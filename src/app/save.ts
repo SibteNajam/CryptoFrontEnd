@@ -4,25 +4,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Activity, RefreshCw, TrendingUp, BarChart3, Clock, Loader2 } from 'lucide-react';
 import { createChart, ColorType, IChartApi, ISeriesApi, CandlestickData, Time } from 'lightweight-charts';
 import { io, Socket } from 'socket.io-client';
-import BinanceOrderBook from '../../components/dashboard/OrderBook';
-
 
 // Types
 interface SymbolPrice {
     symbol: string;
     price: string;
-}
-
-interface OrderBookEntry {
-  price: string;
-  qty: string;
-}
-
-interface OrderBookData {
-  lastUpdateId: number;
-  bids: OrderBookEntry[];
-  asks: OrderBookEntry[];
-  timestamp?: string; // We'll add this ourselves
 }
 
 interface RestPriceData {
@@ -177,13 +163,6 @@ export default function BinanceDashboard() {
     const chartRef = useRef<IChartApi | null>(null);
     const candlestickSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
     const socketRef = useRef<Socket | null>(null);
-
-// Add these new states to your component
-const [orderBookData, setOrderBookData] = useState<OrderBookData | null>(null);
-const [orderBookLoading, setOrderBookLoading] = useState(false);
-const [orderBookDepth, setOrderBookDepth] = useState(200); // Default depth
-const [orderBookRefreshRate, setOrderBookRefreshRate] = useState<number>(3000); // Default 3 seconds
-
 
     // Initialize WebSocket connection with ENHANCED TIMING
     useEffect(() => {
@@ -578,88 +557,28 @@ const [orderBookRefreshRate, setOrderBookRefreshRate] = useState<number>(3000); 
         setTimeout(() => setRefreshing(false), 500);
     };
 
-// Add this function to fetch order book data
-const fetchOrderBook = async (symbol: string, limit: number = orderBookDepth) => {
-  setOrderBookLoading(true);
-  try {
-    console.log(`🔄 Fetching order book for ${symbol} with depth ${limit}`);
-    
-    const response = await fetch(
-      `${API_BASE_URL}/binance/orderBook?symbol=${symbol}&limit=${limit}`
-    );
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    
-    // Add timestamp to the data
-    const orderBookWithTimestamp: OrderBookData = {
-      ...data,
-      timestamp: new Date().toISOString()
+    // UPDATE THIS: Handle symbol selection with historical data (ENHANCED to reset WebSocket timing)
+    const handleSymbolClick = (symbol: string) => {
+        if (symbol === selectedSymbol) return; // Don't reload same symbol
+
+        setSelectedSymbol(symbol);
+        setChartLoading(true);
+        setError(null);
+
+        // 🆕 Reset WebSocket timing when changing symbols
+        setLastWebSocketUpdateTime(0);
+        setWebSocketUpdateHistory([]);
+        setWebSocketTiming(null);
+
+        if (socketRef.current && wsConnected) {
+            // Subscribe to new symbol with current interval AND LOAD HISTORICAL DATA
+            socketRef.current.emit('subscribe_symbol', {
+                symbol: symbol,
+                interval: selectedInterval,
+                loadHistorical: true // IMPORTANT: REQUEST HISTORICAL DATA
+            });
+        }
     };
-    
-    setOrderBookData(orderBookWithTimestamp);
-    console.log('📊 Order Book Data loaded:', {
-      symbol: symbol,
-      bids: orderBookWithTimestamp.bids.length,
-      asks: orderBookWithTimestamp.asks.length,
-      timestamp: new Date().toLocaleTimeString()
-    });
-    
-  } catch (error) {
-    console.error('❌ Error fetching order book:', error);
-  } finally {
-    setOrderBookLoading(false);
-  }
-};
-
-
-// Update fetchSymbols to also fetch order book for the selected symbol
-useEffect(() => {
-  fetchSymbols();
-  setChartLoading(true);
-}, []);
-
-// Add effect to fetch order book when symbol changes
-useEffect(() => {
-  if (selectedSymbol) {
-    fetchOrderBook(selectedSymbol, orderBookDepth);
-  }
-}, [selectedSymbol]);
-
-// Update handleSymbolClick to also fetch order book
-const handleSymbolClick = (symbol: string) => {
-  if (symbol === selectedSymbol) return; // Don't reload same symbol
-
-  setSelectedSymbol(symbol);
-  setChartLoading(true);
-  setError(null);
-
-  // Reset WebSocket timing when changing symbols
-  setLastWebSocketUpdateTime(0);
-  setWebSocketUpdateHistory([]);
-  setWebSocketTiming(null);
-
-  // Fetch order book for the new symbol
-  fetchOrderBook(symbol, orderBookDepth);
-
-  if (socketRef.current && wsConnected) {
-    // Subscribe to new symbol with current interval AND LOAD HISTORICAL DATA
-    socketRef.current.emit('subscribe_symbol', {
-      symbol: symbol,
-      interval: selectedInterval,
-      loadHistorical: true
-    });
-  }
-};
-
-
-
-
-
-
 
     // UPDATE THIS: Handle interval selection with historical data (ENHANCED to reset WebSocket timing)
     const handleIntervalChange = (interval: string) => {
@@ -684,7 +603,11 @@ const handleSymbolClick = (symbol: string) => {
         }
     };
 
-  
+    // Initialize data on mount (UNCHANGED)
+    useEffect(() => {
+        fetchSymbols();
+        setChartLoading(true); // SHOW LOADING FOR INITIAL CHART LOAD
+    }, []);
     // Split symbols into rows (UNCHANGED)
     const firstRow = symbols.slice(0, 10);
     const secondRow = symbols.slice(10, 20);
@@ -1085,67 +1008,6 @@ const handleSymbolClick = (symbol: string) => {
                             )}
                         </div>
                     </div>
-                    <div className="mt-8">
-
-
-
-  <div className="mb-4">
-    <h3 className="text-md font-semibold text-gray-800 mb-2">
-      Order Book
-    </h3>
-    <p className="text-xs text-gray-600">
-      Professional depth chart showing real-time market orders
-    </p>
-  </div>
-  
-{orderBookData ? (
-  <div>
-    <div className="mb-4 flex justify-between items-center">
-      <h3 className="text-md font-semibold text-gray-800">
-        Order Book
-      </h3>
-      
-      {/* Add refresh rate selector */}
-      <div className="flex items-center gap-2">
-        <span className="text-xs text-gray-600">Auto-refresh:</span>
-        <select
-          value={orderBookRefreshRate}
-          onChange={(e) => setOrderBookRefreshRate(Number(e.target.value))}
-          className="text-xs border rounded px-2 py-1 bg-white"
-        >
-          <option value={1000}>1s (High CPU)</option>
-          <option value={3000}>3s</option>
-          <option value={5000}>5s</option>
-          <option value={10000}>10s</option>
-          <option value={30000}>30s</option>
-        </select>
-      </div>
-    </div>
-
-    <BinanceOrderBook
-      symbol={selectedSymbol}
-      bids={orderBookData.bids}
-      asks={orderBookData.asks}
-      precision={selectedSymbol.includes('BTC') ? 2 : selectedSymbol.includes('ETH') ? 2 : 4}
-      depth={15}
-      isLoading={orderBookLoading}
-      lastUpdateTime={orderBookData.timestamp}
-      onRefresh={() => fetchOrderBook(selectedSymbol, orderBookDepth)}
-      refreshInterval={orderBookRefreshRate}
-    />
-  </div>
-) : (
-  <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-8 text-center">
-    <div className="animate-pulse flex flex-col items-center justify-center">
-      <div className="h-6 bg-gray-200 rounded w-1/4 mb-4"></div>
-      <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
-      <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-      <div className="h-4 bg-gray-200 rounded w-1/3 mb-2"></div>
-      <div className="text-sm text-gray-500 mt-4">Loading order book data...</div>
-    </div>
-  </div>
-)}
-</div>
 
                     {/* Kline Information (UNCHANGED) */}
                     {klineData && (
