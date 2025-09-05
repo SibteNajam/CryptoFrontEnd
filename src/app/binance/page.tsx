@@ -8,6 +8,7 @@ import DashboardLayout from '../../components/layout/DashBoardLayout';
 import SymbolCards from '../../components/dashboard/SymbolCards';
 import TradingPanel from '../../components/dashboard/TradingPanel';
 import BinanceOrderBook from '../../components/dashboard/OrderBook';
+import TradingViewChart from '../../components/charts/TradingViewChart';
 
 // Types
 interface SymbolPrice {
@@ -205,7 +206,7 @@ export default function Dashboard() {
             console.log('Binance connection status:', data);
         });
 
-        socket.on('historical_klines', (data: HistoricalKlines) => {
+        socket.on('historical_candles', (data: HistoricalKlines) => {
             console.log('📊 Received historical klines:', data);
             setChartLoading(false);
             loadHistoricalDataToChart(data);
@@ -806,6 +807,13 @@ export default function Dashboard() {
                         </div>
                     </div>
                 )}
+                <div>
+<TradingViewChart 
+    symbol={`BINANCE:${selectedSymbol}`}
+    interval={selectedInterval}
+    theme="dark"
+    height="600px"
+/>                </div>
 
                 {/* Trading Panel */}
                 <TradingPanel
@@ -947,6 +955,7 @@ export default function Dashboard() {
                         </div>
                     )}
                 </TradingPanel>
+
             </div>
         </DashboardLayout>
     );
