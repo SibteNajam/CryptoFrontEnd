@@ -808,12 +808,13 @@ export default function Dashboard() {
                     </div>
                 )}
                 <div>
+// In your dashboard component:
 <TradingViewChart 
     symbol={`BINANCE:${selectedSymbol}`}
     interval={selectedInterval}
-    theme="dark"
+    theme="light" // ✅ Set to light theme
     height="600px"
-/>                </div>
+/>             </div>
 
                 {/* Trading Panel */}
                 <TradingPanel

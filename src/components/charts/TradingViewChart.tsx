@@ -22,7 +22,7 @@ interface TradingViewChartProps {
 const TradingViewChart: React.FC<TradingViewChartProps> = ({
     symbol = "BINANCE:BTCUSDT",
     interval = "5",
-    theme = "light",
+    theme = "light", // ✅ CHANGED - Default to light theme
     height = "500px",
     width = "100%",
     indicators = [
@@ -37,15 +37,13 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({
     const widgetRef = useRef<any>(null);
     const [chartId, setChartId] = useState<string>('');
     const [isMounted, setIsMounted] = useState(false);
-    const isCreatingWidget = useRef(false); // ✅ ADD THIS - Prevent multiple creations
+    const isCreatingWidget = useRef(false);
 
-    // ✅ Generate ID only after component mounts (client-side)
     useEffect(() => {
         setChartId(`tradingview_${Math.random().toString(36).substr(2, 9)}`);
         setIsMounted(true);
     }, []);
 
-    // ✅ SEPARATE EFFECT - Only create widget once when mounted
     useEffect(() => {
         if (!isMounted || !chartId || isCreatingWidget.current) return;
 
@@ -62,12 +60,12 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({
         }
 
         function createWidget() {
-            if (isCreatingWidget.current || widgetRef.current) return; // ✅ Prevent duplicate creation
+            if (isCreatingWidget.current || widgetRef.current) return;
             
             const TradingView = (window as any).TradingView;
             
             if (containerRef.current && TradingView && chartId) {
-                isCreatingWidget.current = true; // ✅ Mark as creating
+                isCreatingWidget.current = true;
                 containerRef.current.innerHTML = '';
                 
                 const widget = new TradingView.widget({
@@ -75,10 +73,10 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({
                     symbol: symbol,
                     interval: interval,
                     timezone: "Etc/UTC",
-                    theme: theme,
+                    theme: theme, // ✅ Uses the theme prop
                     style: "1",
                     locale: "en",
-                    toolbar_bg: "#f1f3f6",
+                    toolbar_bg: theme === "light" ? "#ffffff" : "#1e1e1e", // ✅ ADDED - Dynamic toolbar color
                     enable_publishing: false,
                     allow_symbol_change: true,
                     container_id: chartId,
@@ -87,11 +85,31 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({
                     hide_top_toolbar: false,
                     hide_legend: false,
                     save_image: true,
-                    range: "1D"
+                    range: "1D",
+                    // ✅ ADDED - Custom overrides for white theme
+                    overrides: theme === "light" ? {
+                        "paneProperties.background": "#ffffff",
+                        "paneProperties.backgroundType": "solid",
+                        "paneProperties.vertGridProperties.color": "#e8e8e8",
+                        "paneProperties.horzGridProperties.color": "#e8e8e8",
+                        "symbolWatermarkProperties.transparency": 90,
+                        "scalesProperties.textColor": "#333333",
+                        "scalesProperties.backgroundColor": "#ffffff",
+                        "mainSeriesProperties.candleStyle.upColor": "#26a69a",
+                        "mainSeriesProperties.candleStyle.downColor": "#ef5350",
+                        "mainSeriesProperties.candleStyle.drawWick": true,
+                        "mainSeriesProperties.candleStyle.drawBorder": true,
+                        "mainSeriesProperties.candleStyle.borderColor": "#378658",
+                        "mainSeriesProperties.candleStyle.borderUpColor": "#26a69a",
+                        "mainSeriesProperties.candleStyle.borderDownColor": "#ef5350",
+                        "mainSeriesProperties.candleStyle.wickUpColor": "#26a69a",
+                        "mainSeriesProperties.candleStyle.wickDownColor": "#ef5350",
+                        "volumePaneSize": "medium"
+                    } : {}
                 });
                 
                 widgetRef.current = widget;
-                isCreatingWidget.current = false; // ✅ Mark as done
+                isCreatingWidget.current = false;
             }
         }
 
@@ -109,25 +127,20 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({
             }
             isCreatingWidget.current = false;
         };
-    }, [isMounted, chartId]); // ✅ REMOVE symbol, interval, theme from dependencies
+    }, [isMounted, chartId, theme]); // ✅ ADDED theme to dependencies for recreation when theme changes
 
-    // ✅ ADD THIS - Handle symbol/interval changes without recreating widget
     useEffect(() => {
         if (widgetRef.current && symbol && interval) {
             try {
-                // Use TradingView's built-in method to change symbol
                 widgetRef.current.setSymbol(symbol, interval, () => {
                     console.log('Symbol updated to:', symbol);
                 });
             } catch (error) {
                 console.warn('Could not update symbol:', error);
-                // If setSymbol fails, we might need to recreate (uncomment below if needed)
-                // location.reload();
             }
         }
-    }, [symbol, interval]); // ✅ Only symbol and interval changes
+    }, [symbol, interval]);
 
-    // ✅ Cleanup on unmount
     useEffect(() => {
         return () => {
             if (widgetRef.current) {
@@ -149,9 +162,9 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({
                     display: 'flex', 
                     alignItems: 'center', 
                     justifyContent: 'center',
-                    backgroundColor: '#1a1a1a',
-                    color: '#4CAF50',
-                    border: '1px solid #333'
+                    backgroundColor: theme === "light" ? '#ffffff' : '#1a1a1a', // ✅ ADDED - Dynamic loading background
+                    color: theme === "light" ? '#333333' : '#4CAF50', // ✅ ADDED - Dynamic loading text color
+                    border: `1px solid ${theme === "light" ? '#e2e8f0' : '#333'}` // ✅ ADDED - Dynamic border
                 }}>
                     Loading TradingView Chart...
                 </div>
