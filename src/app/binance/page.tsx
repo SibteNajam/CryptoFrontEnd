@@ -6,9 +6,11 @@ import { createChart, ColorType, IChartApi, ISeriesApi, CandlestickData, Time } 
 import { io, Socket } from 'socket.io-client';
 import DashboardLayout from '../../components/layout/DashBoardLayout';
 import SymbolCards from '../../components/dashboard/SymbolCards';
-import TradingPanel from '../../components/dashboard/TradingPanel';
+import TradingPanel from '../../components/charts/TradingPanel';
 import BinanceOrderBook from '../../components/dashboard/OrderBook';
 import TradingViewChart from '../../components/charts/TradingViewChart';
+import { BinanceApiService } from '../../api/BinanceOrder';
+import PriceClickHandler from '../../components/charts/priceClickHandler';
 
 // Types
 interface SymbolPrice {
@@ -171,7 +173,34 @@ export default function Dashboard() {
     const [orderBookLoading, setOrderBookLoading] = useState(false);
     const [orderBookDepth, setOrderBookDepth] = useState(200);
     const [orderBookRefreshRate, setOrderBookRefreshRate] = useState<number>(3000);
+ const [apiService] = useState(() => new BinanceApiService());
+    const [recentOrders, setRecentOrders] = useState<any[]>([]);
 
+
+
+  const handleOrderFromChart = async (chartOrderData: any) => {
+        try {
+            const order = apiService.formatTradingViewOrder(chartOrderData, selectedSymbol);
+
+            console.log('📊 Order from chart:', order);
+
+            const confirmed = window.confirm(
+                `Place ${order.side} order for ${order.quantity} ${order.symbol} ${
+                    order.type === 'LIMIT' ? `at $${order.price}` : 'at MARKET price'
+                }?`
+            );
+
+            if (confirmed) {
+                const result = await apiService.placeOrder(order);
+                setRecentOrders(prev => [result, ...prev.slice(0, 9)]);
+                alert(`Order placed successfully! Order ID: ${result.orderId}`);
+            }
+
+        } catch (error) {
+            console.error('Order placement failed:', error);
+            alert(`Order failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    };
     // Initialize WebSocket connection
     useEffect(() => {
         const socket = io('http://localhost:3000', {
@@ -227,7 +256,7 @@ export default function Dashboard() {
 
             if (lastWebSocketUpdateTime > 0) {
                 intervalBetweenUpdates = currentUpdateTime - lastWebSocketUpdateTime;
-                
+
                 timingData = {
                     previousUpdateTime: lastWebSocketUpdateTime,
                     currentUpdateTime,
@@ -238,7 +267,7 @@ export default function Dashboard() {
                 };
 
                 setWebSocketTiming(timingData);
-                
+
                 setWebSocketUpdateHistory(prev => {
                     const newHistory = [...prev.slice(-9), timingData!];
                     return newHistory;
@@ -298,7 +327,7 @@ export default function Dashboard() {
 
             try {
                 console.log(`🔄 [${new Date().toLocaleTimeString()}] REST Request started for ${symbol}`);
-                
+
                 const response = await fetch(
                     `${API_BASE_URL}/binance/getCoinInfo?symbol=${symbol}`
                 );
@@ -340,7 +369,7 @@ export default function Dashboard() {
             } catch (error) {
                 const errorEnd = performance.now();
                 const errorLatency = errorEnd - requestStart;
-                
+
                 console.error('❌ REST Error:', {
                     error: error instanceof Error ? error.message : String(error),
                     errorLatency: `${errorLatency.toFixed(2)}ms`,
@@ -548,22 +577,22 @@ export default function Dashboard() {
         setOrderBookLoading(true);
         try {
             console.log(`🔄 Fetching order book for ${symbol} with depth ${limit}`);
-            
+
             const response = await fetch(
                 `${API_BASE_URL}/binance/orderBook?symbol=${symbol}&limit=${limit}`
             );
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
+
             const data = await response.json();
-            
+
             const orderBookWithTimestamp: OrderBookData = {
                 ...data,
                 timestamp: new Date().toISOString()
             };
-            
+
             setOrderBookData(orderBookWithTimestamp);
             console.log('📊 Order Book Data loaded:', {
                 symbol: symbol,
@@ -571,7 +600,7 @@ export default function Dashboard() {
                 asks: orderBookWithTimestamp.asks.length,
                 timestamp: new Date().toLocaleTimeString()
             });
-            
+
         } catch (error) {
             console.error('❌ Error fetching order book:', error);
         } finally {
@@ -637,8 +666,8 @@ export default function Dashboard() {
     };
 
     // Calculate average WebSocket interval
-    const averageWebSocketInterval = webSocketUpdateHistory.length > 0 
-        ? webSocketUpdateHistory.reduce((sum, update) => sum + update.intervalBetweenUpdates, 0) / webSocketUpdateHistory.length 
+    const averageWebSocketInterval = webSocketUpdateHistory.length > 0
+        ? webSocketUpdateHistory.reduce((sum, update) => sum + update.intervalBetweenUpdates, 0) / webSocketUpdateHistory.length
         : 0;
 
     return (
@@ -647,12 +676,10 @@ export default function Dashboard() {
                 {/* Status Bar */}
                 <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
-                        <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${
-                            wsConnected ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                        }`}>
-                            <div className={`w-2 h-2 rounded-full ${
-                                wsConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'
-                            }`}></div>
+                        <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${wsConnected ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                            }`}>
+                            <div className={`w-2 h-2 rounded-full ${wsConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'
+                                }`}></div>
                             {wsConnected ? 'WebSocket Connected' : 'WebSocket Disconnected'}
                         </div>
 
@@ -718,14 +745,13 @@ export default function Dashboard() {
                         <button
                             onClick={() => setRestPollingActive(!restPollingActive)}
                             disabled={isRequestPending}
-                            className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-                                restPollingActive ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-700'
-                            } ${isRequestPending ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            className={`px-3 py-1 rounded text-xs font-medium transition-colors ${restPollingActive ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-700'
+                                } ${isRequestPending ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
                             {restPollingActive ? '🟢 REST ON' : '⭕ REST OFF'}
                             {isRequestPending && ' ⏳'}
                         </button>
-                        
+
                         <select
                             value={restPollingInterval}
                             onChange={(e) => setRestPollingInterval(Number(e.target.value))}
@@ -738,11 +764,11 @@ export default function Dashboard() {
                             <option value={3000}>3s ✅</option>
                             <option value={5000}>5s ✅</option>
                         </select>
-                        
+
                         <span className="text-xs text-gray-600">
                             Calls: {restPollCount}
                         </span>
-                        
+
                         {restLatency && (
                             <span className="text-xs text-orange-600">
                                 Last: {restLatency.totalLatency.toFixed(0)}ms
@@ -764,32 +790,32 @@ export default function Dashboard() {
                                     {webSocketTiming ? `${webSocketTiming.intervalBetweenUpdates.toFixed(2)}ms` : 'No data'}
                                 </div>
                             </div>
-                            
+
                             <div className="bg-white p-3 rounded-lg border">
                                 <span className="text-orange-600 font-medium">REST Latency:</span>
                                 <div className="font-mono font-bold text-orange-700">
                                     {restLatency ? `${restLatency.totalLatency.toFixed(2)}ms` : 'No data'}
                                 </div>
                             </div>
-                            
+
                             <div className="bg-white p-3 rounded-lg border">
                                 <span className="text-green-600 font-medium">Avg WS Interval:</span>
                                 <div className="font-mono font-bold text-green-700">
                                     {averageWebSocketInterval > 0 ? `${averageWebSocketInterval.toFixed(2)}ms` : 'No data'}
                                 </div>
                             </div>
-                            
+
                             <div className="bg-white p-3 rounded-lg border">
                                 <span className="text-purple-600 font-medium">Performance:</span>
                                 <div className="font-mono font-bold text-purple-700">
-                                    {webSocketTiming && restLatency 
+                                    {webSocketTiming && restLatency
                                         ? (restLatency.totalLatency < webSocketTiming.intervalBetweenUpdates ? 'REST Faster' : 'WS Efficient')
                                         : 'Calculating...'
                                     }
                                 </div>
                             </div>
                         </div>
-                        
+
                         {webSocketUpdateHistory.length > 0 && (
                             <div className="mt-4 text-sm text-gray-600">
                                 <span className="font-medium">Recent WS Updates: </span>
@@ -801,31 +827,44 @@ export default function Dashboard() {
                                 ))}
                             </div>
                         )}
-                        
+
                         <div className="mt-2 text-sm text-gray-500">
                             Last updated: {new Date().toLocaleTimeString()}
                         </div>
                     </div>
                 )}
-                <div>
-// In your dashboard component:
-<TradingViewChart 
-    symbol={`BINANCE:${selectedSymbol}`}
-    interval={selectedInterval}
-    theme="light" // ✅ Set to light theme
-    height="600px"
-/>             </div>
+                <div className="flex-1 p-4">
+                     <div className="flex-1 p-4">
 
-                {/* Trading Panel */}
-                <TradingPanel
-                    selectedSymbol={selectedSymbol}
-                    selectedInterval={selectedInterval}
-                    chartLoading={chartLoading}
-                    tickerData={tickerData}
-                    onIntervalChange={handleIntervalChange}
-                >
+                    <TradingViewChart
+                        symbol={`BINANCE:${selectedSymbol}`}
+                        interval={selectedInterval}
+                        theme="light" // ✅ Set to light theme
+                        height="600px"
+                        enableTrading={true} // ✅ Enable trading features
+                        onOrderPlace={handleOrderFromChart}
+                        />
+                        </div>
+                      {/* Right Side - Trading Panel */}
+           <div className="w-80 bg-gray-50 p-4 border-l overflow-y-auto">
+                <div className="space-y-4">
+                    <TradingPanel 
+                        selectedSymbol={selectedSymbol}
+                        apiService={apiService}
+                    />
+                    
+                    <PriceClickHandler 
+                        selectedSymbol={selectedSymbol}
+                        apiService={apiService}
+                    />
+                </div>
+            </div>
+                </div>
+                 
+
+            
                     {/* Chart Container */}
-                    <div className="mb-6">
+                    {/* <div className="mb-6">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="text-lg font-semibold text-gray-800">
                                 {selectedSymbol} - {selectedInterval} Candlestick Chart
@@ -839,9 +878,8 @@ export default function Dashboard() {
                         </div>
                         <div
                             ref={chartContainerRef}
-                            className={`w-full h-96 border border-gray-200 rounded-lg relative ${
-                                chartLoading ? 'opacity-50' : ''
-                            }`}
+                            className={`w-full h-96 border border-gray-200 rounded-lg relative ${chartLoading ? 'opacity-50' : ''
+                                }`}
                         >
                             {chartLoading && (
                                 <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 z-10">
@@ -852,7 +890,10 @@ export default function Dashboard() {
                                 </div>
                             )}
                         </div>
-                    </div>
+                    </div> */}
+                      {/* Trading Panel */}
+            
+                    <div>.</div>
 
                     {/* Order Book */}
                     <div className="mt-6">
@@ -864,14 +905,14 @@ export default function Dashboard() {
                                 Professional depth chart showing real-time market orders
                             </p>
                         </div>
-                        
+
                         {orderBookData ? (
                             <div>
                                 <div className="mb-4 flex justify-between items-center">
                                     <h4 className="text-md font-semibold text-gray-800">
                                         Market Depth
                                     </h4>
-                                    
+
                                     <div className="flex items-center gap-2">
                                         <span className="text-sm text-gray-600">Auto-refresh:</span>
                                         <select
@@ -955,8 +996,6 @@ export default function Dashboard() {
                             </div>
                         </div>
                     )}
-                </TradingPanel>
-
             </div>
         </DashboardLayout>
     );
