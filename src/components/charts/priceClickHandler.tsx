@@ -1,18 +1,20 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { BinanceApiService } from '../../api/BinanceOrder';
 
 interface PriceClickHandlerProps {
     selectedSymbol: string;
-    apiService: any;
+    apiService: BinanceApiService;
 }
 
-const PriceClickHandler: React.FC<PriceClickHandlerProps> = ({ selectedSymbol, apiService }) => {
+const PriceClickHandler: React.FC<PriceClickHandlerProps> = ({ 
+    selectedSymbol, 
+    apiService 
+}) => {
     const [currentPrice, setCurrentPrice] = useState<number>(0);
-    const [clickPrice, setClickPrice] = useState<number | null>(null);
-    const [showOrderForm, setShowOrderForm] = useState(false);
+    const [showQuickOrder, setShowQuickOrder] = useState(false);
 
-    // ✅ Get current price from chart or API
     useEffect(() => {
         const fetchPrice = async () => {
             try {
@@ -25,98 +27,69 @@ const PriceClickHandler: React.FC<PriceClickHandlerProps> = ({ selectedSymbol, a
         };
 
         fetchPrice();
-        const interval = setInterval(fetchPrice, 1000); // Update every second
+        const interval = setInterval(fetchPrice, 3000);
         return () => clearInterval(interval);
     }, [selectedSymbol]);
 
-    // ✅ Handle price level clicks (simulate chart clicks)
-    const handlePriceClick = (price: number) => {
-        setClickPrice(price);
-        setShowOrderForm(true);
-    };
+    const quickOrderPrices = [
+        { label: '+1%', price: currentPrice * 1.01 },
+        { label: 'Market', price: currentPrice },
+        { label: '-1%', price: currentPrice * 0.99 }
+    ];
 
-    const placeQuickOrder = async (side: 'BUY' | 'SELL', quantity: string) => {
+    const placeQuickOrder = async (side: 'BUY' | 'SELL', price: number) => {
         try {
-            const order = {
+            await apiService.placeOrder({
                 symbol: selectedSymbol,
                 side,
-                type: 'LIMIT' as const,
-                quantity,
-                price: clickPrice?.toString() || currentPrice.toString(),
-                timeInForce: 'GTC' as const
-            };
-
-            await apiService.placeOrder(order);
-            alert(`${side} order placed at $${clickPrice}`);
-            setShowOrderForm(false);
-            setClickPrice(null);
+                type: 'LIMIT',
+                quantity: '0.001',
+                price: price.toFixed(2),
+                timeInForce: 'GTC'
+            });
+            alert(`Quick ${side} order placed!`);
         } catch (error) {
-            alert(`Order failed: ${error.message}`);
+            alert(`Order failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     };
 
     return (
-        <div className="bg-white rounded-lg p-4 mt-4">
-            <h3 className="font-semibold mb-3">Quick Order Entry</h3>
-            
-            {/* Current Price Display */}
-            <div className="text-center mb-4">
-                <div className="text-2xl font-bold text-green-600">
+        <div className="bg-white rounded-lg border border-gray-200 p-3">
+            <div className="flex justify-between items-center mb-3">
+                <h3 className="text-sm font-semibold text-gray-800">Quick Trade</h3>
+                <button
+                    onClick={() => setShowQuickOrder(!showQuickOrder)}
+                    className="text-xs text-blue-600 hover:text-blue-800"
+                >
+                    {showQuickOrder ? 'Hide' : 'Show'}
+                </button>
+            </div>
+
+            <div className="text-center mb-3">
+                <div className="text-lg font-bold text-gray-800">
                     ${currentPrice.toLocaleString()}
                 </div>
-                <div className="text-sm text-gray-500">{selectedSymbol}</div>
+                <div className="text-xs text-gray-500">{selectedSymbol}</div>
             </div>
 
-            {/* Price Level Buttons */}
-            <div className="space-y-2 mb-4">
-                <h4 className="text-sm font-medium">Click Price to Order:</h4>
-                {[
-                    currentPrice * 1.02, // +2%
-                    currentPrice * 1.01, // +1%
-                    currentPrice,        // Current
-                    currentPrice * 0.99, // -1%
-                    currentPrice * 0.98  // -2%
-                ].map((price, index) => (
-                    <button
-                        key={index}
-                        onClick={() => handlePriceClick(price)}
-                        className={`w-full p-2 text-sm rounded ${
-                            price > currentPrice 
-                                ? 'bg-red-50 text-red-700 hover:bg-red-100' 
-                                : price < currentPrice
-                                ? 'bg-green-50 text-green-700 hover:bg-green-100'
-                                : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
-                        }`}
-                    >
-                        ${price.toFixed(2)} {price > currentPrice ? '(+)' : price < currentPrice ? '(-)' : '(Current)'}
-                    </button>
-                ))}
-            </div>
-
-            {/* Quick Order Form */}
-            {showOrderForm && clickPrice && (
-                <div className="border-t pt-4">
-                    <h4 className="font-medium mb-2">Order at ${clickPrice.toFixed(2)}</h4>
-                    <div className="grid grid-cols-2 gap-2 mb-3">
-                        <button
-                            onClick={() => placeQuickOrder('BUY', '0.001')}
-                            className="bg-green-500 text-white px-3 py-2 rounded text-sm"
-                        >
-                            BUY 0.001
-                        </button>
-                        <button
-                            onClick={() => placeQuickOrder('SELL', '0.001')}
-                            className="bg-red-500 text-white px-3 py-2 rounded text-sm"
-                        >
-                            SELL 0.001
-                        </button>
-                    </div>
-                    <button
-                        onClick={() => setShowOrderForm(false)}
-                        className="w-full text-gray-500 text-sm"
-                    >
-                        Cancel
-                    </button>
+            {showQuickOrder && (
+                <div className="space-y-2">
+                    {quickOrderPrices.map((item, index) => (
+                        <div key={index} className="flex gap-1">
+                            <button
+                                onClick={() => placeQuickOrder('BUY', item.price)}
+                                className="flex-1 py-2 text-xs bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
+                            >
+                                Buy {item.label}
+                            </button>
+                            <button
+                                onClick={() => placeQuickOrder('SELL', item.price)}
+                                className="flex-1 py-2 text-xs bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+                            >
+                                Sell {item.label}
+                            </button>
+                        </div>
+                    ))}
                 </div>
             )}
         </div>

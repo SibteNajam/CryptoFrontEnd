@@ -173,20 +173,19 @@ export default function Dashboard() {
     const [orderBookLoading, setOrderBookLoading] = useState(false);
     const [orderBookDepth, setOrderBookDepth] = useState(200);
     const [orderBookRefreshRate, setOrderBookRefreshRate] = useState<number>(3000);
- const [apiService] = useState(() => new BinanceApiService());
+    const [apiService] = useState(() => new BinanceApiService());
     const [recentOrders, setRecentOrders] = useState<any[]>([]);
 
 
 
-  const handleOrderFromChart = async (chartOrderData: any) => {
+    const handleOrderFromChart = async (chartOrderData: any) => {
         try {
             const order = apiService.formatTradingViewOrder(chartOrderData, selectedSymbol);
 
             console.log('📊 Order from chart:', order);
 
             const confirmed = window.confirm(
-                `Place ${order.side} order for ${order.quantity} ${order.symbol} ${
-                    order.type === 'LIMIT' ? `at $${order.price}` : 'at MARKET price'
+                `Place ${order.side} order for ${order.quantity} ${order.symbol} ${order.type === 'LIMIT' ? `at $${order.price}` : 'at MARKET price'
                 }?`
             );
 
@@ -632,9 +631,6 @@ export default function Dashboard() {
         setLastWebSocketUpdateTime(0);
         setWebSocketUpdateHistory([]);
         setWebSocketTiming(null);
-
-        fetchOrderBook(symbol, orderBookDepth);
-
         if (socketRef.current && wsConnected) {
             socketRef.current.emit('subscribe_symbol', {
                 symbol: symbol,
@@ -758,11 +754,11 @@ export default function Dashboard() {
                             className="px-2 py-1 border border-gray-300 rounded text-xs"
                             disabled={restPollingActive}
                         >
-                            <option value={100}>100ms ⚠️</option>
-                            <option value={500}>500ms ⚠️</option>
-                            <option value={1000}>1s ✅</option>
-                            <option value={3000}>3s ✅</option>
-                            <option value={5000}>5s ✅</option>
+                            <option value={100}>100ms </option>
+                            <option value={500}>500ms </option>
+                            <option value={1000}>1s </option>
+                            <option value={3000}>3s </option>
+                            <option value={5000}>5s </option>
                         </select>
 
                         <span className="text-xs text-gray-600">
@@ -833,169 +829,182 @@ export default function Dashboard() {
                         </div>
                     </div>
                 )}
-                <div className="flex-1 p-4">
-                     <div className="flex-1 p-4">
-
-                    <TradingViewChart
-                        symbol={`BINANCE:${selectedSymbol}`}
-                        interval={selectedInterval}
-                        theme="light" // ✅ Set to light theme
-                        height="600px"
-                        enableTrading={true} // ✅ Enable trading features
-                        onOrderPlace={handleOrderFromChart}
-                        />
-                        </div>
-                      {/* Right Side - Trading Panel */}
-           <div className="w-80 bg-gray-50 p-4 border-l overflow-y-auto">
-                <div className="space-y-4">
-                    <TradingPanel 
-                        selectedSymbol={selectedSymbol}
-                        apiService={apiService}
-                    />
-                    
-                    <PriceClickHandler 
-                        selectedSymbol={selectedSymbol}
-                        apiService={apiService}
-                    />
-                </div>
-            </div>
-                </div>
-                 
-
-            
-                    {/* Chart Container */}
-                    {/* <div className="mb-6">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-lg font-semibold text-gray-800">
-                                {selectedSymbol} - {selectedInterval} Candlestick Chart
-                            </h3>
-                            {chartLoading && (
-                                <div className="flex items-center gap-2 text-sm text-blue-600">
-                                    <Loader2 size={16} className="animate-spin" />
-                                    <span>Loading chart data...</span>
+                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                    <div className="flex" style={{ height: 'calc(100vh - 250px)' }}> {/* Almost full screen */}
+                        {/* Chart Section - Maximum Width */}
+                        <div className="flex-1 border-r border-gray-200">
+                            {/* Chart Header */}
+                            <div className="border-b border-gray-200 px-4 py-2 flex items-center justify-between">
+                                <div className="flex items-center space-x-4">
+                                    <h3 className="font-semibold text-red-800">{selectedSymbol}</h3>
+                                    <select 
+                                        value={selectedInterval}
+                                        onChange={(e) => handleIntervalChange(e.target.value)}
+                                        className="text-sm border border-gray-300 rounded px-2 py-1 text-gray-700 bg-white"
+                                    >
+                                        <option value="1m">1m</option>
+                                        <option value="5m">5m</option>
+                                        <option value="15m">15m</option>
+                                        <option value="1h">1h</option>
+                                        <option value="4h">4h</option>
+                                        <option value="1d">1D</option>
+                                    </select>
+                                    {tickerData && (
+                                        <div className="text-sm">
+                                            <span className="font-bold text-gray-800">
+                                                ${parseFloat(tickerData.ticker.lastPrice).toLocaleString()}
+                                            </span>
+                                            <span className={`ml-2 ${parseFloat(tickerData.ticker.priceChangePercent) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                {parseFloat(tickerData.ticker.priceChangePercent) >= 0 ? '+' : ''}
+                                                {parseFloat(tickerData.ticker.priceChangePercent).toFixed(2)}%
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
-                            )}
-                        </div>
-                        <div
-                            ref={chartContainerRef}
-                            className={`w-full h-96 border border-gray-200 rounded-lg relative ${chartLoading ? 'opacity-50' : ''
-                                }`}
-                        >
-                            {chartLoading && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 z-10">
-                                    <div className="flex items-center gap-2 text-gray-600">
-                                        <Loader2 size={24} className="animate-spin" />
-                                        <span>Loading historical data...</span>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div> */}
-                      {/* Trading Panel */}
-            
-                    <div>.</div>
+                                {chartLoading && (
+                                    <div className="text-xs text-blue-600">Loading...</div>
+                                )}
+                            </div>
 
-                    {/* Order Book */}
-                    <div className="mt-6">
-                        <div className="mb-4">
-                            <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                                Order Book
-                            </h3>
-                            <p className="text-sm text-gray-600">
-                                Professional depth chart showing real-time market orders
-                            </p>
-                        </div>
-
-                        {orderBookData ? (
-                            <div>
-                                <div className="mb-4 flex justify-between items-center">
-                                    <h4 className="text-md font-semibold text-gray-800">
-                                        Market Depth
-                                    </h4>
-
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-sm text-gray-600">Auto-refresh:</span>
-                                        <select
-                                            value={orderBookRefreshRate}
-                                            onChange={(e) => setOrderBookRefreshRate(Number(e.target.value))}
-                                            className="text-sm border border-gray-300 rounded px-2 py-1 bg-white"
-                                        >
-                                            <option value={1000}>1s (High CPU)</option>
-                                            <option value={3000}>3s</option>
-                                            <option value={5000}>5s</option>
-                                            <option value={10000}>10s</option>
-                                            <option value={30000}>30s</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <BinanceOrderBook
-                                    symbol={selectedSymbol}
-                                    bids={orderBookData.bids}
-                                    asks={orderBookData.asks}
-                                    precision={selectedSymbol.includes('BTC') ? 2 : selectedSymbol.includes('ETH') ? 2 : 4}
-                                    depth={15}
-                                    isLoading={orderBookLoading}
-                                    lastUpdateTime={orderBookData.timestamp}
-                                    onRefresh={() => fetchOrderBook(selectedSymbol, orderBookDepth)}
-                                    refreshInterval={orderBookRefreshRate}
+                            {/* Chart */}
+                            <div className="h-full p-1"> {/* Minimal padding */}
+                                <TradingViewChart
+                                    symbol={`BINANCE:${selectedSymbol}`}
+                                    interval={selectedInterval}
+                                    theme="light"
+                                    height="calc(100vh - 320px)" 
+                                    width="100%"
+                                    enableTrading={false}
                                 />
                             </div>
-                        ) : (
-                            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-8 text-center">
-                                <div className="animate-pulse flex flex-col items-center justify-center">
-                                    <div className="h-6 bg-gray-200 rounded w-1/4 mb-4"></div>
-                                    <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
-                                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                                    <div className="h-4 bg-gray-200 rounded w-1/3 mb-2"></div>
-                                    <div className="text-sm text-gray-500 mt-4">Loading order book data...</div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                        </div>
 
-                    {/* Kline Information */}
-                    {klineData && (
-                        <div className="mt-6 border-t border-gray-200 pt-6">
-                            <h3 className="text-lg font-semibold text-gray-800 mb-4">Latest Kline Data</h3>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                                    <p className="text-sm text-blue-600 font-medium">Open</p>
-                                    <p className="text-lg font-bold text-gray-800">
-                                        ${parseFloat(klineData.kline.o).toLocaleString()}
-                                    </p>
+                        {/* Trading Panel - Fixed 280px width */}
+                        <div className="w-[280px] bg-gray-50 overflow-y-auto scrollbar-hide"  style={{
+    width: "280px",
+    backgroundColor: "#f9fafb",
+    overflowY: "auto",
+    scrollbarWidth: "none",       // Firefox
+    msOverflowStyle: "none"       // IE/Edge
+  }}>
+                            <div className="p-2 space-y-2"> {/* Very compact */}
+                                <TradingPanel 
+                                    selectedSymbol={selectedSymbol}
+                                    apiService={apiService}
+                                />
+                                
+                                <PriceClickHandler 
+                                    selectedSymbol={selectedSymbol}
+                                    apiService={apiService}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        
+                <div>.</div>
+
+                {/* Order Book */}
+                <div className="mt-6">
+                    {orderBookData ? (
+                        <div>
+                            <div className="mb-4 flex justify-between items-center">
+                                {/* <h4 className="text-md font-semibold text-gray-800">
+                                  
+                                </h4> */}
+                                <div className='flex flex-col'>
+                                    <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                            Order Book
+                        </h3>
+                        <p className="text-sm text-gray-600">
+                            Professional depth chart showing real-time market orders
+                        </p>
                                 </div>
-                                <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                                    <p className="text-sm text-green-600 font-medium">High</p>
-                                    <p className="text-lg font-bold text-gray-800">
-                                        ${parseFloat(klineData.kline.h).toLocaleString()}
-                                    </p>
-                                </div>
-                                <div className="p-4 bg-red-50 rounded-lg border border-red-200">
-                                    <p className="text-sm text-red-600 font-medium">Low</p>
-                                    <p className="text-lg font-bold text-gray-800">
-                                        ${parseFloat(klineData.kline.l).toLocaleString()}
-                                    </p>
-                                </div>
-                                <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
-                                    <p className="text-sm text-purple-600 font-medium">Close</p>
-                                    <p className="text-lg font-bold text-gray-800">
-                                        ${parseFloat(klineData.kline.c).toLocaleString()}
-                                    </p>
+
+
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm text-gray-600">Auto-refresh:</span>
+                                    <select
+                                        value={orderBookRefreshRate}
+                                        onChange={(e) => setOrderBookRefreshRate(Number(e.target.value))}
+                                        className="text-sm border border-gray-300 rounded px-2 py-1 bg-white"
+                                    >
+                                        <option value={1000}>1s (High CPU)</option>
+                                        <option value={3000}>3s</option>
+                                        <option value={5000}>5s</option>
+                                        <option value={10000}>10s</option>
+                                        <option value={30000}>30s</option>
+                                    </select>
                                 </div>
                             </div>
-                            <div className="mt-4 text-sm text-gray-500 space-y-1">
-                                <p>Interval: {klineData.kline.i} | Trades: {klineData.kline.n} |
-                                    Volume: {parseFloat(klineData.kline.v).toLocaleString()}</p>
-                                <p>Start: {new Date(klineData.kline.t).toLocaleString()} |
-                                    End: {new Date(klineData.kline.T).toLocaleString()}</p>
-                                <p className={`inline-flex items-center gap-2 ${klineData.kline.x ? 'text-green-600' : 'text-orange-600'}`}>
-                                    <span className={`w-2 h-2 rounded-full ${klineData.kline.x ? 'bg-green-500' : 'bg-orange-500'}`}></span>
-                                    {klineData.kline.x ? 'Kline Closed' : 'Kline Active'}
-                                </p>
+
+                            <BinanceOrderBook
+                                symbol={selectedSymbol}
+                                bids={orderBookData.bids}
+                                asks={orderBookData.asks}
+                                precision={selectedSymbol.includes('BTC') ? 2 : selectedSymbol.includes('ETH') ? 2 : 4}
+                                depth={15}
+                                isLoading={orderBookLoading}
+                                lastUpdateTime={orderBookData.timestamp}
+                                onRefresh={() => fetchOrderBook(selectedSymbol, orderBookDepth)}
+                                refreshInterval={orderBookRefreshRate}
+                            />
+                        </div>
+                    ) : (
+                        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-8 text-center">
+                            <div className="animate-pulse flex flex-col items-center justify-center">
+                                <div className="h-6 bg-gray-200 rounded w-1/4 mb-4"></div>
+                                <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+                                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                                <div className="h-4 bg-gray-200 rounded w-1/3 mb-2"></div>
+                                <div className="text-sm text-gray-500 mt-4">Loading order book data...</div>
                             </div>
                         </div>
                     )}
+                </div>
+
+                {/* Kline Information */}
+                {klineData && (
+                    <div className="mt-6 border-t border-gray-200 pt-6">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Latest Kline Data</h3>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                <p className="text-sm text-blue-600 font-medium">Open</p>
+                                <p className="text-lg font-bold text-gray-800">
+                                    ${parseFloat(klineData.kline.o).toLocaleString()}
+                                </p>
+                            </div>
+                            <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                                <p className="text-sm text-green-600 font-medium">High</p>
+                                <p className="text-lg font-bold text-gray-800">
+                                    ${parseFloat(klineData.kline.h).toLocaleString()}
+                                </p>
+                            </div>
+                            <div className="p-4 bg-red-50 rounded-lg border border-red-200">
+                                <p className="text-sm text-red-600 font-medium">Low</p>
+                                <p className="text-lg font-bold text-gray-800">
+                                    ${parseFloat(klineData.kline.l).toLocaleString()}
+                                </p>
+                            </div>
+                            <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
+                                <p className="text-sm text-purple-600 font-medium">Close</p>
+                                <p className="text-lg font-bold text-gray-800">
+                                    ${parseFloat(klineData.kline.c).toLocaleString()}
+                                </p>
+                            </div>
+                        </div>
+                        <div className="mt-4 text-sm text-gray-500 space-y-1">
+                            <p>Interval: {klineData.kline.i} | Trades: {klineData.kline.n} |
+                                Volume: {parseFloat(klineData.kline.v).toLocaleString()}</p>
+                            <p>Start: {new Date(klineData.kline.t).toLocaleString()} |
+                                End: {new Date(klineData.kline.T).toLocaleString()}</p>
+                            <p className={`inline-flex items-center gap-2 ${klineData.kline.x ? 'text-green-600' : 'text-orange-600'}`}>
+                                <span className={`w-2 h-2 rounded-full ${klineData.kline.x ? 'bg-green-500' : 'bg-orange-500'}`}></span>
+                                {klineData.kline.x ? 'Kline Closed' : 'Kline Active'}
+                            </p>
+                        </div>
+                    </div>
+                )}
             </div>
         </DashboardLayout>
     );
