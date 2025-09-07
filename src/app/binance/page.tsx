@@ -829,139 +829,163 @@ export default function Dashboard() {
                         </div>
                     </div>
                 )}
-                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                    <div className="flex" style={{ height: 'calc(100vh - 250px)' }}> {/* Almost full screen */}
-                        {/* Chart Section - Maximum Width */}
-                        <div className="flex-1 border-r border-gray-200">
-                            {/* Chart Header */}
-                            <div className="border-b border-gray-200 px-4 py-2 flex items-center justify-between">
-                                <div className="flex items-center space-x-4">
-                                    <h3 className="font-semibold text-red-800">{selectedSymbol}</h3>
-                                    <select 
-                                        value={selectedInterval}
-                                        onChange={(e) => handleIntervalChange(e.target.value)}
-                                        className="text-sm border border-gray-300 rounded px-2 py-1 text-gray-700 bg-white"
-                                    >
-                                        <option value="1m">1m</option>
-                                        <option value="5m">5m</option>
-                                        <option value="15m">15m</option>
-                                        <option value="1h">1h</option>
-                                        <option value="4h">4h</option>
-                                        <option value="1d">1D</option>
-                                    </select>
-                                    {tickerData && (
-                                        <div className="text-sm">
-                                            <span className="font-bold text-gray-800">
-                                                ${parseFloat(tickerData.ticker.lastPrice).toLocaleString()}
-                                            </span>
-                                            <span className={`ml-2 ${parseFloat(tickerData.ticker.priceChangePercent) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                                {parseFloat(tickerData.ticker.priceChangePercent) >= 0 ? '+' : ''}
-                                                {parseFloat(tickerData.ticker.priceChangePercent).toFixed(2)}%
-                                            </span>
-                                        </div>
-                                    )}
-                                </div>
-                                {chartLoading && (
-                                    <div className="text-xs text-blue-600">Loading...</div>
-                                )}
-                            </div>
-
-                            {/* Chart */}
-                            <div className="h-full p-1"> {/* Minimal padding */}
-                                <TradingViewChart
-                                    symbol={`BINANCE:${selectedSymbol}`}
-                                    interval={selectedInterval}
-                                    theme="light"
-                                    height="calc(100vh - 320px)" 
-                                    width="100%"
-                                    enableTrading={false}
-                                />
-                            </div>
+               <div className="bg-gray-50 min-h-screen">
+    <div className="max-w-7xl mx-auto p-4 space-y-4">
+        {/* Trading Chart Section - Full Width */}
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+            {/* Chart Header */}
+            <div className="border-b border-gray-200 px-6 py-3 flex items-center justify-between bg-white">
+                <div className="flex items-center space-x-6">
+                    <h2 className="text-lg font-semibold text-gray-900">{selectedSymbol}</h2>
+                    <select 
+                        value={selectedInterval}
+                        onChange={(e) => handleIntervalChange(e.target.value)}
+                        className="text-sm border border-gray-300 rounded-md px-3 py-1.5 text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                        <option value="1m">1m</option>
+                        <option value="5m">5m</option>
+                        <option value="15m">15m</option>
+                        <option value="1h">1h</option>
+                        <option value="4h">4h</option>
+                        <option value="1d">1D</option>
+                    </select>
+                    {tickerData && (
+                        <div className="flex items-center space-x-4">
+                            <span className="text-lg font-medium text-gray-900">
+                                ${parseFloat(tickerData.ticker.lastPrice).toLocaleString()}
+                            </span>
+                            <span className={`text-sm font-medium px-2 py-1 rounded ${
+                                parseFloat(tickerData.ticker.priceChangePercent) >= 0 
+                                    ? 'text-green-700 bg-green-50' 
+                                    : 'text-red-700 bg-red-50'
+                            }`}>
+                                {parseFloat(tickerData.ticker.priceChangePercent) >= 0 ? '+' : ''}
+                                {parseFloat(tickerData.ticker.priceChangePercent).toFixed(2)}%
+                            </span>
                         </div>
+                    )}
+                </div>
+                {chartLoading && (
+                    <div className="flex items-center text-gray-500">
+                        <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin mr-2"></div>
+                        <span className="text-sm">Loading...</span>
+                    </div>
+                )}
+            </div>
 
-                        {/* Trading Panel - Fixed 280px width */}
-                        <div className="w-[280px] bg-gray-50 overflow-y-auto scrollbar-hide"  style={{
-    width: "280px",
-    backgroundColor: "#f9fafb",
-    overflowY: "auto",
-    scrollbarWidth: "none",       // Firefox
-    msOverflowStyle: "none"       // IE/Edge
-  }}>
-                            <div className="p-2 space-y-2"> {/* Very compact */}
-                                <TradingPanel 
-                                    selectedSymbol={selectedSymbol}
-                                    apiService={apiService}
-                                />
-                                
-                                <PriceClickHandler 
-                                    selectedSymbol={selectedSymbol}
-                                    apiService={apiService}
-                                />
-                            </div>
-                        </div>
+            {/* Chart Container */}
+            <div className="bg-white" style={{ height: '500px' }}>
+                <TradingViewChart
+                    symbol={`BINANCE:${selectedSymbol}`}
+                    interval={selectedInterval}
+                    theme="light"
+                    height="500px"
+                    width="100%"
+                    enableTrading={false}
+                />
+            </div>
+        </div>
+
+        {/* Trading Controls & Order Book Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Trading Panel Section */}
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+                {/* Trading Panel Header */}
+                <div className="border-b border-gray-200 px-6 py-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Place Order</h3>
+                    <p className="text-sm text-gray-500 mt-1">Buy or sell {selectedSymbol}</p>
+                </div>
+
+                {/* Trading Panel Content */}
+                <div className="p-6">
+                    <TradingPanel 
+                        selectedSymbol={selectedSymbol}
+                        apiService={apiService}
+                    />
+                    
+                    <div className="mt-6 pt-6 border-t border-gray-200">
+                        <PriceClickHandler 
+                            selectedSymbol={selectedSymbol}
+                            apiService={apiService}
+                        />
                     </div>
                 </div>
-        
-                <div>.</div>
+            </div>
 
-                {/* Order Book */}
-                <div className="mt-6">
+            {/* Order Book Section */}
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+                {/* Order Book Header */}
+                <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                    <div>
+                        <h3 className="text-lg font-semibold text-gray-900">Order Book</h3>
+                        <p className="text-sm text-gray-500 mt-1">Market depth for {selectedSymbol}</p>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                        <label className="text-sm text-gray-600">Refresh:</label>
+                        <select
+                            value={orderBookRefreshRate}
+                            onChange={(e) => setOrderBookRefreshRate(Number(e.target.value))}
+                            className="text-sm border border-gray-300 rounded-md px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                            <option value={1000}>1s</option>
+                            <option value={3000}>3s</option>
+                            <option value={5000}>5s</option>
+                            <option value={10000}>10s</option>
+                            <option value={30000}>30s</option>
+                        </select>
+                    </div>
+                </div>
+
+                {/* Order Book Content */}
+                <div className="p-6">
                     {orderBookData ? (
-                        <div>
-                            <div className="mb-4 flex justify-between items-center">
-                                {/* <h4 className="text-md font-semibold text-gray-800">
-                                  
-                                </h4> */}
-                                <div className='flex flex-col'>
-                                    <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                            Order Book
-                        </h3>
-                        <p className="text-sm text-gray-600">
-                            Professional depth chart showing real-time market orders
-                        </p>
-                                </div>
-
-
-                                <div className="flex items-center gap-2">
-                                    <span className="text-sm text-gray-600">Auto-refresh:</span>
-                                    <select
-                                        value={orderBookRefreshRate}
-                                        onChange={(e) => setOrderBookRefreshRate(Number(e.target.value))}
-                                        className="text-sm border border-gray-300 rounded px-2 py-1 bg-white"
-                                    >
-                                        <option value={1000}>1s (High CPU)</option>
-                                        <option value={3000}>3s</option>
-                                        <option value={5000}>5s</option>
-                                        <option value={10000}>10s</option>
-                                        <option value={30000}>30s</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <BinanceOrderBook
-                                symbol={selectedSymbol}
-                                bids={orderBookData.bids}
-                                asks={orderBookData.asks}
-                                precision={selectedSymbol.includes('BTC') ? 2 : selectedSymbol.includes('ETH') ? 2 : 4}
-                                depth={15}
-                                isLoading={orderBookLoading}
-                                lastUpdateTime={orderBookData.timestamp}
-                                onRefresh={() => fetchOrderBook(selectedSymbol, orderBookDepth)}
-                                refreshInterval={orderBookRefreshRate}
-                            />
-                        </div>
+                        <BinanceOrderBook
+                            symbol={selectedSymbol}
+                            bids={orderBookData.bids}
+                            asks={orderBookData.asks}
+                            precision={selectedSymbol.includes('BTC') ? 2 : selectedSymbol.includes('ETH') ? 2 : 4}
+                            depth={15}
+                            isLoading={orderBookLoading}
+                            lastUpdateTime={orderBookData.timestamp}
+                            onRefresh={() => fetchOrderBook(selectedSymbol, orderBookDepth)}
+                            refreshInterval={orderBookRefreshRate}
+                        />
                     ) : (
-                        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-8 text-center">
-                            <div className="animate-pulse flex flex-col items-center justify-center">
-                                <div className="h-6 bg-gray-200 rounded w-1/4 mb-4"></div>
-                                <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
-                                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                                <div className="h-4 bg-gray-200 rounded w-1/3 mb-2"></div>
-                                <div className="text-sm text-gray-500 mt-4">Loading order book data...</div>
+                        <div className="flex items-center justify-center py-12">
+                            <div className="text-center">
+                                <div className="w-8 h-8 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
+                                <p className="text-gray-500">Loading order book...</p>
                             </div>
                         </div>
                     )}
                 </div>
+
+                {/* Order Book Legend */}
+                {orderBookData && (
+                    <div className="border-t border-gray-200 px-6 py-3 bg-gray-50">
+                        <div className="flex items-center justify-between text-sm">
+                            <div className="flex items-center space-x-4">
+                                <div className="flex items-center">
+                                    <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                                    <span className="text-gray-600">Bids</span>
+                                </div>
+                                <div className="flex items-center">
+                                    <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
+                                    <span className="text-gray-600">Asks</span>
+                                </div>
+                            </div>
+                            <span className="text-gray-500 text-xs">
+                                Last updated: {orderBookData.timestamp ? new Date(orderBookData.timestamp).toLocaleTimeString() : 'Unknown'}
+                            </span>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    </div>
+</div>
+
 
                 {/* Kline Information */}
                 {klineData && (
