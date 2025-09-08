@@ -4,13 +4,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { RefreshCw, Loader2 } from 'lucide-react';
 import { createChart, ColorType, IChartApi, ISeriesApi, CandlestickData, Time } from 'lightweight-charts';
 import { io, Socket } from 'socket.io-client';
-import DashboardLayout from '../../components/layout/DashBoardLayout';
-import SymbolCards from '../../components/dashboard/SymbolCards';
-import TradingPanel from '../../components/charts/TradingPanel';
-import BinanceOrderBook from '../../components/dashboard/OrderBook';
-import TradingViewChart from '../../components/charts/TradingViewChart';
-import { BinanceApiService } from '../../api/BinanceOrder';
-import PriceClickHandler from '../../components/charts/priceClickHandler';
+// import DashboardLayout from '../layout';
+import SymbolCards from '../../../components/dashboard/SymbolCards';
+import TradingPanel from '../../../components/charts/TradingPanel';
+import BinanceOrderBook from '../../../components/dashboard/OrderBook';
+import TradingViewChart from '../../../components/charts/TradingViewChart';
+import { BinanceApiService } from '../../../api/BinanceOrder';
+import PriceClickHandler from '../../../components/charts/priceClickHandler';
 
 // Types
 interface SymbolPrice {
@@ -667,7 +667,7 @@ export default function Dashboard() {
         : 0;
 
     return (
-        <DashboardLayout>
+        // <DashboardLayout>
             <div className="p-6 space-y-6">
                 {/* Status Bar */}
                 <div className="flex items-center justify-between">
@@ -1030,6 +1030,6 @@ export default function Dashboard() {
                     </div>
                 )}
             </div>
-        </DashboardLayout>
+        // </DashboardLayout>
     );
 }

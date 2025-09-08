@@ -24,7 +24,24 @@ export interface AccountInfo {
     takerCommission: number;
     updateTime: number;
 }
-
+export interface OrderResult {
+    symbol: string;
+    orderId: number;
+    orderListId: number;
+    clientOrderId: string;
+    transactTime: number;
+    price: string;
+    origQty: string;
+    executedQty: string;
+    cummulativeQuoteQty: string;
+    status: string;
+    timeInForce: string;
+    type: string;
+    side: string;
+    workingTime: number;
+    fills: any[],
+    selfTradePreventionMode: string
+}
 export interface OpenOrder {
     symbol: string;
     orderId: number;
@@ -49,7 +66,7 @@ export interface OpenOrder {
 export class BinanceApiService {
     private apiUrl: string;
 
-    constructor(apiUrl: string = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000') {
+    constructor(apiUrl: string = 'http://localhost:3000') {
         this.apiUrl = apiUrl;
     }
 
@@ -73,38 +90,58 @@ export class BinanceApiService {
         }
     }
 
-    async placeOrder(order: OrderRequest): Promise<any> {
-        try {
-            console.log('🚀 Placing order via NestJS API:', order);
-            
-            const response = await fetch(`${this.apiUrl}/binance/place-order`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(order)
-            });
+async placeOrder(order: OrderRequest): Promise<OrderResult> {
+    try {
+        console.log('🚀 Frontend API Service - Placing order:', order);
+        console.log('🌐 Calling URL:', `${this.apiUrl}/binance/place-order`);
+        
+        // Log the exact same format that worked in console
+        const orderPayload = {
+            symbol: order.symbol,
+            side: order.side,
+            type: order.type,
+            quantity: order.quantity,
+            price: order.price,
+            timeInForce: order.timeInForce
+        };
+        
+        console.log('📦 Exact payload being sent:', JSON.stringify(orderPayload, null, 2));
+        
+        const response = await fetch(`${this.apiUrl}/binance/place-order`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(orderPayload)
+        });
 
-            if (!response.ok) {
-                const errorData = await response.text();
-                throw new Error(`HTTP error! status: ${response.status}, message: ${errorData}`);
-            }
-
-            const result = await response.json();
-            console.log('✅ Order placed successfully:', result);
-            return result;
-
-        } catch (error) {
-            console.error('❌ Error placing order:', error);
-            throw error;
+        console.log('📡 Response status:', response.status);
+        console.log('📡 Response ok:', response.ok);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('❌ Error response text:', errorText);
+            throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
         }
-    }
 
+        const result = await response.json();
+        console.log('✅ Order placed successfully:', result);
+        return result;
+
+    } catch (error) {
+        console.error('❌ Frontend API Service - Error details:', {
+            error: error,
+            message: error instanceof Error ? error.message : 'Unknown error',
+            stack: error instanceof Error ? error.stack : undefined
+        });
+        throw error;
+    }
+}
     async getOpenOrders(symbol?: string): Promise<OpenOrder[]> {
         try {
             const url = symbol 
-                ? `${this.apiUrl}/binance-signed/open-orders?symbol=${symbol}`
-                : `${this.apiUrl}/binance-signed/open-orders`;
+                ? `${this.apiUrl}/binance/open-orders?symbol=${symbol}`
+                : `${this.apiUrl}/binance/open-orders`;
 
             const response = await fetch(url, {
                 method: 'GET',
