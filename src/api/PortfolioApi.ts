@@ -42,6 +42,83 @@ export interface Order {
   origQuoteOrderQty: string;
   selfTradePreventionMode: string;
 }
+export interface AccountSnapshot {
+  code: number;
+  msg: string;
+  snapshotVos: Array<{
+    type: string;
+    updateTime: number;
+    data: {
+      balances: Balance[];
+      totalAssetOfBtc: string;
+    };
+  }>;
+}
+
+export interface UserAsset {
+  asset: string;
+  free: string;
+  locked: string;
+  freeze: string;
+  withdrawing: string;
+  btcValuation: string;
+  usdtValuation: string;
+}
+
+export interface Deposit {
+  id: string;
+  amount: string;
+  coin: string;
+  network: string;
+  status: number;
+  address: string;
+  addressTag: string;
+  txId: string;
+  insertTime: number;
+  transferType: number;
+  confirmTimes: string;
+}
+
+export interface Withdrawal {
+  id: string;
+  amount: string;
+  transactionFee: string;
+  coin: string;
+  status: number;
+  address: string;
+  txId: string;
+  applyTime: string;
+  network: string;
+  transferType: number;
+}
+
+export interface AssetDetail {
+  [key: string]: {
+    minWithdrawAmount: string;
+    depositStatus: boolean;
+    withdrawFee: number;
+    withdrawStatus: boolean;
+    depositTip?: string;
+  };
+}
+
+export interface TradeFee {
+  symbol: string;
+  makerCommission: string;
+  takerCommission: string;
+}
+
+export interface TransferHistory {
+  total: number;
+  rows: Array<{
+    asset: string;
+    amount: string;
+    type: string;
+    status: string;
+    tranId: number;
+    timestamp: number;
+  }>;
+}
 
 // Account Info API
 export async function getAccountInfo(): Promise<AccountInfo> {
@@ -118,6 +195,181 @@ export async function getOrderHistory(): Promise<Array<{ symbol: string; orders:
     return data;
   } catch (error) {
     console.error('❌ Order History error:', error);
+    throw error;
+  }
+}
+// Enhanced API functions
+export async function getAccountSnapshot(): Promise<AccountSnapshot> {
+  console.log('📊 Fetching Account Snapshot...');
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}/binance/account-snapshot`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log('✅ Account Snapshot loaded successfully');
+    return data;
+  } catch (error) {
+    console.error('❌ Account Snapshot error:', error);
+    throw error;
+  }
+}
+
+export async function getUserAssets(): Promise<UserAsset[]> {
+  console.log('💰 Fetching Enhanced User Assets...');
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}/binance/user-assets`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log('✅ Enhanced User Assets loaded successfully');
+    return data;
+  } catch (error) {
+    console.error('❌ Enhanced User Assets error:', error);
+    throw error;
+  }
+}
+
+export async function getDepositHistory(coin?: string, status?: number, limit = 1000): Promise<Deposit[]> {
+  console.log('📥 Fetching Deposit History...');
+  
+  try {
+    let url = `${API_BASE_URL}/binance/deposit-history?limit=${limit}`;
+    if (coin) url += `&coin=${coin}`;
+    if (status !== undefined) url += `&status=${status}`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log('✅ Deposit History loaded successfully');
+    return data;
+  } catch (error) {
+    console.error('❌ Deposit History error:', error);
+    throw error;
+  }
+}
+
+export async function getWithdrawHistory(coin?: string, status?: number, limit = 1000): Promise<Withdrawal[]> {
+  console.log('📤 Fetching Withdrawal History...');
+  
+  try {
+    let url = `${API_BASE_URL}/binance/withdraw-history?limit=${limit}`;
+    if (coin) url += `&coin=${coin}`;
+    if (status !== undefined) url += `&status=${status}`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log('✅ Withdrawal History loaded successfully');
+    return data;
+  } catch (error) {
+    console.error('❌ Withdrawal History error:', error);
+    throw error;
+  }
+}
+
+export async function getTransactionHistory(): Promise<{
+  deposits: Deposit[];
+  withdrawals: Withdrawal[];
+  summary: {
+    totalDeposits: number;
+    totalWithdrawals: number;
+  };
+}> {
+  console.log('📜 Fetching Complete Transaction History...');
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}/binance/transaction-history`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log('✅ Complete Transaction History loaded successfully');
+    return data;
+  } catch (error) {
+    console.error('❌ Complete Transaction History error:', error);
+    throw error;
+  }
+}
+
+export async function getAssetDetail(asset?: string): Promise<AssetDetail> {
+  console.log('ℹ️ Fetching Asset Details...');
+  
+  try {
+    let url = `${API_BASE_URL}/binance/asset-detail`;
+    if (asset) url += `?asset=${asset}`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log('✅ Asset Details loaded successfully');
+    return data;
+  } catch (error) {
+    console.error('❌ Asset Details error:', error);
+    throw error;
+  }
+}
+
+export async function getTradeFee(symbol?: string): Promise<TradeFee[]> {
+  console.log('💸 Fetching Trade Fees...');
+  
+  try {
+    let url = `${API_BASE_URL}/binance/trade-fee`;
+    if (symbol) url += `?symbol=${symbol}`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log('✅ Trade Fees loaded successfully');
+    return data;
+  } catch (error) {
+    console.error('❌ Trade Fees error:', error);
     throw error;
   }
 }

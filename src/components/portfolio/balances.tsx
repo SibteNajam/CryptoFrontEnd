@@ -95,8 +95,9 @@ export default function BalancesTab({ accountData }: BalancesTabProps) {
                   <tr key={balance.asset} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                          <span className="text-xs font-medium text-gray-600">
+                        {/* Blue Asset Icon */}
+                        <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                          <span className="text-xs font-medium text-white">
                             {balance.asset.slice(0, 2)}
                           </span>
                         </div>

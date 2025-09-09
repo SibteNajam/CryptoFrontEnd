@@ -35,7 +35,7 @@ export default function HistoryTab({ orderHistory }: HistoryTabProps) {
             <div key={group.symbol} className="border border-gray-200 rounded-lg">
               <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
                 <div className="flex items-center justify-between">
-                  <h4 className="font-medium text-gray-900">{group.symbol}</h4>
+                  <h4 className="font-medium text-blue-600">{group.symbol}</h4>
                   <span className="text-sm text-gray-500">{group.orders.length} orders</span>
                 </div>
               </div>

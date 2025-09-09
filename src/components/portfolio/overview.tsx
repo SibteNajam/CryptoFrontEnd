@@ -35,7 +35,7 @@ export default function OverviewTab({ accountData }: OverviewTabProps) {
 
   return (
     <div className="space-y-6">
-      {/* Account Stats */}
+      {/* Account Stats - Keep Original */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white border border-gray-200 rounded-lg p-4">
           <div className="flex items-center justify-between">
@@ -82,12 +82,12 @@ export default function OverviewTab({ accountData }: OverviewTabProps) {
               <p className="text-sm font-medium text-gray-600">Active Assets</p>
               <p className="text-lg font-semibold text-gray-900">{activeBalances.length}</p>
             </div>
-            <Wallet className="h-8 w-8 text-green-500" />
+            <Wallet className="h-8 w-8 text-blue-500" />
           </div>
         </div>
       </div>
 
-      {/* Permissions */}
+      {/* Permissions - Keep Original */}
       <div className="bg-white border border-gray-200 rounded-lg p-6">
         <h3 className="text-lg font-medium text-gray-900 mb-4">Account Permissions</h3>
         <div className="flex flex-wrap gap-2">
@@ -102,7 +102,7 @@ export default function OverviewTab({ accountData }: OverviewTabProps) {
         </div>
       </div>
 
-      {/* Top Assets */}
+      {/* Top Assets - Blue Asset Icons */}
       <div className="bg-white border border-gray-200 rounded-lg">
         <div className="px-6 py-4 border-b border-gray-200">
           <h3 className="text-lg font-medium text-gray-900">Top Assets</h3>
@@ -115,8 +115,9 @@ export default function OverviewTab({ accountData }: OverviewTabProps) {
               return (
                 <div key={balance.asset} className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                      <span className="text-xs font-medium text-gray-600">
+                    {/* Blue Asset Icon */}
+                    <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                      <span className="text-xs font-medium text-white">
                         {balance.asset.slice(0, 2)}
                       </span>
                     </div>

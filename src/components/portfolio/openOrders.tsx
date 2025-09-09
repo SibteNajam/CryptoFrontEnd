@@ -62,7 +62,7 @@ export default function OpenOrdersTab({ openOrders }: OpenOrdersTabProps) {
             <tbody className="divide-y divide-gray-200">
               {openOrders.map((order) => (
                 <tr key={order.orderId} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
                     {order.symbol}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
