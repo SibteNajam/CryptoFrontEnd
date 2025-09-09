@@ -213,15 +213,6 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
 
     return (
         <div className="space-y-4">
-            {/* Error Display */}
-            {error && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                    <div className="text-red-800 text-sm font-medium">
-                        ⚠️ {error}
-                    </div>
-                </div>
-            )}
-
             {/* Account Balance */}
             <div className="bg-white rounded-lg border border-gray-200 p-3">
                 <div className="space-y-2">
@@ -278,7 +269,7 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                             }}
                             className={`py-2 text-xs font-medium rounded transition-colors ${
                                 orderForm.side === 'BUY'
-                                    ? 'bg-green-500 text-white shadow-sm'
+                                    ? 'bg-blue-500 text-white shadow-sm'
                                     : 'text-gray-600 hover:text-gray-800'
                             }`}
                         >
@@ -291,7 +282,7 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                             }}
                             className={`py-2 text-xs font-medium rounded transition-colors ${
                                 orderForm.side === 'SELL'
-                                    ? 'bg-red-500 text-white shadow-sm'
+                                    ? 'bg-red-400 text-white shadow-sm'
                                     : 'text-gray-600 hover:text-gray-800'
                             }`}
                         >
@@ -395,8 +386,8 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                         disabled={orderLoading || loading || !orderForm.quantity || (orderForm.type === 'LIMIT' && !orderForm.price)}
                         className={`w-full py-3 rounded font-medium text-sm transition-colors ${
                             orderForm.side === 'BUY'
-                                ? 'bg-green-500 hover:bg-green-600 text-white disabled:bg-green-300'
-                                : 'bg-red-500 hover:bg-red-600 text-white disabled:bg-red-300'
+                                ? 'bg-blue-600 hover:bg-blue-600 text-white disabled:bg-blue-300'
+                                : 'bg-red-400 hover:bg-red-400 text-white disabled:bg-red-300'
                         } disabled:cursor-not-allowed`}
                     >
                         {orderLoading ? (

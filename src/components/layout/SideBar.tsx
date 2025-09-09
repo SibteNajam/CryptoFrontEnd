@@ -42,10 +42,8 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
       <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200">
         {!collapsed && (
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">B</span>
-            </div>
-            <span className="text-xl font-bold text-gray-800">Binance Pro</span>
+
+            <span className="text-xl font-bold text-gray-800">DashBoard</span>
           </div>
         )}
         

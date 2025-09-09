@@ -161,29 +161,30 @@ async placeOrder(order: OrderRequest): Promise<OrderResult> {
         }
     }
 
-    async cancelOrder(symbol: string, orderId: number): Promise<any> {
-        try {
-            const response = await fetch(`${this.apiUrl}/binance-signed/cancel-order`, {
-                method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ symbol, orderId })
-            });
+  async cancelOrder(symbol: string, orderId: number): Promise<any> {
+  try {
+    const response = await fetch(
+      `${this.apiUrl}/binance/cancel-order?symbol=${encodeURIComponent(symbol)}&orderId=${orderId}`,
+      {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const result = await response.json();
-            console.log('✅ Order cancelled:', result);
-            return result;
-
-        } catch (error) {
-            console.error('❌ Error cancelling order:', error);
-            throw error;
-        }
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
+
+    const result = await response.json();
+    console.log('✅ Order cancelled:', result);
+    return result;
+  } catch (error) {
+    console.error('❌ Error cancelling order:', error);
+    throw error;
+  }
+}
 
     async getMyTrades(symbol: string, limit: number = 10): Promise<any[]> {
         try {

@@ -667,7 +667,6 @@ export default function Dashboard() {
         : 0;
 
     return (
-        // <DashboardLayout>
             <div className="p-6 space-y-6">
                 {/* Status Bar */}
                 <div className="flex items-center justify-between">
@@ -962,7 +961,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* Order Book Legend */}
-                {orderBookData && (
+                {/* {orderBookData && (
                     <div className="border-t border-gray-200 px-6 py-3 bg-gray-50">
                         <div className="flex items-center justify-between text-sm">
                             <div className="flex items-center space-x-4">
@@ -980,7 +979,7 @@ export default function Dashboard() {
                             </span>
                         </div>
                     </div>
-                )}
+                )} */}
             </div>
         </div>
     </div>
@@ -1030,6 +1029,6 @@ export default function Dashboard() {
                     </div>
                 )}
             </div>
-        // </DashboardLayout>
+        
     );
 }
