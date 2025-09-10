@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { ArrowDownUp, Filter, ArrowDown, RefreshCw } from 'lucide-react';
+import { Filter, ArrowDown, RefreshCw, BarChart3 } from 'lucide-react';
 
 interface OrderBookEntry {
   price: string | number;
@@ -19,7 +19,7 @@ interface OrderBookProps {
   isLoading: boolean;
   lastUpdateTime?: string;
   onRefresh: () => void;
-  refreshInterval?: number; // Time in ms for auto-refresh
+  refreshInterval?: number;
 }
 
 const FILTER_OPTIONS = [
@@ -40,19 +40,35 @@ export default function BinanceOrderBook({
   isLoading,
   lastUpdateTime,
   onRefresh,
-  refreshInterval = 3000, // Default to 3 seconds
+  refreshInterval = 3000,
 }: OrderBookProps) {
-  const [quantityFilter, setQuantityFilter] = useState<number>(100);
+  const [quantityFilter, setQuantityFilter] = useState<number>(0.1);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [layout, setLayout] = useState<'combined' | 'split'>('combined');
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [timeSinceRefresh, setTimeSinceRefresh] = useState<number>(0);
+  const [isManualRefreshing, setIsManualRefreshing] = useState(false); // Only for manual refresh
   const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
   const refreshCountdownRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Set up auto-refresh
+  // Enhanced refresh function to handle manual vs auto refresh
+  const handleRefresh = (isManual = false) => {
+    if (isManual) {
+      setIsManualRefreshing(true);
+    }
+    onRefresh();
+    setLastRefresh(new Date());
+    setTimeSinceRefresh(0);
+    
+    // Reset manual refresh state after a short delay
+    if (isManual) {
+      setTimeout(() => {
+        setIsManualRefreshing(false);
+      }, 500);
+    }
+  };
+
+  // Set up auto-refresh with silent updates
   useEffect(() => {
-    // Clear any existing timers
     if (refreshTimerRef.current) {
       clearInterval(refreshTimerRef.current);
     }
@@ -60,16 +76,13 @@ export default function BinanceOrderBook({
       clearInterval(refreshCountdownRef.current);
     }
 
-    // Set up auto-refresh timer
+    // Silent auto-refresh (no visual feedback)
     refreshTimerRef.current = setInterval(() => {
-      if (!isLoading) {
-        onRefresh();
-        setLastRefresh(new Date());
-        setTimeSinceRefresh(0);
+      if (!isManualRefreshing) {
+        handleRefresh(false); // Silent refresh
       }
     }, refreshInterval);
 
-    // Set up countdown timer (updates every 100ms for smoother display)
     refreshCountdownRef.current = setInterval(() => {
       setTimeSinceRefresh(prev => prev + 100);
     }, 100);
@@ -78,13 +91,12 @@ export default function BinanceOrderBook({
       if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
       if (refreshCountdownRef.current) clearInterval(refreshCountdownRef.current);
     };
-  }, [refreshInterval, isLoading, onRefresh]);
+  }, [refreshInterval, isManualRefreshing]);
 
   // Process bids and asks with accumulation and apply filter
   const processedData = useMemo(() => {
-    // Process asks (sell orders) - ascending order by price
     const processedAsks = [...asks]
-      .sort((a, b) => parseFloat(a.price as string) - parseFloat(b.price as string)) // Lower price first for asks
+      .sort((a, b) => parseFloat(a.price as string) - parseFloat(b.price as string))
       .filter(ask => parseFloat(ask.qty as string) >= quantityFilter)
       .map((ask, index, array) => {
         const price = parseFloat(ask.price as string);
@@ -103,9 +115,8 @@ export default function BinanceOrderBook({
       })
       .slice(0, depth);
 
-    // Process bids (buy orders) - descending order by price
     const processedBids = [...bids]
-      .sort((a, b) => parseFloat(b.price as string) - parseFloat(a.price as string)) // Higher price first for bids
+      .sort((a, b) => parseFloat(b.price as string) - parseFloat(a.price as string))
       .filter(bid => parseFloat(bid.qty as string) >= quantityFilter)
       .map((bid, index, array) => {
         const price = parseFloat(bid.price as string);
@@ -130,7 +141,6 @@ export default function BinanceOrderBook({
     };
   }, [bids, asks, depth, quantityFilter]);
 
-  // Format number with specified precision
   const formatNumber = (num: number, places: number = precision) => {
     return num.toLocaleString(undefined, {
       minimumFractionDigits: places,
@@ -138,216 +148,129 @@ export default function BinanceOrderBook({
     });
   };
 
-  // Determine the max quantity for visual depth indicator
   const maxQuantity = useMemo(() => {
     const bidMax = Math.max(...processedData.bids.map(b => b.qty as number), 0);
     const askMax = Math.max(...processedData.asks.map(a => a.qty as number), 0);
     return Math.max(bidMax, askMax);
   }, [processedData]);
 
-  // Calculate depth bar width as percentage
   const getDepthWidth = (quantity: number) => {
     return maxQuantity > 0 ? (quantity / maxQuantity) * 100 : 0;
   };
 
-  // Toggle filter dropdown
-  const toggleFilter = () => setIsFilterOpen(!isFilterOpen);
-
-  // Handle filter selection
   const handleFilterSelect = (value: number) => {
     setQuantityFilter(value);
     setIsFilterOpen(false);
   };
 
-  // Toggle layout between combined and split view
-  const toggleLayout = () => {
-    setLayout(layout === 'combined' ? 'split' : 'combined');
-  };
-
-  // Calculate refresh progress as a percentage
   const refreshProgress = (timeSinceRefresh / refreshInterval) * 100;
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-      <div className="p-3 border-b border-gray-200 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-          Order Book <span className="text-blue-500">{symbol}</span>
-          
-          {/* Add refresh countdown */}
-          <div className="flex items-center gap-1.5 text-xs text-gray-500">
-            <div className="w-20 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-blue-500 transition-all duration-100" 
-                style={{ width: `${refreshProgress}%` }}
-              ></div>
-            </div>
-            <span className="min-w-[40px]">
-              {Math.max(0, Math.ceil((refreshInterval - timeSinceRefresh) / 1000))}s
-            </span>
-          </div>
-        </h3>
-        <div className="flex items-center gap-2">
-          {/* Filter Dropdown */}
-          <div className="relative">
-            <button
-              onClick={toggleFilter}
-              className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
-            >
-              <Filter size={12} />
-              <span>Filter: {quantityFilter}</span>
-              <ArrowDown size={12} />
-            </button>
-            {isFilterOpen && (
-              <div className="absolute right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-10">
-                {FILTER_OPTIONS.map(option => (
-                  <button
-                    key={option.value}
-                    onClick={() => handleFilterSelect(option.value)}
-                    className={`block w-full text-left px-4 py-2 text-xs hover:bg-gray-100 ${
-                      quantityFilter === option.value ? 'bg-blue-50 text-blue-600 font-medium' : ''
-                    }`}
-                  >
-                    {option.label}
-                  </button>
-                ))}
+    <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden flex flex-col h-full">
+      {/* Enhanced Header */}
+      <div className="border-b border-gray-200 px-3 py-3 flex-shrink-0 bg-gradient-to-r from-blue-50/50 to-indigo-50/50">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+            Order Book <span className="text-blue-600 font-bold">{symbol}</span>
+            
+            {/* Refresh countdown */}
+            <div className="flex items-center gap-1.5 text-xs text-gray-500">
+              <div className="w-20 h-1.5 bg-blue-100 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-100 ease-out" 
+                  style={{ width: `${refreshProgress}%` }}
+                ></div>
               </div>
-            )}
-          </div>
+              <span className="min-w-[40px] text-blue-600 font-medium">
+                {Math.max(0, Math.ceil((refreshInterval - timeSinceRefresh) / 1000))}s
+              </span>
+            </div>
+          </h3>
           
-          {/* Layout Toggle */}
+          {/* Manual Refresh Button - only shows loading for manual refresh */}
           <button
-            onClick={toggleLayout}
-            className="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
-            title={layout === 'combined' ? 'Switch to split view' : 'Switch to combined view'}
-          >
-            <ArrowDownUp size={12} />
-          </button>
-          
-          {/* Manual Refresh Button */}
-          <button
-            onClick={() => {
-              onRefresh();
-              setLastRefresh(new Date());
-              setTimeSinceRefresh(0);
-            }}
-            disabled={isLoading}
-            className={`flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 ${
-              isLoading ? 'opacity-50 cursor-not-allowed' : ''
+            onClick={() => handleRefresh(true)}
+            disabled={isManualRefreshing}
+            className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 transform hover:scale-105 ${
+              isManualRefreshing 
+                ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-500' 
+                : 'bg-blue-500 text-white hover:bg-blue-600 shadow-sm hover:shadow-md'
             }`}
             title="Refresh order book data"
           >
-            <RefreshCw size={12} className={isLoading ? "animate-spin" : ""} />
-            <span>{isLoading ? 'Loading...' : 'Refresh'}</span>
+            <RefreshCw size={12} className={isManualRefreshing ? "animate-spin" : ""} />
+            <span>{isManualRefreshing ? 'Refreshing...' : 'Refresh'}</span>
           </button>
+        </div>
+
+        {/* Controls Row */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {/* Filter Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setIsFilterOpen(!isFilterOpen)}
+                className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors border border-blue-200"
+              >
+                <Filter size={10} />
+                <span>{quantityFilter}</span>
+                <ArrowDown size={10} />
+              </button>
+              {isFilterOpen && (
+                <div className="absolute left-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-20 min-w-[80px]">
+                  {FILTER_OPTIONS.map(option => (
+                    <button
+                      key={option.value}
+                      onClick={() => handleFilterSelect(option.value)}
+                      className={`block w-full text-left px-3 py-1.5 text-xs hover:bg-blue-50 transition-colors ${
+                        quantityFilter === option.value ? 'bg-blue-100 text-blue-700 font-medium' : 'text-gray-700'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Depth info */}
+          <div className="text-xs text-gray-500">
+            <span className="flex items-center gap-1">
+              <BarChart3 size={10} />
+              Depth: {depth}
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Column Headers */}
-      <div className="grid grid-cols-3 text-xs font-medium text-gray-500 px-3 py-2 bg-gray-50">
-        <div>Price (USDT)</div>
-        <div className="text-right">Amount</div>
-        <div className="text-right">Total</div>
-      </div>
-
-      {/* Order Book Body */}
-      <div className="order-book-container max-h-[500px] overflow-y-auto">
-        {layout === 'combined' ? (
-          // Combined Layout (Asks on top, Bids on bottom)
-          <>
-            {/* Asks (Sell Orders) - In reverse to show highest price at top */}
-            <div className="asks-container">
-              {processedData.asks.slice().reverse().map((ask, index) => (
-                <div key={`ask-${index}-${ask.price}`} className="relative grid grid-cols-3 text-xs py-1.5 px-3 border-b border-gray-100 hover:bg-red-50">
-                  {/* Background depth indicator */}
-                  <div 
-                    className="absolute right-0 top-0 bottom-0 bg-red-100 z-0" 
-                    style={{ width: `${getDepthWidth(ask.qty as number)}%` }}
-                  ></div>
-                  
-                  {/* Price */}
-                  <div className="text-red-600 font-medium z-10">
-                    {formatNumber(ask.price as number)}
-                  </div>
-                  
-                  {/* Quantity - IMPROVED VISIBILITY */}
-                  <div className="text-right font-medium text-gray-900 z-10">
-                    {formatNumber(ask.qty as number, 4)}
-                  </div>
-                  
-                  {/* Total */}
-                  <div className="text-right text-gray-700 z-10">
-                    {formatNumber(ask.total || 0)}
-                  </div>
-                </div>
-              ))}
-            </div>
-            
-            {/* Spread Indicator */}
-            {processedData.asks.length > 0 && processedData.bids.length > 0 && (
-              <div className="grid grid-cols-3 text-xs py-1.5 px-3 bg-gray-100 border-y border-gray-200">
-                <div className="font-medium text-gray-600">
-                  Spread: {formatNumber((processedData.asks[0].price as number) - (processedData.bids[0].price as number))}
-                </div>
-                <div className="text-right font-medium text-gray-600">
-                  {`${(((processedData.asks[0].price as number) - (processedData.bids[0].price as number)) / (processedData.bids[0].price as number) * 100).toFixed(2)}%`}
-                </div>
-                <div className="text-right">
-                  {lastUpdateTime ? 
-                    <span className="text-gray-600">{new Date(lastUpdateTime).toLocaleTimeString()}</span> : ''}
-                </div>
-              </div>
-            )}
-            
-            {/* Bids (Buy Orders) */}
-            <div className="bids-container">
-              {processedData.bids.map((bid, index) => (
-                <div key={`bid-${index}-${bid.price}`} className="relative grid grid-cols-3 text-xs py-1.5 px-3 border-b border-gray-100 hover:bg-green-50">
-                  {/* Background depth indicator */}
-                  <div 
-                    className="absolute right-0 top-0 bottom-0 bg-green-100 z-0" 
-                    style={{ width: `${getDepthWidth(bid.qty as number)}%` }}
-                  ></div>
-                  
-                  {/* Price */}
-                  <div className="text-green-600 font-medium z-10">
-                    {formatNumber(bid.price as number)}
-                  </div>
-                  
-                  {/* Quantity - IMPROVED VISIBILITY */}
-                  <div className="text-right font-medium text-gray-900 z-10">
-                    {formatNumber(bid.qty as number, 4)}
-                  </div>
-                  
-                  {/* Total */}
-                  <div className="text-right text-gray-700 z-10">
-                    {formatNumber(bid.total || 0)}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
+      {/* Order Book Body - No loading state for auto-refresh */}
+      <div className="flex-1 overflow-y-auto " style={{ maxHeight: '400px', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+        {/* Only show loading for initial load or when no data */}
+        {(isLoading && processedData.bids.length === 0 && processedData.asks.length === 0) ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="w-6 h-6 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-2"></div>
+            <p className="text-blue-600 text-sm font-medium">Loading order book...</p>
+          </div>
         ) : (
-          // Split Layout (Bids and Asks side by side)
-          <div className="grid grid-cols-2 gap-0.5">
-            {/* Bids (Buy Orders) */}
+          <div className="grid grid-cols-2 gap-px">
+            {/* Bids (Buy Orders) - Left Side */}
             <div className="bids-container">
-              <div className="grid grid-cols-3 text-xs font-medium text-gray-500 px-3 py-1 bg-green-50">
+              <div className="grid grid-cols-3 text-xs font-medium text-gray-600 px-3 py-2 bg-green-50/70 border-b border-green-100">
                 <div>Price</div>
                 <div className="text-right">Amount</div>
                 <div className="text-right">Total</div>
               </div>
               {processedData.bids.map((bid, index) => (
-                <div key={`bid-${index}-${bid.price}`} className="relative grid grid-cols-3 text-xs py-1.5 px-3 border-b border-gray-100 hover:bg-green-50">
-                  {/* Background depth indicator */}
+                <div key={`bid-${index}-${bid.price}`} className="relative grid grid-cols-3 text-xs py-2 px-3 hover:bg-green-50 transition-colors duration-200">
                   <div 
-                    className="absolute right-0 top-0 bottom-0 bg-green-100 z-0" 
+                    className="absolute right-0 top-0 bottom-0 bg-green-100/60 z-0 rounded-sm" 
                     style={{ width: `${getDepthWidth(bid.qty as number)}%` }}
                   ></div>
                   
-                  <div className="text-green-600 font-medium z-10">
+                  <div className="text-green-600 font-semibold z-10">
                     {formatNumber(bid.price as number)}
                   </div>
-                  {/* IMPROVED VISIBILITY */}
                   <div className="text-right font-medium text-gray-900 z-10">
                     {formatNumber(bid.qty as number, 4)}
                   </div>
@@ -358,25 +281,23 @@ export default function BinanceOrderBook({
               ))}
             </div>
             
-            {/* Asks (Sell Orders) */}
+            {/* Asks (Sell Orders) - Right Side */}
             <div className="asks-container">
-              <div className="grid grid-cols-3 text-xs font-medium text-gray-500 px-3 py-1 bg-red-50">
+              <div className="grid grid-cols-3 text-xs font-medium text-gray-600 px-3 py-2 bg-red-50/70 border-b border-red-100">
                 <div>Price</div>
                 <div className="text-right">Amount</div>
                 <div className="text-right">Total</div>
               </div>
               {processedData.asks.map((ask, index) => (
-                <div key={`ask-${index}-${ask.price}`} className="relative grid grid-cols-3 text-xs py-1.5 px-3 border-b border-gray-100 hover:bg-red-50">
-                  {/* Background depth indicator */}
+                <div key={`ask-${index}-${ask.price}`} className="relative grid grid-cols-3 text-xs py-2 px-3 hover:bg-red-50 transition-colors duration-200">
                   <div 
-                    className="absolute right-0 top-0 bottom-0 bg-red-100 z-0" 
+                    className="absolute right-0 top-0 bottom-0 bg-red-100/60 z-0 rounded-sm" 
                     style={{ width: `${getDepthWidth(ask.qty as number)}%` }}
                   ></div>
                   
-                  <div className="text-red-600 font-medium z-10">
+                  <div className="text-red-600 font-semibold z-10">
                     {formatNumber(ask.price as number)}
                   </div>
-                  {/* IMPROVED VISIBILITY */}
                   <div className="text-right font-medium text-gray-900 z-10">
                     {formatNumber(ask.qty as number, 4)}
                   </div>
@@ -390,10 +311,14 @@ export default function BinanceOrderBook({
         )}
       </div>
 
-      {/* Order Book Footer */}
-      <div className="p-2 border-t border-gray-200 bg-gray-50 text-xs text-gray-500 flex justify-between items-center">
-        <span>Depth: {processedData.bids.length} bids / {processedData.asks.length} asks</span>
-        <span>Filter: {quantityFilter}+ only</span>
+      {/* Enhanced Footer */}
+      <div className="p-2 border-t border-gray-200 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 text-xs text-gray-600 flex justify-between items-center flex-shrink-0">
+        <span className="text-blue-600 font-medium">
+          {processedData.bids.length} bids / {processedData.asks.length} asks
+        </span>
+        <span className="text-gray-500">
+          Filter: {quantityFilter}+ only
+        </span>
       </div>
     </div>
   );

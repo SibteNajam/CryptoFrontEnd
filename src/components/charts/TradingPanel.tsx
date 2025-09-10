@@ -324,7 +324,7 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                                     console.log('📦 Quantity Changed:', e.target.value);
                                     updateOrderForm({ quantity: e.target.value });
                                 }}
-                                className="w-full text-sm border border-gray-300 rounded px-3 py-2 pr-12 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                className="w-full placeholder-gray-500 text-sm border border-gray-300 rounded px-3 py-2 pr-12 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                 step="0.00000001"
                                 min="0"
                             />
@@ -344,11 +344,11 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                                     console.log('⏰ Time in Force Changed:', e.target.value);
                                     updateOrderForm({ timeInForce: e.target.value as 'GTC' | 'IOC' | 'FOK' });
                                 }}
-                                className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                                className="placeholder-gray-500 w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
                             >
-                                <option value="GTC">GTC (Good Till Cancelled)</option>
-                                <option value="IOC">IOC (Immediate or Cancel)</option>
-                                <option value="FOK">FOK (Fill or Kill)</option>
+                                <option className='text-gray-100' value="GTC">GTC (Good Till Cancelled)</option>
+                                <option  className='text-gray-100' value="IOC">IOC (Immediate or Cancel)</option>
+                                <option  className='text-gray-100' value="FOK">FOK (Fill or Kill)</option>
                             </select>
                         </div>
                     )}
