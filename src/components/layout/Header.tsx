@@ -1,32 +1,66 @@
 'use client';
 
-import React from 'react';
-import { Menu, Search, Bell, Settings, User, RefreshCw } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Menu, Search, Bell, Settings, User, RefreshCw, Sun, Moon } from 'lucide-react';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
 }
 
 export default function Header({ onToggleSidebar }: HeaderProps) {
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  // Check for saved theme preference or default to system preference
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme');
+    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    
+    if (savedTheme === 'dark' || (!savedTheme && systemPrefersDark)) {
+      setIsDarkMode(true);
+      document.documentElement.classList.add('dark');
+      document.body.classList.add('dark');
+    } else {
+      setIsDarkMode(false);
+      document.documentElement.classList.remove('dark');
+      document.body.classList.remove('dark');
+    }
+  }, []);
+
+  // Toggle theme function
+  const toggleTheme = () => {
+    const newTheme = !isDarkMode;
+    setIsDarkMode(newTheme);
+    
+    if (newTheme) {
+      document.documentElement.classList.add('dark');
+      document.body.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.body.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  };
+
   return (
-    <header className="h-16 bg-white border-b border-gray-200 shadow-sm">
+    <header className="h-16 bg-card border-b border-default shadow-sm">
       <div className="h-full flex items-center justify-between px-6">
         {/* Left Section */}
         <div className="flex items-center space-x-4">
           <button
             onClick={onToggleSidebar}
-            className="p-2 rounded-lg hover:bg-gray-100 transition-colors lg:hidden"
+            className="p-2 rounded-lg hover-accent transition-colors lg:hidden"
           >
-            <Menu size={20} className="text-gray-600" />
+            <Menu size={20} className="text-muted-foreground" />
           </button>
           
           <div className="hidden md:flex items-center space-x-2">
-            <h1 className="text-xl font-bold text-gray-800">
+            <h1 className="text-xl font-bold text-primary">
               Trading Dashboard
             </h1>
-            <div className="flex items-center space-x-1 px-2 py-1 bg-green-100 rounded-full">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-xs font-medium text-green-700">Live</span>
+            <div className="flex items-center space-x-1 px-2 py-1 bg-success-light rounded-full">
+              <div className="w-2 h-2 bg-success rounded-full animate-pulse"></div>
+              <span className="text-xs font-medium text-success">Live</span>
             </div>
           </div>
         </div>
@@ -34,11 +68,11 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
         {/* Center Section - Search */}
         <div className="hidden md:flex flex-1 max-w-md mx-8">
           <div className="relative w-full">
-            <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted" />
             <input
               type="text"
               placeholder="Search symbols, pairs..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 bg-input border border-input focus-ring rounded-lg text-card-foreground placeholder:text-muted"
             />
           </div>
         </div>
@@ -46,30 +80,43 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
         {/* Right Section */}
         <div className="flex items-center space-x-3">
           {/* Market Status */}
-          <div className="hidden sm:flex items-center space-x-2 px-3 py-1.5 bg-gray-100 rounded-lg">
-            <RefreshCw size={16} className="text-gray-600" />
-            <span className="text-sm font-medium text-gray-700">
+          <div className="hidden sm:flex items-center space-x-2 px-3 py-1.5 bg-muted rounded-lg">
+            <RefreshCw size={16} className="text-muted-foreground" />
+            <span className="text-sm font-medium text-secondary">
               Market Open
             </span>
           </div>
 
+          {/* Theme Toggle Button */}
+          <button 
+            onClick={toggleTheme}
+            className="p-2 rounded-lg hover-accent transition-colors duration-300 relative group"
+            title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {isDarkMode ? (
+              <Sun size={20} className="text-warning" />
+            ) : (
+              <Moon size={20} className="text-muted-foreground" />
+            )}
+          </button>
+
           {/* Notifications */}
-          <button className="p-2 rounded-lg hover:bg-gray-100 transition-colors relative">
-            <Bell size={20} className="text-gray-600" />
-            <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
+          <button className="p-2 rounded-lg hover-accent transition-colors relative">
+            <Bell size={20} className="text-muted-foreground" />
+            <span className="absolute -top-1 -right-1 w-3 h-3 bg-danger rounded-full"></span>
           </button>
 
           {/* Settings */}
-          <button className="p-2 rounded-lg hover:bg-gray-100 transition-colors">
-            <Settings size={20} className="text-gray-600" />
+          <button className="p-2 rounded-lg hover-accent transition-colors">
+            <Settings size={20} className="text-muted-foreground" />
           </button>
 
           {/* User Menu */}
-          <div className="flex items-center space-x-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
-            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-              <User size={16} className="text-white" />
+          <div className="flex items-center space-x-2 px-3 py-1.5 rounded-lg hover-accent transition-colors cursor-pointer">
+            <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+              <User size={16} className="text-primary-foreground" />
             </div>
-            <span className="hidden sm:block text-sm font-medium text-gray-700">
+            <span className="hidden sm:block text-sm font-medium text-secondary">
               SibteNajam
             </span>
           </div>

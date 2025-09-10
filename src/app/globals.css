@@ -1,26 +1,162 @@
 @import "tailwindcss";
 
 :root {
+  /* Base theme colors */
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #1f2937;
+  
+  /* Primary colors - Blue theme for trading */
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  
+  /* Card and surface colors */
+  --card: #ffffff;
+  --card-foreground: #1f2937;
+  
+  /* Muted colors for backgrounds */
+  --muted: #f3f4f6;
+  --muted-foreground: #4b5563;
+  
+  /* Border and input colors */
+  --border: #e5e7eb;
+  --input: #ffffff;
+  --input-border: #d1d5db;
+  
+  /* Status colors */
+  --success: #22c55e;
+  --success-light: #dcfce7;
+  --success-foreground: #15803d;
+  
+  --danger: #ef4444;
+  --danger-foreground: #ffffff;
+  
+  --warning: #f59e0b;
+  --warning-foreground: #92400e;
+  
+  /* Interactive states */
+  --accent: #f3f4f6;
+  --accent-foreground: #374151;
+  
+  /* Text colors */
+  --text-primary: #1f2937;
+  --text-secondary: #4b5563;
+  --text-muted: #9ca3af;
+  
+  /* Focus ring */
+  --ring: #3b82f6;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-border: var(--input-border);
+  --color-success: var(--success);
+  --color-success-light: var(--success-light);
+  --color-success-foreground: var(--success-foreground);
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-ring: var(--ring);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Dark mode - Binance-inspired trading theme */
+.dark {
+  --background: #0b0e11;
+  --foreground: #f0f0f0;
+  
+  /* Primary colors - Gold accent like Binance */
+  --primary: #f0b90b;
+  --primary-foreground: #0b0e11;
+  
+  /* Card and surface colors */
+  --card: #1e2329;
+  --card-foreground: #f0f0f0;
+  
+  /* Muted colors for backgrounds */
+  --muted: #2b3139;
+  --muted-foreground: #848e9c;
+  
+  /* Border and input colors */
+  --border: #2b3139;
+  --input: #1e2329;
+  --input-border: #2b3139;
+  
+  /* Status colors - Crypto trading colors */
+  --success: #02c076;
+  --success-light: #0d2818;
+  --success-foreground: #02c076;
+  
+  --danger: #f84960;
+  --danger-foreground: #ffffff;
+  
+  --warning: #f0b90b;
+  --warning-foreground: #0b0e11;
+  
+  /* Interactive states */
+  --accent: #2b3139;
+  --accent-foreground: #f0f0f0;
+  
+  /* Text colors */
+  --text-primary: #f0f0f0;
+  --text-secondary: #b7bdc6;
+  --text-muted: #848e9c;
+  
+  /* Focus ring */
+  --ring: #f0b90b;
+}
+
+/* Universal smooth transitions */
+* {
+  transition: 
+    background-color 0.3s ease,
+    color 0.3s ease,
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Utility classes to replace Tailwind */
+.bg-card { background-color: var(--card); }
+.bg-muted { background-color: var(--muted); }
+.bg-primary { background-color: var(--primary); }
+.bg-success { background-color: var(--success); }
+.bg-success-light { background-color: var(--success-light); }
+.bg-danger { background-color: var(--danger); }
+.bg-accent { background-color: var(--accent); }
+
+.text-card-foreground { color: var(--card-foreground); }
+.text-muted-foreground { color: var(--muted-foreground); }
+.text-primary { color: var(--text-primary); }
+.text-secondary { color: var(--text-secondary); }
+.text-muted { color: var(--text-muted); }
+.text-success { color: var(--success-foreground); }
+.text-danger { color: var(--danger); }
+.text-warning { color: var(--warning); }
+
+.border-default { border-color: var(--border); }
+.border-input { border-color: var(--input-border); }
+
+.hover-accent:hover { background-color: var(--accent); }
+.focus-ring:focus { 
+  outline: none; 
+  box-shadow: 0 0 0 2px var(--ring); 
 }
