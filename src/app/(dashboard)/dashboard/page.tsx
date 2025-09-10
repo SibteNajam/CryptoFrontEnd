@@ -670,7 +670,7 @@ export default function Dashboard() {
         : 0;
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-1">
             {/* Status Bar - Keep as is */}
             <div className="flex items-center justify-between bg-white px-1 shadow-sm">
                 <div className="flex items-center space-x-4">
@@ -692,25 +692,6 @@ export default function Dashboard() {
                         )}
                     </div>
                 </div>
-
-                <button
-                    onClick={handleRefresh}
-                    disabled={refreshing || loading}
-                    className={`
-                        flex items-center gap-2 px-4 py-2 bg-white text-gray-800 border border-gray-300 
-                        rounded-lg text-sm font-medium shadow-sm transition-all duration-200
-                        ${refreshing || loading
-                            ? 'opacity-50 cursor-not-allowed'
-                            : 'hover:border-blue-400 hover:shadow-md hover:bg-blue-50'
-                        }
-                    `}
-                >
-                    <RefreshCw
-                        size={16}
-                        className={`transition-transform duration-300 ${refreshing ? 'animate-spin' : ''}`}
-                    />
-                    <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
-                </button>
             </div>
 
             {/* Error Display */}

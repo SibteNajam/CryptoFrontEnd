@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -31,40 +31,42 @@ export default function TickerBar({
   isLoading = false
 }: TickerBarProps) {
   
+  const [previousPrice, setPreviousPrice] = useState<number | null>(null);
+  const [priceFlash, setPriceFlash] = useState<'up' | 'down' | 'none'>('none');
+
   // Loading state
   if (isLoading || !tickerData) {
     return (
-      <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center space-x-4">
+      <div className="bg-white border-b border-gray-200">
+        <div className="px-4 py-2">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center space-x-3">
               <div className="animate-pulse flex items-center space-x-2">
-                <div className="h-6 bg-gray-200 rounded w-20"></div>
-                <div className="h-6 bg-gray-200 rounded w-24"></div>
                 <div className="h-5 bg-gray-200 rounded w-16"></div>
+                <div className="h-5 bg-gray-200 rounded w-20"></div>
+                <div className="h-4 bg-gray-200 rounded w-14"></div>
               </div>
             </div>
             <div className="flex items-center space-x-2">
               {wsConnected ? (
                 <div className="flex items-center gap-1 text-green-600">
-                  <Wifi className="h-4 w-4" />
+                  <Wifi className="h-3 w-3" />
                   <span className="text-xs">Connected</span>
                 </div>
               ) : (
                 <div className="flex items-center gap-1 text-red-600">
-                  <WifiOff className="h-4 w-4" />
+                  <WifiOff className="h-3 w-3" />
                   <span className="text-xs">Disconnected</span>
                 </div>
               )}
-              <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+              <Loader2 className="h-3 w-3 animate-spin text-blue-500" />
             </div>
           </div>
-          <div className="animate-pulse flex space-x-6">
-            <div className="h-4 bg-gray-200 rounded w-16"></div>
-            <div className="h-4 bg-gray-200 rounded w-16"></div>
-            <div className="h-4 bg-gray-200 rounded w-20"></div>
-            <div className="h-4 bg-gray-200 rounded w-24"></div>
-            <div className="h-4 bg-gray-200 rounded w-20"></div>
+          <div className="animate-pulse grid grid-cols-4 gap-3">
+            <div className="h-3 bg-gray-200 rounded"></div>
+            <div className="h-3 bg-gray-200 rounded"></div>
+            <div className="h-3 bg-gray-200 rounded"></div>
+            <div className="h-3 bg-gray-200 rounded"></div>
           </div>
         </div>
       </div>
@@ -82,6 +84,45 @@ export default function TickerBar({
   const bidPrice = parseFloat(tickerData.ticker.bidPrice);
   const askPrice = parseFloat(tickerData.ticker.askPrice);
   const tradeCount = tickerData.ticker.count;
+
+  // Track price changes for real-time color updates
+  useEffect(() => {
+    if (previousPrice !== null && currentPrice !== previousPrice) {
+      if (currentPrice > previousPrice) {
+        setPriceFlash('up');
+      } else if (currentPrice < previousPrice) {
+        setPriceFlash('down');
+      }
+      
+      // Reset flash after animation
+      const timer = setTimeout(() => setPriceFlash('none'), 500);
+      return () => clearTimeout(timer);
+    }
+    setPreviousPrice(currentPrice);
+  }, [currentPrice, previousPrice]);
+
+  // Determine price color based on comparison with opening price
+  const getPriceColor = () => {
+    if (currentPrice > openPrice) {
+      return 'text-green-500';
+    } else if (currentPrice < openPrice) {
+      return 'text-red-500';
+    } else {
+      return 'text-blue-500';
+    }
+  };
+
+  // Get flash background color
+  const getFlashClass = () => {
+    switch (priceFlash) {
+      case 'up':
+        return 'bg-green-100';
+      case 'down':
+        return 'bg-red-100';
+      default:
+        return '';
+    }
+  };
 
   const isPositive = priceChange >= 0;
   const baseAsset = selectedSymbol.replace('USDT', '').replace('BUSD', '').replace('USDC', '');
@@ -123,26 +164,28 @@ export default function TickerBar({
   const spreadPercent = (spread / bidPrice) * 100;
 
   return (
-    // i want to add border bottom only
-    
-    <div className="bg-white border-b border-gray-200 mb-0">
-      <div className="px-6 py-1">
+    <div className="bg-white border-b border-gray-200 ml-1 mr-1 mb-0 mt-0">
+      <div className="px-4 py-2">
         {/* Header Row - Symbol, Price, and Connection Status */}
-        <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center justify-between mb-0">
           {/* Left - Symbol and Price */}
-          <div className="flex items-center space-x-6">
-            <div className="flex items-center space-x-3">
-              <span className="text-xl font-bold text-gray-900">{selectedSymbol}</span>
-              <span className="text-2xl font-bold text-gray-900">${formatPrice(currentPrice)}</span>
-              <div className={`flex items-center space-x-1 px-3 py-1 rounded-lg text-sm font-semibold transition-colors ${
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <span className="text-lg font-bold text-gray-900">{selectedSymbol}</span>
+              <span 
+                className={`text-xl font-bold transition-all duration-300 ${getPriceColor()} ${getFlashClass()} px-1 rounded`}
+              >
+                ${formatPrice(currentPrice)}
+              </span>
+              <div className={`flex items-center space-x-1 px-2 py-0.5 rounded-md text-xs font-semibold transition-colors ${
                 isPositive 
                   ? 'bg-green-100 text-green-700 border border-green-200' 
                   : 'bg-red-100 text-red-700 border border-red-200'
               }`}>
                 {isPositive ? (
-                  <TrendingUp className="h-4 w-4" />
+                  <TrendingUp className="h-3 w-3" />
                 ) : (
-                  <TrendingDown className="h-4 w-4" />
+                  <TrendingDown className="h-3 w-3" />
                 )}
                 <span>
                   {isPositive ? '+' : ''}{formatPrice(priceChange)} 
@@ -153,8 +196,8 @@ export default function TickerBar({
           </div>
 
           {/* Right - Connection Status and Time */}
-          <div className="flex items-center space-x-4">
-            <div className={`flex items-center space-x-1 px-2 py-1 rounded-md text-xs font-medium ${
+          <div className="flex items-center space-x-3">
+            <div className={`flex items-center space-x-1 px-2 py-0.5 rounded-md text-xs font-medium ${
               wsConnected 
                 ? 'bg-green-50 text-green-700 border border-green-200' 
                 : 'bg-red-50 text-red-700 border border-red-200'
@@ -166,7 +209,7 @@ export default function TickerBar({
               )}
               <span>{wsConnected ? 'Live' : 'Offline'}</span>
             </div>
-            <div className="flex items-center space-x-1 text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded-md border">
+            <div className="flex items-center space-x-1 text-xs text-gray-500 bg-gray-50 px-2 py-0.5 rounded-md border">
               <Clock className="h-3 w-3" />
               <span>{new Date().toLocaleTimeString('en-US', { 
                 hour12: false, 
@@ -179,57 +222,57 @@ export default function TickerBar({
         </div>
 
         {/* Stats Row */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
           {/* Price Stats */}
-          <div className="space-y-1">
-            <div className="flex justify-between">
-              <span className="text-gray-500">High 24h:</span>
+          <div className="space-y-0.5">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-500 font-medium">High 24h:</span>
               <span className="font-semibold text-gray-900">${formatPrice(highPrice)}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Low 24h:</span>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-500 font-medium">Low 24h:</span>
               <span className="font-semibold text-gray-900">${formatPrice(lowPrice)}</span>
             </div>
           </div>
 
           {/* Volume Stats */}
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             <div className="flex justify-between items-center">
-              <span className="text-gray-500 flex items-center gap-1">
+              <span className="text-gray-500 font-medium flex items-center gap-1">
                 <Volume2 className="h-3 w-3" />
                 Volume:
               </span>
               <span className="font-semibold text-gray-900">{formatVolume(volume)} {baseAsset}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Vol(USDT):</span>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-500 font-medium">Vol(USDT):</span>
               <span className="font-semibold text-gray-900">${formatVolume(quoteVolume)}</span>
             </div>
           </div>
 
           {/* Order Book Stats */}
-          <div className="space-y-1">
-            <div className="flex justify-between">
-              <span className="text-gray-500">Bid:</span>
+          <div className="space-y-0.5">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-500 font-medium">Bid:</span>
               <span className="font-semibold text-green-600">${formatPrice(bidPrice)}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Ask:</span>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-500 font-medium">Ask:</span>
               <span className="font-semibold text-red-600">${formatPrice(askPrice)}</span>
             </div>
           </div>
 
           {/* Additional Stats */}
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             <div className="flex justify-between items-center">
-              <span className="text-gray-500 flex items-center gap-1">
+              <span className="text-gray-500 font-medium flex items-center gap-1">
                 <Activity className="h-3 w-3" />
                 Trades:
               </span>
               <span className="font-semibold text-gray-900">{formatNumber(tradeCount)}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Spread:</span>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-500 font-medium">Spread:</span>
               <span className="font-semibold text-gray-900">{spreadPercent.toFixed(3)}%</span>
             </div>
           </div>
@@ -237,16 +280,18 @@ export default function TickerBar({
 
         {/* User Balance Row (if available) */}
         {userBalance && (
-          <div className="mt-3 pt-3 border-t border-gray-100">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-500">Your Balance:</span>
-              <div className="flex items-center space-x-4">
+          <div className="mt-2 pt-2 border-t border-gray-100">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-gray-500 font-medium">Your Balance:</span>
+              <div className="flex items-center space-x-3">
                 <span className="font-semibold text-gray-900">
-                  {parseFloat(userBalance.free).toFixed(4)} {baseAsset} (Available)
+                  {parseFloat(userBalance.free).toFixed(4)} {baseAsset} 
+                  <span className="text-gray-500 ml-1 font-normal">(Available)</span>
                 </span>
                 {parseFloat(userBalance.locked) > 0 && (
-                  <span className="text-orange-600">
-                    {parseFloat(userBalance.locked).toFixed(4)} {baseAsset} (Locked)
+                  <span className="font-semibold text-orange-600">
+                    {parseFloat(userBalance.locked).toFixed(4)} {baseAsset}
+                    <span className="text-gray-500 ml-1 font-normal">(Locked)</span>
                   </span>
                 )}
               </div>
