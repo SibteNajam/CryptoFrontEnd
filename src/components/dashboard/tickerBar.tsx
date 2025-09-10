@@ -123,10 +123,12 @@ export default function TickerBar({
   const spreadPercent = (spread / bidPrice) * 100;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-      <div className="px-6 py-4">
+    // i want to add border bottom only
+    
+    <div className="bg-white border-b border-gray-200 mb-0">
+      <div className="px-6 py-1">
         {/* Header Row - Symbol, Price, and Connection Status */}
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-1">
           {/* Left - Symbol and Price */}
           <div className="flex items-center space-x-6">
             <div className="flex items-center space-x-3">

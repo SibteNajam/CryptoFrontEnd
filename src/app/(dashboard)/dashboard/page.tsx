@@ -674,14 +674,7 @@ export default function Dashboard() {
             {/* Status Bar - Keep as is */}
             <div className="flex items-center justify-between bg-white px-1 shadow-sm">
                 <div className="flex items-center space-x-4">
-                    {/* <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${wsConnected ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                        }`}>
-                        <div className={`w-2 h-2 rounded-full ${wsConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'
-                            }`}></div>
-                        {wsConnected ? 'WebSocket Connected' : 'WebSocket Disconnected'}
-                    </div> */}
-
-                    {/* Ticker Updates Display */}
+                                {/* Ticker Updates Display */}
                     <div className="inline-flex items-center gap-4 px-3 py-1 rounded-full text-xs bg-blue-100 text-blue-700">
                         <span>📊 Updates: {tickerUpdateCount}</span>
                         {tickerData && (
@@ -735,7 +728,7 @@ export default function Dashboard() {
             )}
             {/* UPDATED MAIN TRADING LAYOUT */}
             <div className="bg-gray-50 min-h-screen">
-                <div className="max-w-7xl mx-auto p-4 space-y-1">
+                <div className="max-w-7xl mx-auto p-1 space-y-1">
                     {/* Chart and Trades Row */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-1">
                         {/* Chart Section - Takes 2/3 width */}

@@ -195,36 +195,8 @@ export default function TradesComponent({ symbol }: TradesProps) {
       <div className="border-b border-gray-200 px-3 py-3 flex-shrink-0 bg-gradient-to-r from-blue-50/50 to-indigo-50/50" style={{ minHeight: '73px' }}>
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-            Trades <span className="text-blue-600 font-bold">{symbol}</span>
-            
-            {/* Refresh countdown */}
-            <div className="flex items-center gap-1.5 text-xs text-gray-500">
-              <div className="w-20 h-1.5 bg-blue-100 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-100 ease-out" 
-                  style={{ width: `${refreshProgress}%` }}
-                ></div>
-              </div>
-              <span className="min-w-[40px] text-blue-600 font-medium">
-                {Math.max(0, Math.ceil((refreshInterval - timeSinceRefresh) / 1000))}s
-              </span>
-            </div>
+            Trades <span className="text-blue-600 font-bold">{symbol}</span>           
           </h3>
-          
-          {/* Manual Refresh Button */}
-          {/* <button
-            onClick={handleRefreshTrades}
-            disabled={isRefreshing}
-            className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 transform hover:scale-105 ${
-              isRefreshing 
-                ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-500' 
-                : 'bg-blue-500 text-white hover:bg-blue-600 shadow-sm hover:shadow-md'
-            }`}
-            title="Refresh trades data"
-          >
-            <RefreshCw size={12} className={isRefreshing ? "animate-spin" : ""} />
-            <span>{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
-          </button> */}
         </div>
 
         {/* Trade Type Toggle */}

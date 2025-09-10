@@ -172,19 +172,6 @@ export default function BinanceOrderBook({
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
             Order Book <span className="text-blue-600 font-bold">{symbol}</span>
-            
-            {/* Refresh countdown */}
-            <div className="flex items-center gap-1.5 text-xs text-gray-500">
-              <div className="w-20 h-1.5 bg-blue-100 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-100 ease-out" 
-                  style={{ width: `${refreshProgress}%` }}
-                ></div>
-              </div>
-              <span className="min-w-[40px] text-blue-600 font-medium">
-                {Math.max(0, Math.ceil((refreshInterval - timeSinceRefresh) / 1000))}s
-              </span>
-            </div>
           </h3>
           
           {/* Manual Refresh Button - only shows loading for manual refresh */}
@@ -245,7 +232,7 @@ export default function BinanceOrderBook({
       </div>
 
       {/* Order Book Body - No loading state for auto-refresh */}
-      <div className="flex-1 overflow-y-auto " style={{ maxHeight: '400px', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+      <div className="flex-1 overflow-y-auto s" style={{ maxHeight: '400px', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
         {/* Only show loading for initial load or when no data */}
         {(isLoading && processedData.bids.length === 0 && processedData.asks.length === 0) ? (
           <div className="flex items-center justify-center py-8">
