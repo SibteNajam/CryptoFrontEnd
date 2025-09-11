@@ -54,45 +54,33 @@ const PriceClickHandler: React.FC<PriceClickHandlerProps> = ({
     };
 
     return (
-        <div className="bg-white rounded-lg border border-gray-200 p-3">
-            <div className="flex justify-between items-center mb-3">
-                <h3 className="text-sm font-semibold text-gray-800">Quick Trade</h3>
-                <button
-                    onClick={() => setShowQuickOrder(!showQuickOrder)}
-                    className="text-xs text-blue-600 hover:text-blue-800"
-                >
-                    {showQuickOrder ? 'Hide' : 'Show'}
-                </button>
-            </div>
-
-            <div className="text-center mb-3">
-                <div className="text-lg font-bold text-gray-800">
-                    ${currentPrice.toLocaleString()}
+        <div>
+              <div className="text-center mb-2">
+                <div className="text-sm font-bold text-gray-800">
+                  ${currentPrice.toLocaleString()}
                 </div>
                 <div className="text-xs text-gray-500">{selectedSymbol}</div>
-            </div>
+              </div>
 
-            {showQuickOrder && (
-                <div className="space-y-2">
-                    {quickOrderPrices.map((item, index) => (
-                        <div key={index} className="flex gap-1">
-                            <button
-                                onClick={() => placeQuickOrder('BUY', item.price)}
-                                className="flex-1 py-2 text-xs bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
-                            >
-                                Buy {item.label}
-                            </button>
-                            <button
-                                onClick={() => placeQuickOrder('SELL', item.price)}
-                                className="flex-1 py-2 text-xs bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
-                            >
-                                Sell {item.label}
-                            </button>
-                        </div>
-                    ))}
-                </div>
-            )}
-        </div>
+              <div className="space-y-1">
+                {quickOrderPrices.map((item, index) => (
+                  <div key={index} className="flex gap-1">
+                    <button
+                      onClick={() => placeQuickOrder('BUY', item.price)}
+                      className="flex-1 py-1.5 text-xs bg-green-500 text-card-foreground rounded hover:bg-green-600 transition-colors"
+                    >
+                      Buy {item.label}
+                    </button>
+                    <button
+                      onClick={() => placeQuickOrder('SELL', item.price)}
+                      className="flex-1 py-1.5 text-xs bg-red-500 text-card-foreground rounded hover:bg-red-600 transition-colors"
+                    >
+                      Sell {item.label}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
     );
 };
 

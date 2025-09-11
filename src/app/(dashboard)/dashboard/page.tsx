@@ -13,9 +13,9 @@ import { BinanceApiService } from '../../../api/BinanceOrder';
 import PriceClickHandler from '../../../components/charts/priceClickHandler';
 import TradesComponent from '@/components/dashboard/trades';
 import TickerBar from '../../../components/dashboard/tickerBar';
+import { useTheme } from '@/infrastructure/theme/ThemeContext';
 
-
-// Types
+// [Keep all your existing interfaces - they remain the same]
 interface SymbolPrice {
     symbol: string;
     price: string;
@@ -136,7 +136,9 @@ interface HistoricalKlines {
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
 
 export default function Dashboard() {
-    // State variables
+    const { theme } = useTheme(); // ✅ Get current theme
+
+    // [Keep all your existing state variables - they remain the same]
     const [symbols, setSymbols] = useState<SymbolPrice[]>([]);
     const [loading, setLoading] = useState(true);
     const [chartLoading, setChartLoading] = useState(false);
@@ -156,22 +158,18 @@ export default function Dashboard() {
     const [priceComparison, setPriceComparison] = useState<PriceComparison | null>(null);
     const [restPollingInterval, setRestPollingInterval] = useState(2000);
 
-    // Latency tracking states
     const [restLatency, setRestLatency] = useState<RestLatencyData | null>(null);
     const [isRequestPending, setIsRequestPending] = useState(false);
 
-    // WebSocket timing states
     const [webSocketTiming, setWebSocketTiming] = useState<WebSocketTimingData | null>(null);
     const [lastWebSocketUpdateTime, setLastWebSocketUpdateTime] = useState<number>(0);
     const [webSocketUpdateHistory, setWebSocketUpdateHistory] = useState<WebSocketTimingData[]>([]);
 
-    // Chart refs
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<IChartApi | null>(null);
     const candlestickSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
     const socketRef = useRef<Socket | null>(null);
 
-    // Order book states
     const [orderBookData, setOrderBookData] = useState<OrderBookData | null>(null);
     const [orderBookLoading, setOrderBookLoading] = useState(false);
     const [orderBookDepth, setOrderBookDepth] = useState(200);
@@ -179,8 +177,7 @@ export default function Dashboard() {
     const [apiService] = useState(() => new BinanceApiService());
     const [recentOrders, setRecentOrders] = useState<any[]>([]);
 
-
-
+    // [Keep all your existing functions - they remain the same until the return statement]
     const handleOrderFromChart = async (chartOrderData: any) => {
         try {
             const order = apiService.formatTradingViewOrder(chartOrderData, selectedSymbol);
@@ -203,7 +200,8 @@ export default function Dashboard() {
             alert(`Order failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     };
-    // Initialize WebSocket connection
+
+    // [Keep all your existing useEffect hooks and functions - they remain exactly the same]
     useEffect(() => {
         const socket = io('http://localhost:3000', {
             transports: ['websocket'],
@@ -312,7 +310,6 @@ export default function Dashboard() {
         };
     }, []);
 
-    // REST polling function
     const useRestPricePolling = (symbol: string, interval: number, active: boolean) => {
         const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -416,7 +413,6 @@ export default function Dashboard() {
         return { fetchRestPrice };
     };
 
-    // Price comparison calculator
     useEffect(() => {
         if (tickerData && restPriceData && tickerData.symbol === restPriceData.symbol) {
             const wsPrice = parseFloat(tickerData.ticker.lastPrice);
@@ -444,14 +440,12 @@ export default function Dashboard() {
         }
     }, [tickerData, restPriceData]);
 
-    // Add the polling hook
     const { fetchRestPrice } = useRestPricePolling(
         selectedSymbol,
         restPollingInterval,
         restPollingActive
     );
 
-    // Initialize chart
     useEffect(() => {
         if (chartContainerRef.current && !chartRef.current) {
             console.log('🎨 Initializing chart...');
@@ -513,7 +507,6 @@ export default function Dashboard() {
         }
     }, []);
 
-    // Load historical data to chart
     const loadHistoricalDataToChart = (data: HistoricalKlines) => {
         if (candlestickSeriesRef.current) {
             const candlestickData: CandlestickData[] = data.data.map(kline => ({
@@ -529,7 +522,6 @@ export default function Dashboard() {
         }
     };
 
-    // Update chart with kline
     const updateChartWithKline = (data: BinanceKlineData) => {
         if (candlestickSeriesRef.current) {
             const candle: CandlestickData = {
@@ -550,7 +542,6 @@ export default function Dashboard() {
         }
     };
 
-    // Fetch symbols
     const fetchSymbols = async () => {
         try {
             setError(null);
@@ -567,14 +558,12 @@ export default function Dashboard() {
         }
     };
 
-    // Handle manual refresh
     const handleRefresh = async () => {
         setRefreshing(true);
         await fetchSymbols();
         setTimeout(() => setRefreshing(false), 500);
     };
 
-    // Fetch order book data
     const fetchOrderBook = async (symbol: string, limit: number = orderBookDepth) => {
         setOrderBookLoading(true);
         try {
@@ -610,20 +599,17 @@ export default function Dashboard() {
         }
     };
 
-    // Initialize data
     useEffect(() => {
         fetchSymbols();
         setChartLoading(true);
     }, []);
 
-    // Fetch order book when symbol changes
     useEffect(() => {
         if (selectedSymbol) {
             fetchOrderBook(selectedSymbol, orderBookDepth);
         }
     }, [selectedSymbol]);
 
-    // Handle symbol click
     const handleSymbolClick = (symbol: string) => {
         if (symbol === selectedSymbol) return;
 
@@ -643,7 +629,6 @@ export default function Dashboard() {
         }
     };
 
-    // Handle interval change
     const handleIntervalChange = (interval: string) => {
         if (interval === selectedInterval) return;
 
@@ -664,29 +649,28 @@ export default function Dashboard() {
         }
     };
 
-    // Calculate average WebSocket interval
     const averageWebSocketInterval = webSocketUpdateHistory.length > 0
         ? webSocketUpdateHistory.reduce((sum, update) => sum + update.intervalBetweenUpdates, 0) / webSocketUpdateHistory.length
         : 0;
 
     return (
         <div className="space-y-1">
-            {/* Status Bar - Keep as is */}
-            <div className="flex items-center justify-between bg-white px-1 shadow-sm">
+            {/* Status Bar */}
+            <div className="flex items-center justify-between bg-card px-1 shadow-sm">
                 <div className="flex items-center space-x-4">
-                                {/* Ticker Updates Display */}
-                    <div className="inline-flex items-center gap-4 px-3 py-1 rounded-full text-xs bg-blue-100 text-blue-700">
+                    {/* Ticker Updates Display */}
+                    <div className="inline-flex items-center gap-4 px-3 py-1 rounded-full text-xs bg-card text-info">
                         <span>📊 Updates: {tickerUpdateCount}</span>
                         {tickerData && (
                             <span>| Last: {new Date().toLocaleTimeString()}</span>
                         )}
                         {webSocketTiming && (
-                            <span className="text-green-700">
+                            <span className="text-success">
                                 | 🔴 WS: {webSocketTiming.intervalBetweenUpdates.toFixed(0)}ms
                             </span>
                         )}
                         {restLatency && (
-                            <span className="text-orange-700">
+                            <span className="text-warning">
                                 | 📡 REST: {restLatency.totalLatency.toFixed(0)}ms
                             </span>
                         )}
@@ -696,33 +680,35 @@ export default function Dashboard() {
 
             {/* Error Display */}
             {error && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 shadow-sm">
+                <div className="p-4 bg-danger-light border border-danger rounded-xl text-danger-foreground shadow-sm">
                     <p className="font-medium">{error}</p>
                 </div>
             )}
+
             {tickerData && (
                 <TickerBar
                     selectedSymbol={selectedSymbol}
                     tickerData={tickerData}
-                    userBalance={undefined} // Add user balance if available
+                    userBalance={undefined}
                 />
             )}
+
             {/* UPDATED MAIN TRADING LAYOUT */}
-            <div className="bg-gray-50 min-h-screen">
+            <div className="bg-muted min-h-screen">
                 <div className="max-w-7xl mx-auto p-1 space-y-1">
                     {/* Chart and Trades Row */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-1">
                         {/* Chart Section - Takes 2/3 width */}
                         <div className="lg:col-span-2">
-                            <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden h-full">
+                            <div className="bg-card rounded-lg border border-default shadow-sm overflow-hidden h-full">
                                 {/* Chart Header */}
-                                <div className="border-b border-gray-200 px-6 py-3  flex items-center justify-between bg-white flex-shrink-0">
+                                <div className="border-b border-default px-6 py-3 flex items-center justify-between bg-card flex-shrink-0">
                                     <div className="flex items-center space-x-6">
-                                        <h2 className="text-lg font-semibold text-gray-900">{selectedSymbol}</h2>
+                                        <h2 className="text-lg font-semibold text-primary">{selectedSymbol}</h2>
                                         <select
                                             value={selectedInterval}
                                             onChange={(e) => handleIntervalChange(e.target.value)}
-                                            className="text-sm border border-gray-300 rounded-md px-3 py-1.5 text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            className="text-sm border border-light rounded-md px-3 py-1.5 text-secondary bg-card focus-ring"
                                         >
                                             <option value="1m">1m</option>
                                             <option value="5m">5m</option>
@@ -733,12 +719,12 @@ export default function Dashboard() {
                                         </select>
                                         {tickerData && (
                                             <div className="flex items-center space-x-4">
-                                                <span className="text-lg font-medium text-gray-900">
+                                                <span className="text-lg font-medium text-primary">
                                                     ${parseFloat(tickerData.ticker.lastPrice).toLocaleString()}
                                                 </span>
                                                 <span className={`text-sm font-medium px-2 py-1 rounded ${parseFloat(tickerData.ticker.priceChangePercent) >= 0
-                                                    ? 'text-green-700 bg-green-50'
-                                                    : 'text-red-700 bg-red-50'
+                                                    ? 'text-success bg-success-light'
+                                                    : 'text-danger bg-danger-light'
                                                     }`}>
                                                     {parseFloat(tickerData.ticker.priceChangePercent) >= 0 ? '+' : ''}
                                                     {parseFloat(tickerData.ticker.priceChangePercent).toFixed(2)}%
@@ -748,12 +734,12 @@ export default function Dashboard() {
                                     </div>
                                 </div>
 
-                                {/* Chart Container - Fills remaining space */}
-                                <div className="bg-white flex-1" style={{ height: '500px' }}>
+                                {/* Chart Container */}
+                                <div className="bg-card flex-1" style={{ height: '500px' }}>
                                     <TradingViewChart
                                         symbol={`BINANCE:${selectedSymbol}`}
                                         interval={selectedInterval}
-                                        theme="light"
+                                        theme={theme} // ✅ Pass current theme from context
                                         height="500px"
                                         width="100%"
                                         enableTrading={false}
@@ -762,9 +748,9 @@ export default function Dashboard() {
                             </div>
                         </div>
 
-                        {/* Trades Section - Takes 1/3 width, exact same height as chart */}
+                        {/* Trades Section */}
                         <div className="lg:col-span-1">
-                              {orderBookData ? (
+                            {orderBookData ? (
                                 <div className="h-full">
                                     <BinanceOrderBook
                                         symbol={selectedSymbol}
@@ -781,91 +767,74 @@ export default function Dashboard() {
                             ) : (
                                 <div className="flex items-center justify-center h-full">
                                     <div className="text-center py-8">
-                                        <div className="w-8 h-8 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
-                                        <p className="text-gray-500">Loading order book...</p>
+                                        <div className="w-8 h-8 border-2 border-light border-t-primary rounded-full animate-spin mx-auto mb-4"></div>
+                                        <p className="text-muted-foreground">Loading order book...</p>
                                     </div>
                                 </div>
                             )}
-                           
                         </div>
                     </div>
 
                     {/* Trading Panel and Order Book Row */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-1">
-                        {/* Trading Panel Section - Takes 2/3 width */}
-                        <div className="lg:col-span-2">
-                            <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-                                {/* Trading Panel Header */}
-                                <div className="border-b border-gray-200 px-6 py-4">
-                                    <h3 className="text-lg font-semibold text-gray-900">Place Order</h3>
-                                    <p className="text-sm text-gray-500 mt-1">Buy or sell {selectedSymbol}</p>
-                                </div>
+    {/* Trading Panel Section */}
+    <div className="lg:col-span-2">
+        <div className="bg-card rounded-lg border border-default shadow-sm" style={{ height: '580px' }}>
+            {/* Trading Panel Content */}
+            <div className="p-3 h-full overflow-y-auto">
+                <TradingPanel
+                    selectedSymbol={selectedSymbol}
+                    apiService={apiService}
+                />
+            </div>
+        </div>
+    </div>
 
-                                {/* Trading Panel Content */}
-                                <div className="p-6">
-                                    <TradingPanel
-                                        selectedSymbol={selectedSymbol}
-                                        apiService={apiService}
-                                    />
-
-                                    <div className="mt-6 pt-6 border-t border-gray-200">
-                                        <PriceClickHandler
-                                            selectedSymbol={selectedSymbol}
-                                            apiService={apiService}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Order Book Section - Takes 1/3 width */}
-                        <div className="lg:col-span-1">
-
-
-                            <TradesComponent symbol={selectedSymbol} />
-
-                        </div>
-                    </div>
+    {/* Order Book Section */}
+    <div className="lg:col-span-1">
+        <TradesComponent symbol={selectedSymbol} />
+    </div>
+</div>
                 </div>
             </div>
 
-            {/* Kline Information - Keep as is */}
+            {/* Kline Information */}
             {klineData && (
-                <div className="mt-6 border-t border-gray-200 pt-6">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Latest Kline Data</h3>
+                <div className="mt-6 border-t border-default pt-6">
+                    <h3 className="text-lg font-semibold text-primary mb-4">Latest Kline Data</h3>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                            <p className="text-sm text-blue-600 font-medium">Open</p>
-                            <p className="text-lg font-bold text-gray-800">
+                        <div className="p-4 bg-info-light rounded-lg border border-info">
+                            <p className="text-sm text-info font-medium">Open</p>
+                            <p className="text-lg font-bold text-primary">
                                 ${parseFloat(klineData.kline.o).toLocaleString()}
                             </p>
                         </div>
-                        <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                            <p className="text-sm text-green-600 font-medium">High</p>
-                            <p className="text-lg font-bold text-gray-800">
+                        <div className="p-4 bg-success-light rounded-lg border border-success">
+                            <p className="text-sm text-success font-medium">High</p>
+                            <p className="text-lg font-bold text-primary">
                                 ${parseFloat(klineData.kline.h).toLocaleString()}
                             </p>
                         </div>
-                        <div className="p-4 bg-red-50 rounded-lg border border-red-200">
-                            <p className="text-sm text-red-600 font-medium">Low</p>
-                            <p className="text-lg font-bold text-gray-800">
+                        <div className="p-4 bg-danger-light rounded-lg border border-danger">
+                            <p className="text-sm text-danger font-medium">Low</p>
+                            <p className="text-lg font-bold text-primary">
                                 ${parseFloat(klineData.kline.l).toLocaleString()}
                             </p>
                         </div>
-                        <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
-                            <p className="text-sm text-purple-600 font-medium">Close</p>
-                            <p className="text-lg font-bold text-gray-800">
+                        <div className="p-4 bg-purple-light rounded-lg border border-purple">
+                            <p className="text-sm text-purple font-medium">Close</p>
+                            <p className="text-lg font-bold text-primary">
                                 ${parseFloat(klineData.kline.c).toLocaleString()}
                             </p>
                         </div>
                     </div>
-                    <div className="mt-4 text-sm text-gray-500 space-y-1">
+                    <div className="mt-4 text-sm text-muted-foreground space-y-1">
                         <p>Interval: {klineData.kline.i} | Trades: {klineData.kline.n} |
                             Volume: {parseFloat(klineData.kline.v).toLocaleString()}</p>
                         <p>Start: {new Date(klineData.kline.t).toLocaleString()} |
                             End: {new Date(klineData.kline.T).toLocaleString()}</p>
-                        <p className={`inline-flex items-center gap-2 ${klineData.kline.x ? 'text-green-600' : 'text-orange-600'}`}>
-                            <span className={`w-2 h-2 rounded-full ${klineData.kline.x ? 'bg-green-500' : 'bg-orange-500'}`}></span>
+                        <p className={`inline-flex items-center gap-2 ${klineData.kline.x ? 'text-success' : 'text-warning'}`}>
+                            <span className={`w-2 h-2 rounded-full ${klineData.kline.x ? 'bg-success' : 'bg-warning'}`}></span>
                             {klineData.kline.x ? 'Kline Closed' : 'Kline Active'}
                         </p>
                     </div>

@@ -103,9 +103,9 @@ export default function BalanceViewer({
 
   if (compact) {
     return (
-      <div className="space-y-2">
+      <div className="bg-card space-y-2">
         {balances.base && (
-          <div className="flex justify-between items-center text-sm">
+          <div className="bg-card flex justify-between items-center text-sm">
             <span className="text-gray-600">{balances.base.asset}:</span>
             <span className="font-medium text-gray-900">
               {parseFloat(balances.base.free).toFixed(6)}

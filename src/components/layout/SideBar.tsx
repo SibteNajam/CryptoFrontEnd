@@ -22,38 +22,37 @@ interface SidebarProps {
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
-  { name: 'Markets', href: '/markets', icon: TrendingUp },
-  { name: 'Trading', href: '/trading', icon: BarChart3 },
+  // { name: 'Markets', href: '/markets', icon: TrendingUp },
+  // { name: 'Trading', href: '/trading', icon: BarChart3 },
   { name: 'Portfolio', href: '/portfolio', icon: PieChart },
-  { name: 'Wallet', href: '/wallet', icon: Wallet },
-  { name: 'Analytics', href: '/analytics', icon: Activity },
-  { name: 'Alerts', href: '/alerts', icon: Bell },
-  { name: 'Settings', href: '/settings', icon: Settings },
+  // { name: 'Wallet', href: '/wallet', icon: Wallet },
+  // { name: 'Analytics', href: '/analytics', icon: Activity },
+  // { name: 'Alerts', href: '/alerts', icon: Bell },
+  // { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
 export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
 
   return (
-    <div className={`fixed left-0 top-0 h-full bg-white border-r border-gray-200 shadow-lg transition-all duration-300 z-40 ${
+    <div className={`fixed left-0 top-0 h-full bg-card border-r border-default shadow-lg transition-all duration-300 z-40 ${
       collapsed ? 'w-16' : 'w-64'
     }`}>
       {/* Logo Section */}
-      <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200">
+      <div className="h-16 flex items-center justify-between px-4 border-b border-default">
         {!collapsed && (
           <div className="flex items-center space-x-2">
-
-            <span className="text-xl font-bold text-gray-800">DashBoard</span>
+            <span className="text-xl font-bold text-primary">DashBoard</span>
           </div>
         )}
         
         <button
           onClick={onToggle}
-          className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+          className="p-1.5 rounded-lg hover-muted transition-colors"
         >
           <ChevronLeft 
             size={20} 
-            className={`text-gray-600 transition-transform duration-300 ${
+            className={`text-muted-foreground transition-transform duration-300 ${
               collapsed ? 'rotate-180' : ''
             }`} 
           />
@@ -73,8 +72,8 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                   href={item.href}
                   className={`flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 group ${
                     isActive
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                      ? 'bg-primary text-primary-foreground shadow-md'
+                      : 'text-secondary hover-muted text-card-foreground'
                   }`}
                 >
                   <Icon 
@@ -82,7 +81,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                     className={`${
                       collapsed ? 'mr-0' : 'mr-3'
                     } transition-all duration-200 ${
-                      isActive ? 'text-white' : 'text-gray-500 group-hover:text-gray-700'
+                      isActive ? 'text-primary-foreground' : 'text-muted-foreground group-hover:text-secondary'
                     }`} 
                   />
                   {!collapsed && (
@@ -100,16 +99,16 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
       {/* User Section */}
       {!collapsed && (
         <div className="absolute bottom-4 left-0 right-0 px-3">
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-3 border border-blue-100">
+          <div className="bg-gradient-light rounded-lg p-3 border border-info">
             <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                <span className="text-white text-sm font-semibold">SN</span>
+              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+                <span className="text-primary-foreground text-sm font-semibold">SN</span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">
+                <p className="text-sm font-medium text-primary truncate">
                   SibteNajam
                 </p>
-                <p className="text-xs text-gray-500 truncate">
+                <p className="text-xs text-muted-foreground truncate">
                   Premium User
                 </p>
               </div>

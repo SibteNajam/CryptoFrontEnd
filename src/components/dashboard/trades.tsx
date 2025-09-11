@@ -189,146 +189,146 @@ export default function TradesComponent({ symbol }: TradesProps) {
     return symbol.replace('USDT', '').replace('BUSD', '').replace('USDC', '');
   };
 
-  return (
-    <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden flex flex-col" style={{ height: '580px' }}>
-      {/* Header - Fixed height to match chart header */}
-      <div className="border-b border-gray-200 px-3 py-3 flex-shrink-0 bg-gradient-to-r from-blue-50/50 to-indigo-50/50" style={{ minHeight: '73px' }}>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-            Trades <span className="text-blue-600 font-bold">{symbol}</span>           
-          </h3>
-        </div>
-
-        {/* Trade Type Toggle */}
-        <div className="flex bg-blue-50 rounded-lg p-1 border border-blue-100">
-          <button
-            onClick={() => handleTradeTypeChange('market')}
-            className={`flex-1 px-3 py-2 text-xs font-medium rounded-md transition-all duration-300 ease-out transform ${
-              tradeType === 'market' 
-                ? 'bg-blue-600 text-white shadow-md scale-105' 
-                : 'text-blue-600 hover:text-blue-700 hover:bg-blue-100'
-            }`}
-          >
-            <div className="flex items-center justify-center gap-1.5">
-              <BarChart3 size={12} />
-              <span>Market Trades</span>
-            </div>
-          </button>
-          <button
-            onClick={() => handleTradeTypeChange('my')}
-            className={`flex-1 px-3 py-2 text-xs font-medium rounded-md transition-all duration-300 ease-out transform ${
-              tradeType === 'my' 
-                ? 'bg-blue-600 text-white shadow-md scale-105' 
-                : 'text-blue-600 hover:text-blue-700 hover:bg-blue-100'
-            }`}
-          >
-            <div className="flex items-center justify-center gap-1.5">
-              <User size={12} />
-              <span>My Trades</span>
-            </div>
-          </button>
-        </div>
-
-        {/* Error Display */}
-        {error && (
-          <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-md text-xs text-red-700">
-            {error}
-          </div>
-        )}
+ return (
+  <div className="bg-card rounded-lg border border-gray-200 shadow-sm overflow-hidden flex flex-col" style={{ height: '580px' }}>
+    {/* Header - Fixed height to match chart header */}
+    <div className="border-b border-gray-200 px-3 py-3 flex-shrink-0 bg-gradient-blue" style={{ minHeight: '73px' }}>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+          Trades <span className="text-blue-600 font-bold">{symbol}</span>           
+        </h3>
       </div>
 
-      {/* Column Headers */}
-      <div className="grid grid-cols-3 text-xs font-medium text-gray-500 px-3 py-2 bg-gradient-to-r from-gray-50 to-blue-50/30 flex-shrink-0 border-b border-gray-100">
-        <div className="text-left">Price (USDT)</div>
-        <div className="text-right">Amount ({getBaseAsset(symbol)})</div>
-        <div className="text-right flex items-center justify-end gap-1">
-          <Clock size={10} />
-          Time
-        </div>
+      {/* Trade Type Toggle */}
+      <div className="flex bg-blue-50 rounded-lg p-1 border border-blue-100">
+        <button
+          onClick={() => handleTradeTypeChange('market')}
+          className={`flex-1 px-3 py-2 text-xs font-medium rounded-md transition-all duration-300 ease-out transform ${
+            tradeType === 'market' 
+              ? 'bg-primary text-card-foreground shadow-md scale-105' 
+              : 'text-blue-600 hover:text-blue-700 hover:bg-blue-100'
+          }`}
+        >
+          <div className="flex items-center justify-center gap-1.5">
+            <BarChart3 size={12} />
+            <span>Market Trades</span>
+          </div>
+        </button>
+        <button
+          onClick={() => handleTradeTypeChange('my')}
+          className={`flex-1 px-3 py-2 text-xs font-medium rounded-md transition-all duration-300 ease-out transform ${
+            tradeType === 'my' 
+              ? 'bg-primary text-secondary shadow-md scale-105' 
+              : 'text-blue-600 hover:text-blue-700 hover:bg-blue-100'
+          }`}
+        >
+          <div className=" text-info flex items-center justify-center gap-1.5">
+            <User size={12} />
+            <span>My Trades</span>
+          </div>
+        </button>
       </div>
 
-      {/* Trades List - Only animate during tab switching, not refresh */}
-     <div className={`flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden transition-all duration-300 ease-out ${
-  isTabSwitching ? 'opacity-50 scale-95' : 'opacity-100 scale-100'
-}`} style={{ maxHeight: '460px', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-        {processedTrades.length === 0 ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center py-8">
-              {(isRefreshing || (tradeType === 'market' ? marketTrades.length === 0 : myTrades.length === 0)) && !error ? (
-                <>
-                  <div className="w-8 h-8 border-3 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-3"></div>
-                  <p className="text-blue-600 text-sm font-medium">Loading trades...</p>
-                </>
-              ) : error ? (
-                <>
-                  <TrendingDown className="h-8 w-8 text-red-400 mx-auto mb-3" />
-                  <p className="text-red-500 text-sm font-medium">Failed to load trades</p>
-                </>
-              ) : (
-                <>
-                  <BarChart3 className="h-8 w-8 text-blue-300 mx-auto mb-3" />
-                  <p className="text-blue-500 text-sm font-medium">No trades found</p>
-                </>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className="divide-y divide-gray-50">
-            {processedTrades.map((trade, index) => {
-              const isBuy = tradeType === 'market' 
-                ? !(trade as TradeEntry).isBuyerMaker 
-                : (trade as MyTradeEntry).isBuyer;
-              const price = parseFloat(trade.price);
-              const quantity = parseFloat(trade.qty);
-              
-              return (
-                <div 
-                  key={`${trade.id}-${trade.time}-${index}`} 
-                  className={`grid grid-cols-3 text-xs py-2.5 px-3 transition-colors duration-200 ease-out hover:scale-[1.01] hover:shadow-sm ${
-                    isBuy 
-                      ? 'hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 hover:border-l-2 hover:border-l-green-400' 
-                      : 'hover:bg-gradient-to-r hover:from-red-50 hover:to-rose-50 hover:border-l-2 hover:border-l-red-400'
-                  }`}
-                >
-                  {/* Price */}
-                  <div className={`text-left font-semibold transition-colors duration-200 ${
-                    isBuy ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                    {formatNumber(price, symbol.includes('BTC') ? 2 : 4)}
-                  </div>
-                  
-                  {/* Quantity */}
-                  <div className="text-right font-medium text-gray-900">
-                    {formatNumber(quantity, 6)}
-                  </div>
-                  
-                  {/* Time */}
-                  <div className="text-right text-blue-600 font-mono text-xs font-medium">
-                    {formatTime(trade.time)}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Footer */}
-      <div className="p-2 border-t border-gray-200 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 text-xs text-gray-600 flex justify-between items-center flex-shrink-0">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 bg-green-500 rounded-full shadow-sm"></span>
-            <span className="font-medium">Buy</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 bg-red-500 rounded-full shadow-sm"></span>
-            <span className="font-medium">Sell</span>
-          </div>
+      {/* Error Display */}
+      {error && (
+        <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-md text-xs text-red-700">
+          {error}
         </div>
-        <span className="text-blue-600 font-semibold">
-          {processedTrades.length} {tradeType === 'market' ? 'Market' : 'My'} Trades
-        </span>
+      )}
+    </div>
+
+    {/* Column Headers */}
+    <div className="grid grid-cols-3 text-xs font-medium text-gray-500 px-3 py-2 bg-gradient-gray flex-shrink-0 border-b border-gray-100">
+      <div className="text-left">Price (USDT)</div>
+      <div className="text-right">Amount ({getBaseAsset(symbol)})</div>
+      <div className="text-right flex items-center justify-end gap-1">
+        <Clock size={10} />
+        Time
       </div>
     </div>
-  );
+
+    {/* Trades List - Only animate during tab switching, not refresh */}
+    <div className={`flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden transition-all duration-300 ease-out ${
+      isTabSwitching ? 'opacity-50 scale-95' : 'opacity-100 scale-100'
+    }`} style={{ maxHeight: '460px', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+      {processedTrades.length === 0 ? (
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center py-8">
+            {(isRefreshing || (tradeType === 'market' ? marketTrades.length === 0 : myTrades.length === 0)) && !error ? (
+              <>
+                <div className="w-8 h-8 border-3 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-3"></div>
+                <p className="text-blue-600 text-sm font-medium">Loading trades...</p>
+              </>
+            ) : error ? (
+              <>
+                <TrendingDown className="h-8 w-8 text-red-400 mx-auto mb-3" />
+                <p className="text-red-500 text-sm font-medium">Failed to load trades</p>
+              </>
+            ) : (
+              <>
+                <BarChart3 className="h-8 w-8 text-blue-300 mx-auto mb-3" />
+                <p className="text-blue-500 text-sm font-medium">No trades found</p>
+              </>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="divide-y divide-gray-50">
+          {processedTrades.map((trade, index) => {
+            const isBuy = tradeType === 'market' 
+              ? !(trade as TradeEntry).isBuyerMaker 
+              : (trade as MyTradeEntry).isBuyer;
+            const price = parseFloat(trade.price);
+            const quantity = parseFloat(trade.qty);
+            
+            return (
+              <div 
+                key={`${trade.id}-${trade.time}-${index}`} 
+                className={`grid grid-cols-3 text-xs py-2.5 px-3 transition-colors duration-200 ease-out hover:scale-[1.01] hover:shadow-sm ${
+                  isBuy 
+                    ? 'hover-bg-gradient-green hover-border-l-green' 
+                    : 'hover-bg-gradient-red hover-border-l-red'
+                }`}
+              >
+                {/* Price */}
+                <div className={`text-left font-semibold transition-colors duration-200 ${
+                  isBuy ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  {formatNumber(price, symbol.includes('BTC') ? 2 : 4)}
+                </div>
+                
+                {/* Quantity */}
+                <div className="text-right font-medium text-gray-900">
+                  {formatNumber(quantity, 6)}
+                </div>
+                
+                {/* Time */}
+                <div className="text-right text-blue-600 font-mono text-xs font-medium">
+                  {formatTime(trade.time)}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+
+    {/* Footer */}
+    <div className="p-2 border-t border-gray-200 bg-gradient-blue text-xs text-gray-600 flex justify-between items-center flex-shrink-0">
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-1.5">
+          <span className="w-2 h-2 bg-green-500 rounded-full shadow-sm"></span>
+          <span className="font-medium">Buy</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-2 h-2 bg-red-500 rounded-full shadow-sm"></span>
+          <span className="font-medium">Sell</span>
+        </div>
+      </div>
+      <span className="text-blue-600 font-semibold">
+        {processedTrades.length} {tradeType === 'market' ? 'Market' : 'My'} Trades
+      </span>
+    </div>
+  </div>
+);
 }

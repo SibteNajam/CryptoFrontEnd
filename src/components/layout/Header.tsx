@@ -1,46 +1,18 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Menu, Search, Bell, Settings, User, RefreshCw, Sun, Moon } from 'lucide-react';
+import { useTheme } from '../../infrastructure/theme/ThemeContext'; // ✅ Add this import
 
 interface HeaderProps {
   onToggleSidebar: () => void;
 }
 
 export default function Header({ onToggleSidebar }: HeaderProps) {
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  // ✅ Replace the useState and useEffect with theme context
+  const { isDarkMode, toggleTheme } = useTheme();
 
-  // Check for saved theme preference or default to system preference
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme');
-    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    
-    if (savedTheme === 'dark' || (!savedTheme && systemPrefersDark)) {
-      setIsDarkMode(true);
-      document.documentElement.classList.add('dark');
-      document.body.classList.add('dark');
-    } else {
-      setIsDarkMode(false);
-      document.documentElement.classList.remove('dark');
-      document.body.classList.remove('dark');
-    }
-  }, []);
-
-  // Toggle theme function
-  const toggleTheme = () => {
-    const newTheme = !isDarkMode;
-    setIsDarkMode(newTheme);
-    
-    if (newTheme) {
-      document.documentElement.classList.add('dark');
-      document.body.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      document.body.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  };
+  // ✅ Remove the old useState and useEffect - everything else stays the same!
 
   return (
     <header className="h-16 bg-card border-b border-default shadow-sm">
@@ -87,9 +59,9 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
             </span>
           </div>
 
-          {/* Theme Toggle Button */}
+          {/* Theme Toggle Button - stays exactly the same */}
           <button 
-            onClick={toggleTheme}
+            onClick={toggleTheme} // ✅ Now uses context function
             className="p-2 rounded-lg hover-accent transition-colors duration-300 relative group"
             title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
           >

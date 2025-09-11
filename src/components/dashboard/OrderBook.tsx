@@ -165,148 +165,147 @@ export default function BinanceOrderBook({
 
   const refreshProgress = (timeSinceRefresh / refreshInterval) * 100;
 
-  return (
-    <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden flex flex-col h-full">
-      {/* Enhanced Header */}
-      <div className="border-b border-gray-200 px-3 py-3 flex-shrink-0 bg-gradient-to-r from-blue-50/50 to-indigo-50/50">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-            Order Book <span className="text-blue-600 font-bold">{symbol}</span>
-          </h3>
-          
-          {/* Manual Refresh Button - only shows loading for manual refresh */}
-          <button
-            onClick={() => handleRefresh(true)}
-            disabled={isManualRefreshing}
-            className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 transform hover:scale-105 ${
-              isManualRefreshing 
-                ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-500' 
-                : 'bg-blue-500 text-white hover:bg-blue-600 shadow-sm hover:shadow-md'
-            }`}
-            title="Refresh order book data"
-          >
-            <RefreshCw size={12} className={isManualRefreshing ? "animate-spin" : ""} />
-            <span>{isManualRefreshing ? 'Refreshing...' : 'Refresh'}</span>
-          </button>
-        </div>
-
-        {/* Controls Row */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {/* Filter Dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => setIsFilterOpen(!isFilterOpen)}
-                className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors border border-blue-200"
-              >
-                <Filter size={10} />
-                <span>{quantityFilter}</span>
-                <ArrowDown size={10} />
-              </button>
-              {isFilterOpen && (
-                <div className="absolute left-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-20 min-w-[80px]">
-                  {FILTER_OPTIONS.map(option => (
-                    <button
-                      key={option.value}
-                      onClick={() => handleFilterSelect(option.value)}
-                      className={`block w-full text-left px-3 py-1.5 text-xs hover:bg-blue-50 transition-colors ${
-                        quantityFilter === option.value ? 'bg-blue-100 text-blue-700 font-medium' : 'text-gray-700'
-                      }`}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Depth info */}
-          <div className="text-xs text-gray-500">
-            <span className="flex items-center gap-1">
-              <BarChart3 size={10} />
-              Depth: {depth}
-            </span>
-          </div>
-        </div>
+ return (
+  <div className="bg-card rounded-lg border border-default shadow-sm overflow-hidden flex flex-col h-full">
+    {/* Enhanced Header */}
+    <div className="border-b border-default px-3 py-3 flex-shrink-0 bg-gradient-light">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-semibold text-primary flex items-center gap-2">
+          Order Book <span className="text-info font-bold">{symbol}</span>
+        </h3>
+        
+        {/* Manual Refresh Button */}
+        <button
+          onClick={() => handleRefresh(true)}
+          disabled={isManualRefreshing}
+          className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 transform hover:scale-105 ${
+            isManualRefreshing 
+              ? 'opacity-50 cursor-not-allowed bg-muted text-muted-foreground' 
+              : 'bg-primary text-primary-foreground hover-primary shadow-sm hover:shadow-md'
+          }`}
+          title="Refresh order book data"
+        >
+          <RefreshCw size={12} className={isManualRefreshing ? "animate-spin" : ""} />
+          <span>{isManualRefreshing ? 'Refreshing...' : 'Refresh'}</span>
+        </button>
       </div>
 
-      {/* Order Book Body - No loading state for auto-refresh */}
-      <div className="flex-1 overflow-y-auto s" style={{ maxHeight: '400px', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-        {/* Only show loading for initial load or when no data */}
-        {(isLoading && processedData.bids.length === 0 && processedData.asks.length === 0) ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="w-6 h-6 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-2"></div>
-            <p className="text-blue-600 text-sm font-medium">Loading order book...</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-px">
-            {/* Bids (Buy Orders) - Left Side */}
-            <div className="bids-container">
-              <div className="grid grid-cols-3 text-xs font-medium text-gray-600 px-3 py-2 bg-green-50/70 border-b border-green-100">
-                <div>Price</div>
-                <div className="text-right">Amount</div>
-                <div className="text-right">Total</div>
+      {/* Controls Row */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {/* Filter Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setIsFilterOpen(!isFilterOpen)}
+              className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-info bg-info-light rounded-md hover-info transition-colors border border-info"
+            >
+              <Filter size={10} />
+              <span>{quantityFilter}</span>
+              <ArrowDown size={10} />
+            </button>
+            {isFilterOpen && (
+              <div className="absolute left-0 mt-1 bg-card border border-default rounded-md shadow-lg z-20 min-w-[80px]">
+                {FILTER_OPTIONS.map(option => (
+                  <button
+                    key={option.value}
+                    onClick={() => handleFilterSelect(option.value)}
+                    className={`block w-full text-left px-3 py-1.5 text-xs hover-info transition-colors ${
+                      quantityFilter === option.value ? 'bg-info-bg text-info-dark font-medium' : 'text-secondary'
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
               </div>
-              {processedData.bids.map((bid, index) => (
-                <div key={`bid-${index}-${bid.price}`} className="relative grid grid-cols-3 text-xs py-2 px-3 hover:bg-green-50 transition-colors duration-200">
-                  <div 
-                    className="absolute right-0 top-0 bottom-0 bg-green-100/60 z-0 rounded-sm" 
-                    style={{ width: `${getDepthWidth(bid.qty as number)}%` }}
-                  ></div>
-                  
-                  <div className="text-green-600 font-semibold z-10">
-                    {formatNumber(bid.price as number)}
-                  </div>
-                  <div className="text-right font-medium text-gray-900 z-10">
-                    {formatNumber(bid.qty as number, 4)}
-                  </div>
-                  <div className="text-right text-gray-700 z-10">
-                    {formatNumber(bid.total || 0)}
-                  </div>
-                </div>
-              ))}
-            </div>
-            
-            {/* Asks (Sell Orders) - Right Side */}
-            <div className="asks-container">
-              <div className="grid grid-cols-3 text-xs font-medium text-gray-600 px-3 py-2 bg-red-50/70 border-b border-red-100">
-                <div>Price</div>
-                <div className="text-right">Amount</div>
-                <div className="text-right">Total</div>
-              </div>
-              {processedData.asks.map((ask, index) => (
-                <div key={`ask-${index}-${ask.price}`} className="relative grid grid-cols-3 text-xs py-2 px-3 hover:bg-red-50 transition-colors duration-200">
-                  <div 
-                    className="absolute right-0 top-0 bottom-0 bg-red-100/60 z-0 rounded-sm" 
-                    style={{ width: `${getDepthWidth(ask.qty as number)}%` }}
-                  ></div>
-                  
-                  <div className="text-red-600 font-semibold z-10">
-                    {formatNumber(ask.price as number)}
-                  </div>
-                  <div className="text-right font-medium text-gray-900 z-10">
-                    {formatNumber(ask.qty as number, 4)}
-                  </div>
-                  <div className="text-right text-gray-700 z-10">
-                    {formatNumber(ask.total || 0)}
-                  </div>
-                </div>
-              ))}
-            </div>
+            )}
           </div>
-        )}
-      </div>
+        </div>
 
-      {/* Enhanced Footer */}
-      <div className="p-2 border-t border-gray-200 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 text-xs text-gray-600 flex justify-between items-center flex-shrink-0">
-        <span className="text-blue-600 font-medium">
-          {processedData.bids.length} bids / {processedData.asks.length} asks
-        </span>
-        <span className="text-gray-500">
-          Filter: {quantityFilter}+ only
-        </span>
+        {/* Depth info */}
+        <div className="text-xs text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <BarChart3 size={10} />
+            Depth: {depth}
+          </span>
+        </div>
       </div>
     </div>
-  );
+
+    {/* Order Book Body */}
+    <div className="flex-1 overflow-y-auto" style={{ maxHeight: '400px', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+      {(isLoading && processedData.bids.length === 0 && processedData.asks.length === 0) ? (
+        <div className="flex items-center justify-center py-8">
+          <div className="w-6 h-6 border-2 border-info-light border-t-info rounded-full animate-spin mx-auto mb-2"></div>
+          <p className="text-info text-sm font-medium">Loading order book...</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-px">
+          {/* Bids (Buy Orders) - Left Side */}
+          <div className="bids-container">
+            <div className="grid grid-cols-3 text-xs font-medium text-muted-foreground px-3 py-2 bg-success-light border-b border-success-bg">
+              <div>Price</div>
+              <div className="text-right">Amount</div>
+              <div className="text-right">Total</div>
+            </div>
+            {processedData.bids.map((bid, index) => (
+              <div key={`bid-${index}-${bid.price}`} className="relative grid grid-cols-3 text-xs py-2 px-3 hover-success transition-colors duration-200">
+                <div 
+                  className="absolute right-0 top-0 bottom-0 bg-success-bg z-0 rounded-sm" 
+                  style={{ width: `${getDepthWidth(bid.qty as number)}%` }}
+                ></div>
+                
+                <div className="text-success font-semibold z-10">
+                  {formatNumber(bid.price as number)}
+                </div>
+                <div className="text-right font-medium text-primary z-10">
+                  {formatNumber(bid.qty as number, 4)}
+                </div>
+                <div className="text-right text-secondary z-10">
+                  {formatNumber(bid.total || 0)}
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          {/* Asks (Sell Orders) - Right Side */}
+          <div className="asks-container">
+            <div className="grid grid-cols-3 text-xs font-medium text-muted-foreground px-3 py-2 bg-danger-light border-b border-danger-bg">
+              <div>Price</div>
+              <div className="text-right">Amount</div>
+              <div className="text-right">Total</div>
+            </div>
+            {processedData.asks.map((ask, index) => (
+              <div key={`ask-${index}-${ask.price}`} className="relative grid grid-cols-3 text-xs py-2 px-3 hover-danger transition-colors duration-200">
+                <div 
+                  className="absolute right-0 top-0 bottom-0 bg-danger-bg z-0 rounded-sm" 
+                  style={{ width: `${getDepthWidth(ask.qty as number)}%` }}
+                ></div>
+                
+                <div className="text-danger font-semibold z-10">
+                  {formatNumber(ask.price as number)}
+                </div>
+                <div className="text-right font-medium text-primary z-10">
+                  {formatNumber(ask.qty as number, 4)}
+                </div>
+                <div className="text-right text-secondary z-10">
+                  {formatNumber(ask.total || 0)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+
+    {/* Enhanced Footer */}
+    <div className="p-2 border-t border-default bg-gradient-light text-xs text-muted-foreground flex justify-between items-center flex-shrink-0">
+      <span className="text-info font-medium">
+        {processedData.bids.length} bids / {processedData.asks.length} asks
+      </span>
+      <span className="text-muted-foreground">
+        Filter: {quantityFilter}+ only
+      </span>
+    </div>
+  </div>
+);
 }

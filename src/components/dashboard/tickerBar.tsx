@@ -37,7 +37,7 @@ export default function TickerBar({
   // Loading state
   if (isLoading || !tickerData) {
     return (
-      <div className="bg-white border-b border-gray-200">
+      <div className="bg-card border-b border-gray-200">
         <div className="px-4 py-2">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center space-x-3">
@@ -116,9 +116,9 @@ export default function TickerBar({
   const getFlashClass = () => {
     switch (priceFlash) {
       case 'up':
-        return 'bg-green-100';
+        return 'text-green-100';
       case 'down':
-        return 'bg-red-100';
+        return 'text-red-100';
       default:
         return '';
     }
@@ -164,7 +164,7 @@ export default function TickerBar({
   const spreadPercent = (spread / bidPrice) * 100;
 
   return (
-    <div className="bg-white border-b border-gray-200 ml-1 mr-1 mb-0 mt-0">
+    <div className="bg-card border-b border-gray-200 ml-1 mr-1 mb-0 mt-0 rounded-xs">
       <div className="px-4 py-2">
         {/* Header Row - Symbol, Price, and Connection Status */}
         <div className="flex items-center justify-between mb-0">
@@ -179,8 +179,8 @@ export default function TickerBar({
               </span>
               <div className={`flex items-center space-x-1 px-2 py-0.5 rounded-md text-xs font-semibold transition-colors ${
                 isPositive 
-                  ? 'bg-green-100 text-green-700 border border-green-200' 
-                  : 'bg-red-100 text-red-700 border border-red-200'
+                  ? 'bg-green-100 text-green-700' 
+                  : 'bg-red-100 text-red-700'
               }`}>
                 {isPositive ? (
                   <TrendingUp className="h-3 w-3" />
@@ -209,7 +209,7 @@ export default function TickerBar({
               )}
               <span>{wsConnected ? 'Live' : 'Offline'}</span>
             </div>
-            <div className="flex items-center space-x-1 text-xs text-gray-500 bg-gray-50 px-2 py-0.5 rounded-md border">
+            <div className="flex items-center space-x-1 text-xs text-gray-500 bg-gray-50 px-2 py-0.5 rounded-md border border-gray-200">
               <Clock className="h-3 w-3" />
               <span>{new Date().toLocaleTimeString('en-US', { 
                 hour12: false, 
