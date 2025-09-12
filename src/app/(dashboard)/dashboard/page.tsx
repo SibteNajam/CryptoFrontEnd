@@ -781,7 +781,7 @@ export default function Dashboard() {
     <div className="lg:col-span-2">
         <div className="bg-card rounded-lg border border-default shadow-sm" style={{ height: '580px' }}>
             {/* Trading Panel Content */}
-            <div className="p-3 h-full overflow-y-auto">
+            <div className="p-3 h-full overflow-hidden">
                 <TradingPanel
                     selectedSymbol={selectedSymbol}
                     apiService={apiService}
@@ -798,7 +798,7 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            {/* Kline Information */}
+            {/* Kline Information
             {klineData && (
                 <div className="mt-6 border-t border-default pt-6">
                     <h3 className="text-lg font-semibold text-primary mb-4">Latest Kline Data</h3>
@@ -839,7 +839,7 @@ export default function Dashboard() {
                         </p>
                     </div>
                 </div>
-            )}
+            )} */}
         </div>
     );
 }

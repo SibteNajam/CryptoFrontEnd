@@ -166,12 +166,12 @@ export default function BinanceOrderBook({
   const refreshProgress = (timeSinceRefresh / refreshInterval) * 100;
 
  return (
-  <div className="bg-card rounded-lg border border-default shadow-sm overflow-hidden flex flex-col h-full">
+  <div className="bg-card rounded-lg border border-gray-200 shadow-sm overflow-hidden flex flex-col h-full">
     {/* Enhanced Header */}
-    <div className="border-b border-default px-3 py-3 flex-shrink-0 bg-gradient-light">
+    <div className="border-b border-gray-200 px-3 py-3 flex-shrink-0 bg-gradient-blue">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold text-primary flex items-center gap-2">
-          Order Book <span className="text-info font-bold">{symbol}</span>
+          Order Book <span className="text-blue-600 font-bold">{symbol}</span>
         </h3>
         
         {/* Manual Refresh Button */}

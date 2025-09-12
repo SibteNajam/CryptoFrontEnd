@@ -25,7 +25,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
           >
             <Menu size={20} className="text-muted-foreground" />
           </button>
-          
+
           <div className="hidden md:flex items-center space-x-2">
             <h1 className="text-xl font-bold text-primary">
               Trading Dashboard
@@ -35,38 +35,31 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
               <span className="text-xs font-medium text-success">Live</span>
             </div>
           </div>
-        </div>
 
-        {/* Center Section - Search */}
-        <div className="hidden md:flex flex-1 max-w-md mx-8">
-          <div className="relative w-full">
-            <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted" />
-            <input
-              type="text"
-              placeholder="Search symbols, pairs..."
-              className="w-full pl-10 pr-4 py-2 bg-input border border-input focus-ring rounded-lg text-card-foreground placeholder:text-muted"
-            />
+          {/* Center Section - Search */}
+          <div className="hidden md:flex flex-1 max-w-md mx-8">
+            <div className="relative w-full">
+              <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted" />
+              <input
+                type="text"
+                placeholder="Search symbols, pairs..."
+                className="w-full pl-10 pr-4 py-2 bg-input border border-input focus-ring rounded-lg text-card-foreground placeholder:text-muted"
+              />
+            </div>
           </div>
         </div>
 
         {/* Right Section */}
         <div className="flex items-center space-x-3">
           {/* Market Status */}
-          <div className="hidden sm:flex items-center space-x-2 px-3 py-1.5 bg-muted rounded-lg">
-            <RefreshCw size={16} className="text-muted-foreground" />
-            <span className="text-sm font-medium text-secondary">
-              Market Open
-            </span>
-          </div>
-
           {/* Theme Toggle Button - stays exactly the same */}
-          <button 
+          <button
             onClick={toggleTheme} // ✅ Now uses context function
             className="p-2 rounded-lg hover-accent transition-colors duration-300 relative group"
             title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
           >
             {isDarkMode ? (
-              <Sun size={20} className="text-warning" />
+              <Sun size={20} className="text-primary" />
             ) : (
               <Moon size={20} className="text-muted-foreground" />
             )}

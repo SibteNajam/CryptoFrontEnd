@@ -6,7 +6,7 @@
   --foreground: #111827;
   
   /* Primary colors - Blue theme for trading */
-  --primary: #7898ff;
+  --primary: #609dff; 
   --primary-foreground: #ffffff;
   --primary-light: #dbeafe;
   
@@ -218,9 +218,9 @@
   --foreground: #f0f0f0;
   
   /* Primary colors - Gold accent like Binance */
-  --primary: #4380af;
+  --primary: #60a5fa;
   --primary-foreground: #0b0e11;
-  --primary-light: #2d2416;
+  --primary-light: #343331;
   
   /* Card and surface colors */
   --card: #1e2329;
@@ -304,13 +304,13 @@
   --red-600: #f84960;
   --red-700: #f84960;
   --red-900: #f84960;
-  --blue-50: #1a2332;
-  --blue-100: #2d2416;
+  --blue-50: #2b313b;
+  --blue-100: #242830;
   --blue-200: #2d2416;
   --blue-300: #60a5fa;
   --blue-400: #60a5fa;
   --blue-500: #3b82f6;
-  --blue-600: #f0b90b;
+  --blue-600: #0080b7;
   --blue-700: #f0b90b;
   --blue-900: #f0b90b;
   --indigo-50: #1a2332;
@@ -513,3 +513,22 @@ select:focus {
 .hover-text-gray-800:hover { color: var(--gray-800); }
 .hover-bg-blue-700:hover { background-color: var(--blue-700); }
 .hover-bg-red-600:hover { background-color: var(--red-600); }
+
+
+
+/* Add this to your global CSS file */
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* Internet Explorer 10+ */
+  scrollbar-width: none;  /* Firefox */
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;  /* Safari and Chrome */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE/Edge */
+  scrollbar-width: none;     /* Firefox */
+}

@@ -34,10 +34,10 @@ export default function OverviewTab({ accountData }: OverviewTabProps) {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 bg-card">
       {/* Account Stats - Keep Original */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
+      <div className="bg-card grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-card border border-gray-200 rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Account Type</p>
@@ -47,7 +47,7 @@ export default function OverviewTab({ accountData }: OverviewTabProps) {
           </div>
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
+        <div className="bg-card border border-gray-200 rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Trading</p>
@@ -65,7 +65,7 @@ export default function OverviewTab({ accountData }: OverviewTabProps) {
           </div>
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
+        <div className="bg-card border border-gray-200 rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Maker Fee</p>
@@ -76,7 +76,7 @@ export default function OverviewTab({ accountData }: OverviewTabProps) {
           </div>
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
+        <div className="bg-card border border-gray-200 rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Active Assets</p>
@@ -88,7 +88,7 @@ export default function OverviewTab({ accountData }: OverviewTabProps) {
       </div>
 
       {/* Permissions - Keep Original */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
+      <div className="bg-card border border-gray-200 rounded-lg p-6">
         <h3 className="text-lg font-medium text-gray-900 mb-4">Account Permissions</h3>
         <div className="flex flex-wrap gap-2">
           {accountData.permissions.map((permission) => (
@@ -103,7 +103,7 @@ export default function OverviewTab({ accountData }: OverviewTabProps) {
       </div>
 
       {/* Top Assets - Blue Asset Icons */}
-      <div className="bg-white border border-gray-200 rounded-lg">
+      <div className="bg-card border border-gray-200 rounded-lg">
         <div className="px-6 py-4 border-b border-gray-200">
           <h3 className="text-lg font-medium text-gray-900">Top Assets</h3>
         </div>
