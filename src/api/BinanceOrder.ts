@@ -1,11 +1,12 @@
 // Create this file: services/BinanceApiService.ts
 export interface OrderRequest {
     symbol: string;
-    side: 'BUY' | 'SELL';
-    type: 'LIMIT' | 'MARKET';
+    side: string;
+    type: string;
     quantity: string;
     price?: string;
-    timeInForce?: 'GTC' | 'IOC' | 'FOK';
+    stopPrice?: string;
+    timeInForce?: string;
 }
 
 export interface AccountInfo {
@@ -42,6 +43,61 @@ export interface OrderResult {
     fills: any[],
     selfTradePreventionMode: string
 }
+
+export interface OTOCOOrderResult {
+    orderListId: number;
+    contingencyType: string;
+    listStatusType: string;
+    listOrderStatus: string;
+    listClientOrderId: string;
+    transactionTime: number;
+    symbol: string;
+    orders: Array<{
+        symbol: string;
+        orderId: number;
+        clientOrderId: string;
+    }>;
+    orderReports: Array<{
+        symbol: string;
+        orderId: number;
+        orderListId: number;
+        clientOrderId: string;
+        transactTime: number;
+        price: string;
+        origQty: string;
+        executedQty: string;
+        origQuoteOrderQty: string;
+        cummulativeQuoteQty: string;
+        status: string;
+        timeInForce: string;
+        type: string;
+        side: string;
+        stopPrice?: string;
+        workingTime: number;
+        selfTradePreventionMode: string;
+    }>;
+}
+export interface OTOCOOrderRequest {
+    symbol: string;
+    workingType: 'LIMIT';
+    workingSide: 'BUY' | 'SELL';
+    workingPrice: string;
+    workingQuantity: string;
+    workingTimeInForce: 'GTC' | 'IOC' | 'FOK';
+    pendingSide: 'BUY' | 'SELL';
+    pendingQuantity: string;
+    pendingAboveType: 'TAKE_PROFIT_LIMIT' | 'STOP_LOSS_LIMIT';
+    pendingAbovePrice: string;
+    pendingAboveStopPrice: string;
+    pendingAboveTimeInForce: 'GTC';
+    pendingBelowType: 'TAKE_PROFIT_LIMIT' | 'STOP_LOSS_LIMIT';
+    pendingBelowPrice: string;
+    pendingBelowStopPrice: string;
+    pendingBelowTimeInForce: 'GTC';
+    timestamp: number;
+}
+
+
 export interface OpenOrder {
     symbol: string;
     orderId: number;
@@ -65,7 +121,6 @@ export interface OpenOrder {
 
 export class BinanceApiService {
     private apiUrl: string;
-
     constructor(apiUrl: string = 'http://localhost:3000') {
         this.apiUrl = apiUrl;
     }
@@ -185,6 +240,62 @@ async placeOrder(order: OrderRequest): Promise<OrderResult> {
     throw error;
   }
 }
+ async placeOrderListOTOCO(order: any): Promise<OTOCOOrderResult> {
+        try {
+            console.log('🚀 Frontend API Service - Placing OTOCO order:', order);
+            console.log('🌐 Calling URL:', `${this.apiUrl}/binance/place-order-list-otoco`);
+
+            const orderPayload = {
+                symbol: order.symbol,
+                workingType: order.workingType,
+                workingSide: order.workingSide,
+                workingPrice: order.workingPrice,
+                workingQuantity: order.workingQuantity,
+                workingTimeInForce: order.workingTimeInForce,
+                pendingSide: order.pendingSide,
+                pendingQuantity: order.pendingQuantity,
+                pendingAboveType: order.pendingAboveType,
+                pendingAbovePrice: order.pendingAbovePrice,
+                pendingAboveStopPrice: order.pendingAboveStopPrice,
+                pendingAboveTimeInForce: order.pendingAboveTimeInForce,
+                pendingBelowType: order.pendingBelowType,
+                pendingBelowPrice: order.pendingBelowPrice,
+                pendingBelowStopPrice: order.pendingBelowStopPrice,
+                pendingBelowTimeInForce: order.pendingBelowTimeInForce,
+                timestamp: order.timestamp,
+            };
+
+            console.log('📦 Exact payload being sent:', JSON.stringify(orderPayload, null, 2));
+
+            const response = await fetch(`${this.apiUrl}/binance/place-otoc-order`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(orderPayload),
+            });
+
+            console.log('📡 Response status:', response.status);
+            console.log('📡 Response ok:', response.ok);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('❌ Error response text:', errorText);
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+            }
+
+            const result = await response.json();
+            console.log('✅ OTOCO Order List placed successfully:', result);
+            return result;
+        } catch (error) {
+            console.error('❌ Frontend API Service - Error details:', {
+                error: error,
+                message: error instanceof Error ? error.message : 'Unknown error',
+                stack: error instanceof Error ? error.stack : undefined,
+            });
+            throw error;
+        }
+    }
 
     async getMyTrades(symbol: string, limit: number = 10): Promise<any[]> {
         try {
@@ -219,4 +330,6 @@ async placeOrder(order: OrderRequest): Promise<OrderResult> {
             timeInForce: 'GTC'
         };
     }
+
+    
 }

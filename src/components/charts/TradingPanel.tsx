@@ -3,22 +3,16 @@
 import React, { useState, useEffect } from 'react';
 import { BinanceApiService, AccountInfo, OpenOrder } from '../../api/BinanceOrder';
 import BalanceViewer from '../Order/balance';
+import OpenedOrders from '../OrderPlacment/openedOrder';
 
 interface TradingPanelProps {
     selectedSymbol: string;
     apiService: BinanceApiService;
 }
-interface Position {
-    symbol: string;
-    positionSide: 'LONG' | 'SHORT';
-    positionAmt: string;
-    entryPrice: string;
-    markPrice: string;
-    unRealizedProfit: string;
-    percentage: string;
-    leverage: string;
-    marginType: string;
-    isolatedWallet: string;
+interface TP_SL_Form {
+    enabled: boolean;
+    stopLossPrice: string;
+    takeProfitPrice: string;
 }
 
 interface OrderForm {
@@ -49,6 +43,14 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
         price: '',
         timeInForce: 'GTC'
     });
+    const [tpSlForm, setTPSLForm] = useState<TP_SL_Form>({
+        enabled: false,
+        stopLossPrice: '',
+        takeProfitPrice: ''
+    });
+    const updateTPSLForm = (updates: Partial<TP_SL_Form>) => {
+        setTPSLForm({ ...tpSlForm, ...updates });
+    };
 
     const updateOrderForm = (updates: Partial<OrderForm>) => {
         setOrderForm({ ...orderForm, ...updates });
@@ -63,7 +65,7 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                 apiService.getAccountInfo(),
                 apiService.getOpenOrders(selectedSymbol)
             ]);
-
+            console.log('Orders opened:', orders);
             setAccountInfo(account);
             setOpenOrders(orders);
         } catch (err) {
@@ -98,6 +100,23 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
         if (!selectedSymbol) return 'No symbol selected';
         if (!orderForm.quantity || parseFloat(orderForm.quantity) <= 0) return 'Please enter a valid quantity';
         if (orderForm.type === 'LIMIT' && (!orderForm.price || parseFloat(orderForm.price) <= 0)) return 'Please enter a valid price';
+
+        if (tpSlForm.enabled) {
+            if (!tpSlForm.stopLossPrice || parseFloat(tpSlForm.stopLossPrice) <= 0) return 'Please enter a valid Stop Loss price';
+            if (!tpSlForm.takeProfitPrice || parseFloat(tpSlForm.takeProfitPrice) <= 0) return 'Please enter a valid Take Profit price';
+
+            const price = orderForm.type === 'LIMIT' ? parseFloat(orderForm.price) : currentPrice;
+            const slPrice = parseFloat(tpSlForm.stopLossPrice);
+            const tpPrice = parseFloat(tpSlForm.takeProfitPrice);
+
+            if (orderForm.side === 'BUY') {
+                if (slPrice >= price) return 'Stop Loss should be below order price for BUY';
+                if (tpPrice <= price) return 'Take Profit should be above order price for BUY';
+            } else {
+                if (slPrice <= price) return 'Stop Loss should be above order price for SELL';
+                if (tpPrice >= price) return 'Take Profit should be below order price for SELL';
+            }
+        }
         return null;
     };
 
@@ -112,19 +131,117 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
         setError(null);
 
         try {
-            const orderData = {
-                symbol: selectedSymbol,
-                side: orderForm.side,
-                type: orderForm.type,
-                quantity: orderForm.quantity,
-                ...(orderForm.type === 'LIMIT' && {
-                    price: orderForm.price,
-                    timeInForce: orderForm.timeInForce
-                })
-            };
+            if (tpSlForm.enabled && orderForm.type === 'LIMIT') {
+                // Use OTOCO for LIMIT with TP/SL
+                const pendingSide = orderForm.side === 'BUY' ? 'SELL' : 'BUY';
+                const timestamp = Date.now();
 
-            const result = await apiService.placeOrder(orderData);
-            alert(`✅ Order placed successfully! ID: ${result.orderId}`);
+                let pendingAboveType, pendingAbovePrice, pendingAboveStopPrice, pendingAboveTimeInForce;
+                let pendingBelowType, pendingBelowPrice, pendingBelowStopPrice, pendingBelowTimeInForce;
+
+                if (orderForm.side === 'BUY') {
+                    // Above: TP (higher), Below: SL (lower)
+                    pendingAboveType = 'TAKE_PROFIT_LIMIT';
+                    pendingAbovePrice = tpSlForm.takeProfitPrice;
+                    pendingAboveStopPrice = tpSlForm.takeProfitPrice;
+                    pendingAboveTimeInForce = 'GTC';
+                    pendingBelowType = 'STOP_LOSS_LIMIT';
+                    pendingBelowPrice = tpSlForm.stopLossPrice;
+                    pendingBelowStopPrice = tpSlForm.stopLossPrice;
+                    pendingBelowTimeInForce = 'GTC';
+                } else {
+                    // Above: SL (higher), Below: TP (lower)
+                    pendingAboveType = 'STOP_LOSS_LIMIT';
+                    pendingAbovePrice = tpSlForm.stopLossPrice;
+                    pendingAboveStopPrice = tpSlForm.stopLossPrice;
+                    pendingAboveTimeInForce = 'GTC';
+                    pendingBelowType = 'TAKE_PROFIT_LIMIT';
+                    pendingBelowPrice = tpSlForm.takeProfitPrice;
+                    pendingBelowStopPrice = tpSlForm.takeProfitPrice;
+                    pendingBelowTimeInForce = 'GTC';
+                }
+
+                const otocoPayload = {
+                    symbol: selectedSymbol,
+                    workingType: 'LIMIT',
+                    workingSide: orderForm.side,
+                    workingPrice: orderForm.price,
+                    workingQuantity: orderForm.quantity,
+                    workingTimeInForce: orderForm.timeInForce,
+                    pendingSide,
+                    pendingQuantity: orderForm.quantity, // Same qty to close position
+                    pendingAboveType,
+                    pendingAbovePrice,
+                    pendingAboveStopPrice,
+                    pendingAboveTimeInForce,
+                    pendingBelowType,
+                    pendingBelowPrice,
+                    pendingBelowStopPrice,
+                    pendingBelowTimeInForce,
+                    timestamp
+                };
+
+                const result = await apiService.placeOrderListOTOCO(otocoPayload);
+                alert(`✅ OTOCO Order List placed successfully! List ID: ${result.orderListId}`);
+            } else if (tpSlForm.enabled && orderForm.type === 'MARKET') {
+                // Keep your existing logic for MARKET with separate TP/SL (non-OCO)
+                const orderData = {
+                    symbol: selectedSymbol,
+                    side: orderForm.side,
+                    type: 'MARKET',
+                    quantity: orderForm.quantity
+                };
+
+                const result = await apiService.placeOrder(orderData);
+                alert(`✅ Market Order placed successfully! ID: ${result.orderId}`);
+
+                if (result.status !== 'FILLED') {
+                    throw new Error('Main order not fully filled. TP/SL not placed.');
+                }
+                const executedQty = result.executedQty;
+                const oppositeSide = orderForm.side === 'BUY' ? 'SELL' : 'BUY';
+
+                // Place Stop Loss order (STOP_LOSS_LIMIT)
+                const slData = {
+                    symbol: selectedSymbol,
+                    side: oppositeSide,
+                    type: 'STOP_LOSS_LIMIT',
+                    quantity: executedQty,
+                    price: tpSlForm.stopLossPrice,
+                    stopPrice: tpSlForm.stopLossPrice,
+                    timeInForce: 'GTC'
+                };
+                const slResult = await apiService.placeOrder(slData);
+                alert(`✅ Stop Loss order placed! ID: ${slResult.orderId}`);
+
+                // Place Take Profit order (TAKE_PROFIT_LIMIT)
+                const tpData = {
+                    symbol: selectedSymbol,
+                    side: oppositeSide,
+                    type: 'TAKE_PROFIT_LIMIT',
+                    quantity: executedQty,
+                    price: tpSlForm.takeProfitPrice,
+                    stopPrice: tpSlForm.takeProfitPrice,
+                    timeInForce: 'GTC'
+                };
+                const tpResult = await apiService.placeOrder(tpData);
+                alert(`✅ Take Profit order placed! ID: ${tpResult.orderId}`);
+            } else {
+                // Single order (no TP/SL)
+                const orderData = {
+                    symbol: selectedSymbol,
+                    side: orderForm.side,
+                    type: orderForm.type,
+                    quantity: orderForm.quantity,
+                    ...(orderForm.type === 'LIMIT' && {
+                        price: orderForm.price,
+                        timeInForce: orderForm.timeInForce
+                    })
+                };
+
+                const result = await apiService.placeOrder(orderData);
+                alert(`✅ Order placed successfully! ID: ${result.orderId}`);
+            }
 
             setOrderForm({
                 side: 'BUY',
@@ -132,6 +249,11 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                 quantity: '',
                 price: '',
                 timeInForce: 'GTC'
+            });
+            setTPSLForm({
+                enabled: false,
+                stopLossPrice: '',
+                takeProfitPrice: ''
             });
 
             await loadAccountData();
@@ -337,6 +459,53 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                     ))}
                 </div>
 
+                {/* TP/SL Section */}
+                <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="checkbox"
+                            checked={tpSlForm.enabled}
+                            onChange={(e) => updateTPSLForm({ enabled: e.target.checked })}
+                            className="h-4 w-4"
+                        />
+                        <label className="text-xs font-medium text-card-foreground">Enable TP/SL</label>
+                    </div>
+                    {tpSlForm.enabled && (
+                        <div className="grid grid-cols-2 gap-1">
+                            <div>
+                                <label className="block text-xs text-card-foreground mb-0.5">Stop Loss</label>
+                                <input
+                                    type="number"
+                                    placeholder="0.00"
+                                    value={tpSlForm.stopLossPrice}
+                                    onChange={(e) => updateTPSLForm({ stopLossPrice: e.target.value })}
+                                    className="w-full text-xs border rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-input"
+                                    style={{
+                                        backgroundColor: 'var(--input)',
+                                        color: 'var(--input-foreground)',
+                                        borderColor: 'var(--input-border)'
+                                    }}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs text-card-foreground mb-0.5">Take Profit</label>
+                                <input
+                                    type="number"
+                                    placeholder="0.00"
+                                    value={tpSlForm.takeProfitPrice}
+                                    onChange={(e) => updateTPSLForm({ takeProfitPrice: e.target.value })}
+                                    className="w-full text-xs border rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-input"
+                                    style={{
+                                        backgroundColor: 'var(--input)',
+                                        color: 'var(--input-foreground)',
+                                        borderColor: 'var(--input-border)'
+                                    }}
+                                />
+                            </div>
+                        </div>
+                    )}
+                </div>
+
                 {/* Total */}
                 <div className="bg-gray-50 rounded px-2 py-1">
                     <div className="flex justify-between text-xs">
@@ -415,35 +584,12 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                                 </div>
                             ) : (
                                 <div className="space-y-1 overflow-y-auto max-h-48 scrollbar-hide">
-                                    {openOrders.map((order) => (
-                                        <div key={order.orderId} className="flex justify-between items-center p-1.5 bg-gray-50 rounded text-xs">
-                                            <div>
-                                                <div className="font-medium text-gray-900">
-                                                    {order.side} {parseFloat(order.origQty).toFixed(4)}
-                                                </div>
-                                                <div className="text-gray-600">
-                                                    @ ${parseFloat(order.price).toFixed(2)}
-                                                </div>
-                                            </div>
-                                            <button
-                                                onClick={async () => {
-                                                    if (confirm('Cancel this order?')) {
-                                                        try {
-                                                            await apiService.cancelOrder(selectedSymbol, order.orderId);
-                                                            await loadAccountData();
-                                                            alert('Order cancelled successfully!');
-                                                        } catch (err) {
-                                                            const errorMsg = err instanceof Error ? err.message : 'Cancel failed';
-                                                            alert(`Cancel failed: ${errorMsg}`);
-                                                        }
-                                                    }
-                                                }}
-                                                className="text-red-600 hover:text-red-800 px-1"
-                                            >
-                                                ✕
-                                            </button>
-                                        </div>
-                                    ))}
+                                    <OpenedOrders
+                                        openOrders={openOrders}
+                                        selectedSymbol={selectedSymbol}
+                                        apiService={apiService}
+                                        refresh={loadAccountData}
+                                    />
                                 </div>
                             )}
                         </div>
