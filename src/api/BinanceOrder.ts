@@ -215,6 +215,18 @@ async placeOrder(order: OrderRequest): Promise<OrderResult> {
             throw error;
         }
     }
+    async getExchangeInfo(): Promise<any> {
+    try {
+      const response = await fetch('https://api.binance.com/api/v3/exchangeInfo');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching exchange info:', error);
+      throw error;
+    }
+  }
 
   async cancelOrder(symbol: string, orderId: number): Promise<any> {
   try {
@@ -243,7 +255,7 @@ async placeOrder(order: OrderRequest): Promise<OrderResult> {
  async placeOrderListOTOCO(order: any): Promise<OTOCOOrderResult> {
         try {
             console.log('🚀 Frontend API Service - Placing OTOCO order:', order);
-            console.log('🌐 Calling URL:', `${this.apiUrl}/binance/place-order-list-otoco`);
+            console.log('🌐 Calling URL:', `${this.apiUrl}/binance/place-otoc-order`);
 
             const orderPayload = {
                 symbol: order.symbol,

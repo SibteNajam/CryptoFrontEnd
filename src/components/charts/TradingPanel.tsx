@@ -14,7 +14,6 @@ interface TP_SL_Form {
     stopLossPrice: string;
     takeProfitPrice: string;
 }
-
 interface OrderForm {
     side: 'BUY' | 'SELL';
     type: 'LIMIT' | 'MARKET';
@@ -22,6 +21,9 @@ interface OrderForm {
     price: string;
     timeInForce: 'GTC' | 'IOC' | 'FOK';
 }
+
+const DEFAULT_PRICE_PRECISION = 2; // Default for BTCUSDT
+const DEFAULT_QUANTITY_PRECISION = 5; // Default for BTCUSDT
 
 const TradingPanel: React.FC<TradingPanelProps> = ({
     selectedSymbol,
@@ -33,8 +35,8 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
     const [error, setError] = useState<string | null>(null);
     const [orderLoading, setOrderLoading] = useState(false);
     const [currentPrice, setCurrentPrice] = useState<number>(0);
-    const [showQuickOrder, setShowQuickOrder] = useState(false);
     const [activeTab, setActiveTab] = useState<'orders' | 'quick'>('orders');
+    const [symbolInfo, setSymbolInfo] = useState<any>(null); // Cache symbol info
 
     const [orderForm, setOrderForm] = useState<OrderForm>({
         side: 'BUY',
@@ -48,12 +50,56 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
         stopLossPrice: '',
         takeProfitPrice: ''
     });
-    const updateTPSLForm = (updates: Partial<TP_SL_Form>) => {
-        setTPSLForm({ ...tpSlForm, ...updates });
+
+    const formatToPrecision = (value: string, precision: number): string => {
+        const num = parseFloat(value);
+        if (isNaN(num)) return '';
+        return num.toFixed(precision);
     };
 
     const updateOrderForm = (updates: Partial<OrderForm>) => {
-        setOrderForm({ ...orderForm, ...updates });
+        const newForm = { ...orderForm, ...updates };
+        const pricePrecision = symbolInfo?.pricePrecision ?? DEFAULT_PRICE_PRECISION;
+        const quantityPrecision = symbolInfo?.quantityPrecision ?? DEFAULT_QUANTITY_PRECISION;
+
+        if (updates.price) {
+            if (!updates.price.endsWith('.')) {
+                newForm.price = formatToPrecision(updates.price, pricePrecision);
+            } else {
+                newForm.price = updates.price;
+            }
+        }
+        if (updates.quantity) {
+            if (!updates.quantity.endsWith('.')) {
+                newForm.quantity = formatToPrecision(updates.quantity, quantityPrecision);
+            } else {
+                newForm.quantity = updates.quantity;
+            }
+        }
+
+        setOrderForm(newForm);
+    };
+
+    const updateTPSLForm = (updates: Partial<TP_SL_Form>) => {
+        const newForm = { ...tpSlForm, ...updates };
+        const pricePrecision = symbolInfo?.pricePrecision ?? DEFAULT_PRICE_PRECISION;
+
+        if (updates.stopLossPrice) {
+            if (!updates.stopLossPrice.endsWith('.')) {
+                newForm.stopLossPrice = formatToPrecision(updates.stopLossPrice, pricePrecision);
+            } else {
+                newForm.stopLossPrice = updates.stopLossPrice;
+            }
+        }
+        if (updates.takeProfitPrice) {
+            if (!updates.takeProfitPrice.endsWith('.')) {
+                newForm.takeProfitPrice = formatToPrecision(updates.takeProfitPrice, pricePrecision);
+            } else {
+                newForm.takeProfitPrice = updates.takeProfitPrice;
+            }
+        }
+
+        setTPSLForm(newForm);
     };
 
     const loadAccountData = async () => {
@@ -65,7 +111,6 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                 apiService.getAccountInfo(),
                 apiService.getOpenOrders(selectedSymbol)
             ]);
-            console.log('Orders opened:', orders);
             setAccountInfo(account);
             setOpenOrders(orders);
         } catch (err) {
@@ -76,7 +121,26 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
         }
     };
 
-    // Fetch current price for quick orders
+    useEffect(() => {
+        const fetchSymbolInfo = async () => {
+            try {
+                const exchangeInfo = await apiService.getExchangeInfo();
+                const info = exchangeInfo.symbols.find((s: any) => s.symbol === selectedSymbol);
+                if (!info) {
+                    throw new Error(`Symbol ${selectedSymbol} not found in exchange info`);
+                }
+                setSymbolInfo(info);
+            } catch (err) {
+                console.error('Error fetching symbol info:', err);
+                setError(`Failed to load symbol information for ${selectedSymbol}. Using default precision.`);
+            }
+        };
+
+        if (selectedSymbol) {
+            fetchSymbolInfo();
+        }
+    }, [selectedSymbol, apiService]);
+
     useEffect(() => {
         const fetchPrice = async () => {
             try {
@@ -100,28 +164,182 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
         if (!selectedSymbol) return 'No symbol selected';
         if (!orderForm.quantity || parseFloat(orderForm.quantity) <= 0) return 'Please enter a valid quantity';
         if (orderForm.type === 'LIMIT' && (!orderForm.price || parseFloat(orderForm.price) <= 0)) return 'Please enter a valid price';
+        if (!symbolInfo) return 'Symbol information not loaded. Please wait or select a valid symbol.';
 
+        const pricePrecision = symbolInfo.pricePrecision ?? DEFAULT_PRICE_PRECISION;
+        const quantityPrecision = symbolInfo.quantityPrecision ?? DEFAULT_QUANTITY_PRECISION;
+        const minNotional = symbolInfo.filters.find((f: any) => f.filterType === 'MIN_NOTIONAL')?.minNotional;
+
+        // Validate precision
+        if (orderForm.quantity && orderForm.quantity !== parseFloat(orderForm.quantity).toFixed(quantityPrecision)) {
+            return `Quantity must have ${quantityPrecision} decimal places`;
+        }
+        if (orderForm.type === 'LIMIT' && orderForm.price && orderForm.price !== parseFloat(orderForm.price).toFixed(pricePrecision)) {
+            return `Price must have ${pricePrecision} decimal places`;
+        }
         if (tpSlForm.enabled) {
             if (!tpSlForm.stopLossPrice || parseFloat(tpSlForm.stopLossPrice) <= 0) return 'Please enter a valid Stop Loss price';
             if (!tpSlForm.takeProfitPrice || parseFloat(tpSlForm.takeProfitPrice) <= 0) return 'Please enter a valid Take Profit price';
+            if (tpSlForm.stopLossPrice !== parseFloat(tpSlForm.stopLossPrice).toFixed(pricePrecision)) {
+                return `Stop Loss price must have ${pricePrecision} decimal places`;
+            }
+            if (tpSlForm.takeProfitPrice !== parseFloat(tpSlForm.takeProfitPrice).toFixed(pricePrecision)) {
+                return `Take Profit price must have ${pricePrecision} decimal places`;
+            }
 
             const price = orderForm.type === 'LIMIT' ? parseFloat(orderForm.price) : currentPrice;
             const slPrice = parseFloat(tpSlForm.stopLossPrice);
             const tpPrice = parseFloat(tpSlForm.takeProfitPrice);
 
-            if (orderForm.side === 'BUY') {
-                if (slPrice >= price) return 'Stop Loss should be below order price for BUY';
-                if (tpPrice <= price) return 'Take Profit should be above order price for BUY';
-            } else {
-                if (slPrice <= price) return 'Stop Loss should be above order price for SELL';
-                if (tpPrice >= price) return 'Take Profit should be below order price for SELL';
+           if (orderForm.side === 'BUY') {
+    // For BUY orders: SL should be BELOW buy price, TP should be ABOVE buy price
+    if (slPrice >= price) return 'Stop Loss should be below order price for BUY';
+    if (tpPrice <= price) return 'Take Profit should be above order price for BUY';
+} else {
+    // For SELL orders: SL should be ABOVE sell price, TP should be BELOW sell price  
+    if (slPrice <= price) return 'Stop Loss should be above order price for SELL';
+    if (tpPrice >= price) return 'Take Profit should be below order price for SELL';
+}
+
+            if (minNotional && price * parseFloat(orderForm.quantity) < parseFloat(minNotional)) {
+                return `Order value must be at least ${minNotional} USDT`;
             }
         }
+
         return null;
     };
 
+    const fetchServerTime = async (): Promise<number> => {
+        try {
+            const response = await fetch('https://api.binance.com/api/v3/time');
+            const data = await response.json();
+            return data.serverTime;
+        } catch (err) {
+            console.error('Error fetching server time:', err);
+            return Date.now(); // Fallback
+        }
+    };
+
+    const handleOTOCOOrder = async () => {
+        const pricePrecision = symbolInfo?.pricePrecision ?? DEFAULT_PRICE_PRECISION;
+        const quantityPrecision = symbolInfo?.quantityPrecision ?? DEFAULT_QUANTITY_PRECISION;
+        const pendingSide = orderForm.side === 'BUY' ? 'SELL' : 'BUY';
+        const timestamp = await fetchServerTime();
+
+        let pendingAboveType, pendingAbovePrice, pendingAboveStopPrice, pendingAboveTimeInForce;
+        let pendingBelowType, pendingBelowPrice, pendingBelowStopPrice, pendingBelowTimeInForce;
+
+        if (orderForm.side === 'BUY') {
+            pendingAboveType = 'TAKE_PROFIT_LIMIT';
+            pendingAbovePrice = formatToPrecision(tpSlForm.takeProfitPrice, pricePrecision);
+            pendingAboveStopPrice = pendingAbovePrice;
+            pendingAboveTimeInForce = 'GTC';
+            pendingBelowType = 'STOP_LOSS_LIMIT';
+            pendingBelowPrice = formatToPrecision(tpSlForm.stopLossPrice, pricePrecision);
+            pendingBelowStopPrice = pendingBelowPrice;
+            pendingBelowTimeInForce = 'GTC';
+        } else {
+            pendingAboveType = 'STOP_LOSS_LIMIT';
+            pendingAbovePrice = formatToPrecision(tpSlForm.stopLossPrice, pricePrecision);
+            pendingAboveStopPrice = pendingAbovePrice;
+            pendingAboveTimeInForce = 'GTC';
+            pendingBelowType = 'TAKE_PROFIT_LIMIT';
+            pendingBelowPrice = formatToPrecision(tpSlForm.takeProfitPrice, pricePrecision);
+            pendingBelowStopPrice = pendingBelowPrice;
+            pendingBelowTimeInForce = 'GTC';
+        }
+
+        const otocoPayload = {
+            symbol: selectedSymbol,
+            workingType: 'LIMIT',
+            workingSide: orderForm.side,
+            workingPrice: formatToPrecision(orderForm.price, pricePrecision),
+            workingQuantity: formatToPrecision(orderForm.quantity, quantityPrecision),
+            workingTimeInForce: orderForm.timeInForce,
+            pendingSide,
+            pendingQuantity: formatToPrecision(orderForm.quantity, quantityPrecision),
+            pendingAboveType,
+            pendingAbovePrice,
+            pendingAboveStopPrice,
+            pendingAboveTimeInForce,
+            pendingBelowType,
+            pendingBelowPrice,
+            pendingBelowStopPrice,
+            pendingBelowTimeInForce,
+            timestamp
+        };
+
+        const result = await apiService.placeOrderListOTOCO(otocoPayload);
+        alert(`✅ OTOCO Order List placed successfully! List ID: ${result.orderListId}`);
+    };
+
+    const handleMarketTPSLOrder = async () => {
+        const pricePrecision = symbolInfo?.pricePrecision ?? DEFAULT_PRICE_PRECISION;
+        const quantityPrecision = symbolInfo?.quantityPrecision ?? DEFAULT_QUANTITY_PRECISION;
+
+        const orderData = {
+            symbol: selectedSymbol,
+            side: orderForm.side,
+            type: 'MARKET',
+            quantity: formatToPrecision(orderForm.quantity, quantityPrecision)
+        };
+
+        const result = await apiService.placeOrder(orderData);
+        alert(`✅ Market Order placed successfully! ID: ${result.orderId}`);
+
+        if (result.status !== 'FILLED') {
+            throw new Error('Main order not fully filled. TP/SL not placed.');
+        }
+
+        const executedQty = formatToPrecision(result.executedQty, quantityPrecision);
+        const oppositeSide = orderForm.side === 'BUY' ? 'SELL' : 'BUY';
+
+        const slData = {
+            symbol: selectedSymbol,
+            side: oppositeSide,
+            type: 'STOP_LOSS_LIMIT',
+            quantity: executedQty,
+            price: formatToPrecision(tpSlForm.stopLossPrice, pricePrecision),
+            stopPrice: formatToPrecision(tpSlForm.stopLossPrice, pricePrecision),
+            timeInForce: 'GTC'
+        };
+        const slResult = await apiService.placeOrder(slData);
+        alert(`✅ Stop Loss order placed! ID: ${slResult.orderId}`);
+
+        const tpData = {
+            symbol: selectedSymbol,
+            side: oppositeSide,
+            type: 'TAKE_PROFIT_LIMIT',
+            quantity: executedQty,
+            price: formatToPrecision(tpSlForm.takeProfitPrice, pricePrecision),
+            stopPrice: formatToPrecision(tpSlForm.takeProfitPrice, pricePrecision),
+            timeInForce: 'GTC'
+        };
+        const tpResult = await apiService.placeOrder(tpData);
+        alert(`✅ Take Profit order placed! ID: ${tpResult.orderId}`);
+    };
+
+    const handleSingleOrder = async () => {
+        const pricePrecision = symbolInfo?.pricePrecision ?? DEFAULT_PRICE_PRECISION;
+        const quantityPrecision = symbolInfo?.quantityPrecision ?? DEFAULT_QUANTITY_PRECISION;
+
+        const orderData = {
+            symbol: selectedSymbol,
+            side: orderForm.side,
+            type: orderForm.type,
+            quantity: formatToPrecision(orderForm.quantity, quantityPrecision),
+            ...(orderForm.type === 'LIMIT' && {
+                price: formatToPrecision(orderForm.price, pricePrecision),
+                timeInForce: orderForm.timeInForce
+            })
+        };
+
+        const result = await apiService.placeOrder(orderData);
+        alert(`✅ Order placed successfully! ID: ${result.orderId}`);
+    };
+
     const handlePlaceOrder = async () => {
-        const validationError = validateOrder();
+        const validationError = await validateOrder();
         if (validationError) {
             alert(validationError);
             return;
@@ -132,115 +350,11 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
 
         try {
             if (tpSlForm.enabled && orderForm.type === 'LIMIT') {
-                // Use OTOCO for LIMIT with TP/SL
-                const pendingSide = orderForm.side === 'BUY' ? 'SELL' : 'BUY';
-                const timestamp = Date.now();
-
-                let pendingAboveType, pendingAbovePrice, pendingAboveStopPrice, pendingAboveTimeInForce;
-                let pendingBelowType, pendingBelowPrice, pendingBelowStopPrice, pendingBelowTimeInForce;
-
-                if (orderForm.side === 'BUY') {
-                    // Above: TP (higher), Below: SL (lower)
-                    pendingAboveType = 'TAKE_PROFIT_LIMIT';
-                    pendingAbovePrice = tpSlForm.takeProfitPrice;
-                    pendingAboveStopPrice = tpSlForm.takeProfitPrice;
-                    pendingAboveTimeInForce = 'GTC';
-                    pendingBelowType = 'STOP_LOSS_LIMIT';
-                    pendingBelowPrice = tpSlForm.stopLossPrice;
-                    pendingBelowStopPrice = tpSlForm.stopLossPrice;
-                    pendingBelowTimeInForce = 'GTC';
-                } else {
-                    // Above: SL (higher), Below: TP (lower)
-                    pendingAboveType = 'STOP_LOSS_LIMIT';
-                    pendingAbovePrice = tpSlForm.stopLossPrice;
-                    pendingAboveStopPrice = tpSlForm.stopLossPrice;
-                    pendingAboveTimeInForce = 'GTC';
-                    pendingBelowType = 'TAKE_PROFIT_LIMIT';
-                    pendingBelowPrice = tpSlForm.takeProfitPrice;
-                    pendingBelowStopPrice = tpSlForm.takeProfitPrice;
-                    pendingBelowTimeInForce = 'GTC';
-                }
-
-                const otocoPayload = {
-                    symbol: selectedSymbol,
-                    workingType: 'LIMIT',
-                    workingSide: orderForm.side,
-                    workingPrice: orderForm.price,
-                    workingQuantity: orderForm.quantity,
-                    workingTimeInForce: orderForm.timeInForce,
-                    pendingSide,
-                    pendingQuantity: orderForm.quantity, // Same qty to close position
-                    pendingAboveType,
-                    pendingAbovePrice,
-                    pendingAboveStopPrice,
-                    pendingAboveTimeInForce,
-                    pendingBelowType,
-                    pendingBelowPrice,
-                    pendingBelowStopPrice,
-                    pendingBelowTimeInForce,
-                    timestamp
-                };
-
-                const result = await apiService.placeOrderListOTOCO(otocoPayload);
-                alert(`✅ OTOCO Order List placed successfully! List ID: ${result.orderListId}`);
+                await handleOTOCOOrder();
             } else if (tpSlForm.enabled && orderForm.type === 'MARKET') {
-                // Keep your existing logic for MARKET with separate TP/SL (non-OCO)
-                const orderData = {
-                    symbol: selectedSymbol,
-                    side: orderForm.side,
-                    type: 'MARKET',
-                    quantity: orderForm.quantity
-                };
-
-                const result = await apiService.placeOrder(orderData);
-                alert(`✅ Market Order placed successfully! ID: ${result.orderId}`);
-
-                if (result.status !== 'FILLED') {
-                    throw new Error('Main order not fully filled. TP/SL not placed.');
-                }
-                const executedQty = result.executedQty;
-                const oppositeSide = orderForm.side === 'BUY' ? 'SELL' : 'BUY';
-
-                // Place Stop Loss order (STOP_LOSS_LIMIT)
-                const slData = {
-                    symbol: selectedSymbol,
-                    side: oppositeSide,
-                    type: 'STOP_LOSS_LIMIT',
-                    quantity: executedQty,
-                    price: tpSlForm.stopLossPrice,
-                    stopPrice: tpSlForm.stopLossPrice,
-                    timeInForce: 'GTC'
-                };
-                const slResult = await apiService.placeOrder(slData);
-                alert(`✅ Stop Loss order placed! ID: ${slResult.orderId}`);
-
-                // Place Take Profit order (TAKE_PROFIT_LIMIT)
-                const tpData = {
-                    symbol: selectedSymbol,
-                    side: oppositeSide,
-                    type: 'TAKE_PROFIT_LIMIT',
-                    quantity: executedQty,
-                    price: tpSlForm.takeProfitPrice,
-                    stopPrice: tpSlForm.takeProfitPrice,
-                    timeInForce: 'GTC'
-                };
-                const tpResult = await apiService.placeOrder(tpData);
-                alert(`✅ Take Profit order placed! ID: ${tpResult.orderId}`);
+                await handleMarketTPSLOrder();
             } else {
-                // Single order (no TP/SL)
-                const orderData = {
-                    symbol: selectedSymbol,
-                    side: orderForm.side,
-                    type: orderForm.type,
-                    quantity: orderForm.quantity,
-                    ...(orderForm.type === 'LIMIT' && {
-                        price: orderForm.price,
-                        timeInForce: orderForm.timeInForce
-                    })
-                };
-
-                const result = await apiService.placeOrder(orderData);
-                alert(`✅ Order placed successfully! ID: ${result.orderId}`);
+                await handleSingleOrder();
             }
 
             setOrderForm({
@@ -282,18 +396,23 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
             maxAmount = parseFloat(balance.free);
         }
 
-        const calculatedAmount = (maxAmount * percent / 100).toFixed(8);
+        const calculatedAmount = formatToPrecision(
+            (maxAmount * percent / 100).toString(),
+            symbolInfo?.quantityPrecision ?? DEFAULT_QUANTITY_PRECISION
+        );
         updateOrderForm({ quantity: calculatedAmount });
     };
 
     const placeQuickOrder = async (side: 'BUY' | 'SELL', price: number) => {
         try {
+            const pricePrecision = symbolInfo?.pricePrecision ?? DEFAULT_PRICE_PRECISION;
+            const quantityPrecision = symbolInfo?.quantityPrecision ?? DEFAULT_QUANTITY_PRECISION;
             await apiService.placeOrder({
                 symbol: selectedSymbol,
                 side,
                 type: 'LIMIT',
-                quantity: '0.001',
-                price: price.toFixed(2),
+                quantity: formatToPrecision('0.001', quantityPrecision),
+                price: formatToPrecision(price.toString(), pricePrecision),
                 timeInForce: 'GTC'
             });
             alert(`Quick ${side} order placed!`);
@@ -393,9 +512,15 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                             <label className="block text-xs text-card-foreground mb-0.5">Price</label>
                             <input
                                 type="number"
+                                step="0.01"
                                 placeholder="0.00"
                                 value={orderForm.price}
                                 onChange={(e) => updateOrderForm({ price: e.target.value })}
+                                onBlur={(e) => {
+                                    if (e.target.value) {
+                                        updateOrderForm({ price: formatToPrecision(e.target.value, symbolInfo?.pricePrecision ?? DEFAULT_PRICE_PRECISION) });
+                                    }
+                                }}
                                 className="w-full text-xs border rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-input"
                                 style={{
                                     backgroundColor: 'var(--input)',
@@ -411,9 +536,15 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                         <label className="block text-xs text-card-foreground mb-0.5">Amount</label>
                         <input
                             type="number"
-                            placeholder="0.00"
+                            step="0.00001"
+                            placeholder="0.00000"
                             value={orderForm.quantity}
                             onChange={(e) => updateOrderForm({ quantity: e.target.value })}
+                            onBlur={(e) => {
+                                if (e.target.value) {
+                                    updateOrderForm({ quantity: formatToPrecision(e.target.value, symbolInfo?.quantityPrecision ?? DEFAULT_QUANTITY_PRECISION) });
+                                }
+                            }}
                             className="w-full text-xs border rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-input"
                             style={{
                                 backgroundColor: 'var(--input)',
@@ -476,9 +607,15 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                                 <label className="block text-xs text-card-foreground mb-0.5">Stop Loss</label>
                                 <input
                                     type="number"
+                                    step="0.01"
                                     placeholder="0.00"
                                     value={tpSlForm.stopLossPrice}
                                     onChange={(e) => updateTPSLForm({ stopLossPrice: e.target.value })}
+                                    onBlur={(e) => {
+                                        if (e.target.value) {
+                                            updateTPSLForm({ stopLossPrice: formatToPrecision(e.target.value, symbolInfo?.pricePrecision ?? DEFAULT_PRICE_PRECISION) });
+                                        }
+                                    }}
                                     className="w-full text-xs border rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-input"
                                     style={{
                                         backgroundColor: 'var(--input)',
@@ -491,9 +628,15 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                                 <label className="block text-xs text-card-foreground mb-0.5">Take Profit</label>
                                 <input
                                     type="number"
+                                    step="0.01"
                                     placeholder="0.00"
                                     value={tpSlForm.takeProfitPrice}
                                     onChange={(e) => updateTPSLForm({ takeProfitPrice: e.target.value })}
+                                    onBlur={(e) => {
+                                        if (e.target.value) {
+                                            updateTPSLForm({ takeProfitPrice: formatToPrecision(e.target.value, symbolInfo?.pricePrecision ?? DEFAULT_PRICE_PRECISION) });
+                                        }
+                                    }}
                                     className="w-full text-xs border rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-input"
                                     style={{
                                         backgroundColor: 'var(--input)',
@@ -522,7 +665,7 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                 {/* Place Order Button */}
                 <button
                     onClick={handlePlaceOrder}
-                    disabled={orderLoading || loading || !orderForm.quantity || (orderForm.type === 'LIMIT' && !orderForm.price)}
+                    disabled={orderLoading || loading || !symbolInfo || !orderForm.quantity || (orderForm.type === 'LIMIT' && !orderForm.price)}
                     className={`w-full py-2 rounded font-medium text-sm transition-colors ${orderForm.side === 'BUY'
                         ? 'bg-green-700 hover:bg-green-600 text-card-foreground disabled:bg-green-300'
                         : 'bg-red-500 hover:bg-red-600 text-card-foreground disabled:bg-red-300'
@@ -548,7 +691,6 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
 
             {/* Tabbed Section: Open Orders / Quick Orders */}
             <div className="bg-card rounded border border-gray-200">
-                {/* Tab Headers */}
                 <div className="flex border-b border-gray-200">
                     <button
                         onClick={() => setActiveTab('orders')}
@@ -570,14 +712,9 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                     </button>
                 </div>
 
-                {/* Tab Content */}
-                <div className="p-2" style={{
-                    scrollbarWidth: 'none',
-                    msOverflowStyle: 'none'
-                }} >
+                <div className="p-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                     {activeTab === 'orders' ? (
-                        /* Open Orders Content */
-                        <div className=''>
+                        <div>
                             {openOrders.length === 0 ? (
                                 <div className="text-center py-3 text-xs text-gray-500">
                                     No open orders
@@ -594,7 +731,6 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                             )}
                         </div>
                     ) : (
-                        /* Quick Trade Content */
                         <div>
                             <div className="text-center mb-2">
                                 <div className="text-sm font-bold text-gray-800">
@@ -625,7 +761,7 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                     )}
                 </div>
             </div>
-        </div >
+        </div>
     );
 };
 

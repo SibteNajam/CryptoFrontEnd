@@ -40,15 +40,14 @@ export default function PortfolioPage() {
     setError(null);
     
     try {
-      const [accountInfo, orders, history] = await Promise.all([
+      const [accountInfo, ] = await Promise.all([
         getAccountInfo(),
-        getOpenOrders(),
-        getOrderHistory()
+        // getOpenOrders(),
+        // getOrderHistory()
       ]);
 
       setAccountData(accountInfo);
-      setOpenOrders(orders);
-      setOrderHistory(history);
+     
       setLastUpdate(new Date());
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch basic data');
@@ -345,7 +344,7 @@ export default function PortfolioPage() {
       </div>
 
       {/* Tab Content */}
-      <div className="min-h-[400px]">
+      <div className="h-full">
         {renderTabContent()}
       </div>
     </div>
