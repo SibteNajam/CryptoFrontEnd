@@ -13,7 +13,7 @@ const PriceClickHandler: React.FC<PriceClickHandlerProps> = ({
     apiService 
 }) => {
     const [currentPrice, setCurrentPrice] = useState<number>(0);
-    const [showQuickOrder, setShowQuickOrder] = useState(false);
+    // const [showQuickOrder, setShowQuickOrder] = useState(false);
 
     useEffect(() => {
         const fetchPrice = async () => {

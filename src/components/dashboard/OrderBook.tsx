@@ -166,7 +166,7 @@ export default function BinanceOrderBook({
   const refreshProgress = (timeSinceRefresh / refreshInterval) * 100;
 
  return (
-  <div className="bg-card rounded-lg border border-gray-200 shadow-sm overflow-hidden flex flex-col h-full">
+  <div className="bg-card rounded-sm border border-gray-200 shadow-sm overflow-hidden flex flex-col h-full">
     {/* Enhanced Header */}
     <div className="border-b border-gray-200 px-3 py-3 flex-shrink-0">
       <div className="flex items-center justify-between mb-3">

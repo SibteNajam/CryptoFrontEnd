@@ -27,7 +27,7 @@ export default function TickerBar({
   selectedSymbol, 
   tickerData,
   userBalance,
-  wsConnected = false,
+  wsConnected = true,
   isLoading = false
 }: TickerBarProps) {
   

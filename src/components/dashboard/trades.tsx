@@ -190,9 +190,9 @@ export default function TradesComponent({ symbol }: TradesProps) {
     };
 
     return (
-        <div className="bg-card rounded-lg border border-gray-200 shadow-sm overflow-hidden flex flex-col" style={{ height: '580px' }}>
+        <div className="bg-card rounded-sm border border-gray-200 shadow-sm overflow-hidden flex flex-col" style={{ height: '580px' }}>
             {/* Header - Fixed height to match chart header */}
-            <div className="border-b border-gray-200 px-3 py-3 flex-shrink-0 bg-gradient-blue" style={{ minHeight: '73px' }}>
+            <div className="border-b border-gray-200 px-3 py-3 flex-shrink-0 bg-card" style={{ minHeight: '73px' }}>
                 <div className="flex items-center justify-between mb-3">
                     <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
                         Trades <span className="text-blue-600 font-bold">{symbol}</span>
@@ -200,7 +200,7 @@ export default function TradesComponent({ symbol }: TradesProps) {
                 </div>
 
                 {/* Trade Type Toggle */}
-                <div className="flex bg-primary-light rounded-lg p-1 border border-primary-light">
+                <div className="flex rounded-lg p-1 border border-primary-light">
                     <button
                         onClick={() => handleTradeTypeChange('market')}
                         className={`flex-1 px-3 py-2 text-xs font-medium rounded-md transition-all duration-300 ease-out transform ${tradeType === 'market'

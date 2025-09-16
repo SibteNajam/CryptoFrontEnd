@@ -145,7 +145,7 @@ export default function Dashboard() {
     const [error, setError] = useState<string | null>(null);
     const [refreshing, setRefreshing] = useState(false);
     const [hoveredCard, setHoveredCard] = useState<string | null>(null);
-    const [selectedSymbol, setSelectedSymbol] = useState<string>('BTCUSDT');
+    const [selectedSymbol, setSelectedSymbol] = useState<string>('RVNUSDT');
     const [selectedInterval, setSelectedInterval] = useState<string>('1m');
     const [wsConnected, setWsConnected] = useState(false);
     const [tickerData, setTickerData] = useState<BinanceTickerData | null>(null);
@@ -177,29 +177,6 @@ export default function Dashboard() {
     const [apiService] = useState(() => new BinanceApiService());
     const [recentOrders, setRecentOrders] = useState<any[]>([]);
 
-    // [Keep all your existing functions - they remain the same until the return statement]
-    const handleOrderFromChart = async (chartOrderData: any) => {
-        try {
-            const order = apiService.formatTradingViewOrder(chartOrderData, selectedSymbol);
-
-            console.log('📊 Order from chart:', order);
-
-            const confirmed = window.confirm(
-                `Place ${order.side} order for ${order.quantity} ${order.symbol} ${order.type === 'LIMIT' ? `at $${order.price}` : 'at MARKET price'
-                }?`
-            );
-
-            if (confirmed) {
-                const result = await apiService.placeOrder(order);
-                setRecentOrders(prev => [result, ...prev.slice(0, 9)]);
-                alert(`Order placed successfully! Order ID: ${result.orderId}`);
-            }
-
-        } catch (error) {
-            console.error('Order placement failed:', error);
-            alert(`Order failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        }
-    };
 
     // [Keep all your existing useEffect hooks and functions - they remain exactly the same]
     useEffect(() => {
@@ -695,12 +672,12 @@ export default function Dashboard() {
 
             {/* UPDATED MAIN TRADING LAYOUT */}
             <div className="bg-muted min-h-screen">
-                <div className="max-w-7xl mx-auto p-1 space-y-1">
+                <div className="max-w-7xl mx-auto ">
                     {/* Chart and Trades Row */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-1">
+                    <div className="grid grid-cols-1 lg:grid-cols-3">
                         {/* Chart Section - Takes 2/3 width */}
                         <div className="lg:col-span-2">
-                            <div className="bg-card rounded-lg border border-default shadow-sm overflow-hidden h-full">
+                            <div className="bg-card rounded-sm border border-default shadow-sm overflow-hidden h-full">
                                 {/* Chart Header */}
                                 <div className="border-b border-default px-6 py-3 flex items-center justify-between bg-card flex-shrink-0">
                                     <div className="flex items-center space-x-6">
@@ -776,25 +753,25 @@ export default function Dashboard() {
                     </div>
 
                     {/* Trading Panel and Order Book Row */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-1">
-    {/* Trading Panel Section */}
-    <div className="lg:col-span-2">
-        <div className="bg-card rounded-lg border border-default shadow-sm" style={{ height: '580px' }}>
-            {/* Trading Panel Content */}
-            <div className="p-3 h-full overflow-hidden">
-                <TradingPanel
-                    selectedSymbol={selectedSymbol}
-                    apiService={apiService}
-                />
-            </div>
-        </div>
-    </div>
+                    <div className="grid grid-cols-1 lg:grid-cols-3 ">
+                        {/* Trading Panel Section */}
+                        <div className="lg:col-span-2">
+                            <div className="bg-card rounded-sm border border-default shadow-sm" style={{ height: '580px' }}>
+                                {/* Trading Panel Content */}
+                                <div className="p-3 h-full overflow-hidden">
+                                    <TradingPanel
+                                        selectedSymbol={selectedSymbol}
+                                        apiService={apiService}
+                                    />
+                                </div>
+                            </div>
+                        </div>
 
-    {/* Order Book Section */}
-    <div className="lg:col-span-1">
-        <TradesComponent symbol={selectedSymbol} />
-    </div>
-</div>
+                        {/* Order Book Section */}
+                        <div className="lg:col-span-1">
+                            <TradesComponent symbol={selectedSymbol} />
+                        </div>
+                    </div>
                 </div>
             </div>
 

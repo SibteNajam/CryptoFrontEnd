@@ -252,60 +252,26 @@ async placeOrder(order: OrderRequest): Promise<OrderResult> {
     throw error;
   }
 }
- async placeOrderListOTOCO(order: any): Promise<OTOCOOrderResult> {
+ async placeOrderListOTOCO(payload: any): Promise<any> {
         try {
-            console.log('🚀 Frontend API Service - Placing OTOCO order:', order);
-            console.log('🌐 Calling URL:', `${this.apiUrl}/binance/place-otoc-order`);
-
-            const orderPayload = {
-                symbol: order.symbol,
-                workingType: order.workingType,
-                workingSide: order.workingSide,
-                workingPrice: order.workingPrice,
-                workingQuantity: order.workingQuantity,
-                workingTimeInForce: order.workingTimeInForce,
-                pendingSide: order.pendingSide,
-                pendingQuantity: order.pendingQuantity,
-                pendingAboveType: order.pendingAboveType,
-                pendingAbovePrice: order.pendingAbovePrice,
-                pendingAboveStopPrice: order.pendingAboveStopPrice,
-                pendingAboveTimeInForce: order.pendingAboveTimeInForce,
-                pendingBelowType: order.pendingBelowType,
-                pendingBelowPrice: order.pendingBelowPrice,
-                pendingBelowStopPrice: order.pendingBelowStopPrice,
-                pendingBelowTimeInForce: order.pendingBelowTimeInForce,
-                timestamp: order.timestamp,
-            };
-
-            console.log('📦 Exact payload being sent:', JSON.stringify(orderPayload, null, 2));
-
-            const response = await fetch(`${this.apiUrl}/binance/place-otoc-order`, {
+            const response = await fetch('http://localhost:3000/binance/place-otoc-order', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Accept': '*/*'
                 },
-                body: JSON.stringify(orderPayload),
+                body: JSON.stringify(payload)
             });
-
-            console.log('📡 Response status:', response.status);
-            console.log('📡 Response ok:', response.ok);
-
             if (!response.ok) {
-                const errorText = await response.text();
-                console.error('❌ Error response text:', errorText);
-                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
-
-            const result = await response.json();
-            console.log('✅ OTOCO Order List placed successfully:', result);
-            return result;
+            return await response.json();
         } catch (error) {
-            console.error('❌ Frontend API Service - Error details:', {
-                error: error,
-                message: error instanceof Error ? error.message : 'Unknown error',
-                stack: error instanceof Error ? error.stack : undefined,
-            });
-            throw error;
+            if (error instanceof Error) {
+                throw new Error(`Failed to place OTOCO order: ${error.message}`);
+            } else {
+                throw new Error('Failed to place OTOCO order: Unknown error');
+            }
         }
     }
 
