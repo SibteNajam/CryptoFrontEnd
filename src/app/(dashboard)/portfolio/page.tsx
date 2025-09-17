@@ -40,13 +40,14 @@ export default function PortfolioPage() {
     setError(null);
     
     try {
-      const [accountInfo, ] = await Promise.all([
+      const [accountInfo, openOrders] = await Promise.all([
         getAccountInfo(),
-        // getOpenOrders(),
+        getOpenOrders(),
         // getOrderHistory()
       ]);
 
       setAccountData(accountInfo);
+      setOpenOrders(openOrders);
      
       setLastUpdate(new Date());
     } catch (err) {
@@ -291,7 +292,7 @@ export default function PortfolioPage() {
             fetchEnhancedData();
           }} 
           disabled={loading}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors text-sm font-medium"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-card border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors text-sm font-medium"
         >
           <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           {loading ? 'Loading...' : 'Refresh'}

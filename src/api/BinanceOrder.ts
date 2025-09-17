@@ -5,7 +5,6 @@ export interface OrderRequest {
     type: string;
     quantity: string;
     price?: string;
-    stopPrice?: string;
     timeInForce?: string;
 }
 
@@ -156,8 +155,8 @@ async placeOrder(order: OrderRequest): Promise<OrderResult> {
             side: order.side,
             type: order.type,
             quantity: order.quantity,
-            price: order.price,
-            timeInForce: order.timeInForce
+            price: order.price ? order.price : undefined,
+            timeInForce: order.timeInForce ? order.timeInForce : undefined
         };
         
         console.log('📦 Exact payload being sent:', JSON.stringify(orderPayload, null, 2));
@@ -252,11 +251,35 @@ async placeOrder(order: OrderRequest): Promise<OrderResult> {
     throw error;
   }
 }
- async placeOrderListOTOCO(payload: any): Promise<any> {
-        try {
-            const response = await fetch('http://localhost:3000/binance/place-otoc-order', {
-                method: 'POST',
-                headers: {
+
+async placeMarketOrder(payload: any): Promise<any> {
+    try {
+        const response = await fetch('http://localhost:3000/binance/place-market-order', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': '*/*'
+            },
+            body: JSON.stringify(payload)
+        });
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return await response.json();
+    } catch (error) {
+        if (error instanceof Error) {
+            throw new Error(`Failed to place market order: ${error.message}`);
+        } else {
+            throw new Error('Failed to place market order: Unknown error');
+        }
+    }
+};
+
+async placeOrderListOTOCO(payload: any): Promise<any> {
+    try {
+        const response = await fetch('http://localhost:3000/binance/place-otoc-order', {
+            method: 'POST',
+            headers: {
                     'Content-Type': 'application/json',
                     'Accept': '*/*'
                 },

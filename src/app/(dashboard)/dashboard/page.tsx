@@ -138,14 +138,13 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:30
 export default function Dashboard() {
     const { theme } = useTheme(); // ✅ Get current theme
 
-    // [Keep all your existing state variables - they remain the same]
     const [symbols, setSymbols] = useState<SymbolPrice[]>([]);
     const [loading, setLoading] = useState(true);
     const [chartLoading, setChartLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [refreshing, setRefreshing] = useState(false);
     const [hoveredCard, setHoveredCard] = useState<string | null>(null);
-    const [selectedSymbol, setSelectedSymbol] = useState<string>('RVNUSDT');
+    const [selectedSymbol, setSelectedSymbol] = useState<string>('SUIUSDT');
     const [selectedInterval, setSelectedInterval] = useState<string>('1m');
     const [wsConnected, setWsConnected] = useState(false);
     const [tickerData, setTickerData] = useState<BinanceTickerData | null>(null);
@@ -178,7 +177,6 @@ export default function Dashboard() {
     const [recentOrders, setRecentOrders] = useState<any[]>([]);
 
 
-    // [Keep all your existing useEffect hooks and functions - they remain exactly the same]
     useEffect(() => {
         const socket = io('http://localhost:3000', {
             transports: ['websocket'],
@@ -663,11 +661,14 @@ export default function Dashboard() {
             )}
 
             {tickerData && (
-                <TickerBar
-                    selectedSymbol={selectedSymbol}
-                    tickerData={tickerData}
-                    userBalance={undefined}
-                />
+               <TickerBar
+    selectedSymbol={selectedSymbol}
+    tickerData={tickerData}
+    userBalance={undefined}
+    wsConnected={wsConnected}
+    availableSymbols={symbols} // Pass your fetched symbols array
+    onSymbolChange={handleSymbolClick} // Use existing handler
+/>
             )}
 
             {/* UPDATED MAIN TRADING LAYOUT */}
@@ -774,49 +775,6 @@ export default function Dashboard() {
                     </div>
                 </div>
             </div>
-
-            {/* Kline Information
-            {klineData && (
-                <div className="mt-6 border-t border-default pt-6">
-                    <h3 className="text-lg font-semibold text-primary mb-4">Latest Kline Data</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="p-4 bg-info-light rounded-lg border border-info">
-                            <p className="text-sm text-info font-medium">Open</p>
-                            <p className="text-lg font-bold text-primary">
-                                ${parseFloat(klineData.kline.o).toLocaleString()}
-                            </p>
-                        </div>
-                        <div className="p-4 bg-success-light rounded-lg border border-success">
-                            <p className="text-sm text-success font-medium">High</p>
-                            <p className="text-lg font-bold text-primary">
-                                ${parseFloat(klineData.kline.h).toLocaleString()}
-                            </p>
-                        </div>
-                        <div className="p-4 bg-danger-light rounded-lg border border-danger">
-                            <p className="text-sm text-danger font-medium">Low</p>
-                            <p className="text-lg font-bold text-primary">
-                                ${parseFloat(klineData.kline.l).toLocaleString()}
-                            </p>
-                        </div>
-                        <div className="p-4 bg-purple-light rounded-lg border border-purple">
-                            <p className="text-sm text-purple font-medium">Close</p>
-                            <p className="text-lg font-bold text-primary">
-                                ${parseFloat(klineData.kline.c).toLocaleString()}
-                            </p>
-                        </div>
-                    </div>
-                    <div className="mt-4 text-sm text-muted-foreground space-y-1">
-                        <p>Interval: {klineData.kline.i} | Trades: {klineData.kline.n} |
-                            Volume: {parseFloat(klineData.kline.v).toLocaleString()}</p>
-                        <p>Start: {new Date(klineData.kline.t).toLocaleString()} |
-                            End: {new Date(klineData.kline.T).toLocaleString()}</p>
-                        <p className={`inline-flex items-center gap-2 ${klineData.kline.x ? 'text-success' : 'text-warning'}`}>
-                            <span className={`w-2 h-2 rounded-full ${klineData.kline.x ? 'bg-success' : 'bg-warning'}`}></span>
-                            {klineData.kline.x ? 'Kline Closed' : 'Kline Active'}
-                        </p>
-                    </div>
-                </div>
-            )} */}
         </div>
     );
 }

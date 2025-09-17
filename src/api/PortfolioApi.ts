@@ -145,7 +145,7 @@ export async function getAccountInfo(): Promise<AccountInfo> {
   }
 }
 
-// Open Orders API
+// Open Orders API--working-binance-mainnet
 export async function getOpenOrders(symbol?: string): Promise<Order[]> {
   console.log('📋 Fetching Open Orders...');
   
@@ -175,7 +175,7 @@ export async function getOpenOrders(symbol?: string): Promise<Order[]> {
 }
 
 // Order History API
-export async function getOrderHistory(): Promise<Array<{ symbol: string; orders: Order[] }>> {
+export async function getOrderHistory(): Promise<Array<{ symbol: string; orders: any[] }>> {
   console.log('📜 Fetching Order History...');
   
   try {
