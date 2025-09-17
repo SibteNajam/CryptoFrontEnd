@@ -40,13 +40,13 @@ export default function SymbolCards({
       <div
         key={cardKey}
         className={`
-          relative bg-white p-2 rounded-lg border cursor-pointer transition-all duration-200 
+          relative bg-card p-2 rounded-lg border border-default cursor-pointer transition-all duration-200 
           min-h-[60px] flex flex-col justify-between
           ${isSelected
-            ? 'border-blue-500 shadow-md shadow-blue-500/15 bg-blue-50'
+            ? 'border-blue-400 shadow-md shadow-blue-500/15 bg-blue-50 dark:bg-blue-50/10'
             : isHovered
-              ? 'border-gray-300 shadow-md bg-gray-50'
-              : 'border-gray-200 shadow-sm'
+              ? 'border-gray-300 shadow-md bg-muted'
+              : 'border-default shadow-sm'
           }
         `}
         onMouseEnter={() => onCardHover(cardKey)}
@@ -58,12 +58,12 @@ export default function SymbolCards({
             <TrendingUp
               size={12}
               className={`transition-colors duration-200 ${
-                isSelected ? 'text-blue-600' : isHovered ? 'text-gray-700' : 'text-gray-500'
+                isSelected ? 'text-blue-600' : isHovered ? 'text-secondary' : 'text-muted-foreground'
               }`}
             />
             <span className={`
               text-xs font-semibold transition-colors duration-200
-              ${isSelected ? 'text-blue-600' : 'text-gray-800'}
+              ${isSelected ? 'text-blue-600' : 'text-primary'}
             `}>
               {symbol.symbol}
             </span>
@@ -73,13 +73,13 @@ export default function SymbolCards({
             size={12}
             className={`
               transition-all duration-200
-              ${isSelected ? 'text-blue-600' : isHovered ? 'text-gray-600' : 'text-gray-400'}
+              ${isSelected ? 'text-blue-600' : isHovered ? 'text-secondary' : 'text-muted-foreground'}
             `}
           />
         </div>
 
         <div className="flex items-end justify-between mt-1">
-          <span className="text-xs font-medium text-gray-900">
+          <span className="text-xs font-medium text-primary">
             {symbol.price}
           </span>
           {symbol.change && (
@@ -98,27 +98,27 @@ export default function SymbolCards({
   };
 
   const renderSkeletonCard = (key: string) => (
-    <div key={key} className="bg-white p-2 rounded-lg border border-gray-200 shadow-sm min-h-[60px] flex flex-col justify-between animate-pulse">
+    <div key={key} className="bg-card p-2 rounded-lg border border-default shadow-sm min-h-[60px] flex flex-col justify-between animate-pulse">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1">
-          <div className="h-3 w-3 bg-gray-200 rounded-full"></div>
-          <div className="h-3 bg-gray-200 rounded w-10"></div>
+          <div className="h-3 w-3 bg-muted rounded-full"></div>
+          <div className="h-3 bg-muted rounded w-10"></div>
         </div>
-        <div className="h-3 w-3 bg-gray-200 rounded"></div>
+        <div className="h-3 w-3 bg-muted rounded"></div>
       </div>
       <div className="flex items-end justify-between mt-1">
-        <div className="h-3 bg-gray-200 rounded w-8"></div>
-        <div className="h-3 bg-gray-200 rounded w-6"></div>
+        <div className="h-3 bg-muted rounded w-8"></div>
+        <div className="h-3 bg-muted rounded w-6"></div>
       </div>
     </div>
   );
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
+      <div className="bg-card rounded-lg border border-default shadow-sm p-4">
         <div className="flex items-center justify-center mb-3">
           <Loader2 size={16} className="animate-spin text-blue-600 mr-2" />
-          <span className="text-sm text-gray-600 font-medium">Loading symbols...</span>
+          <span className="text-sm text-muted-foreground font-medium">Loading symbols...</span>
         </div>
         <div className="grid grid-cols-5 gap-2 mb-2">
           {Array(10).fill(0).map((_, index) => renderSkeletonCard(`skeleton-1-${index}`))}
@@ -131,10 +131,10 @@ export default function SymbolCards({
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
+    <div className="bg-card rounded-lg border border-default shadow-sm p-4">
       <div className="mb-3">
-        <h2 className="text-sm font-bold text-gray-800">Trading Pairs</h2>
-        <p className="text-xs text-gray-500">Select a symbol to view detailed analysis</p>
+        <h2 className="text-sm font-bold text-primary">Trading Pairs</h2>
+        <p className="text-xs text-muted-foreground">Select a symbol to view detailed analysis</p>
       </div>
       
       <div className="grid grid-cols-5 gap-2 mb-2">

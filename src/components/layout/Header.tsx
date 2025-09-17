@@ -15,13 +15,13 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
   // ✅ Remove the old useState and useEffect - everything else stays the same!
 
   return (
-    <header className="h-16 bg-card border-b border-default shadow-sm">
-      <div className="h-full flex items-center justify-between px-6">
+    <header className="h-16 sticky top-0 z-30 bg-card/80 backdrop-blur border-b border-default shadow-sm">
+      <div className="h-full flex items-center justify-between px-4 sm:px-6">
         {/* Left Section */}
         <div className="flex items-center space-x-4">
           <button
             onClick={onToggleSidebar}
-            className="p-2 rounded-lg hover-accent transition-colors lg:hidden"
+            className="p-2 rounded-lg hover-light transition-colors lg:hidden"
           >
             <Menu size={20} className="text-muted-foreground" />
           </button>
@@ -37,7 +37,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
           </div>
 
           {/* Center Section - Search */}
-          <div className="hidden md:flex flex-1 max-w-md mx-8">
+          <div className="hidden md:flex flex-1 max-w-md mx-4 sm:mx-8">
             <div className="relative w-full">
               <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted" />
               <input
@@ -54,8 +54,8 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
           {/* Market Status */}
           {/* Theme Toggle Button - stays exactly the same */}
           <button
-            onClick={toggleTheme} // ✅ Now uses context function
-            className="p-2 rounded-lg hover-accent transition-colors duration-300 relative group"
+            onClick={toggleTheme}
+            className="p-2 rounded-lg hover-light transition-colors duration-300 relative group"
             title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
           >
             {isDarkMode ? (
@@ -66,18 +66,18 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
           </button>
 
           {/* Notifications */}
-          <button className="p-2 rounded-lg hover-accent transition-colors relative">
+          <button className="p-2 rounded-lg hover-light transition-colors relative">
             <Bell size={20} className="text-muted-foreground" />
             <span className="absolute -top-1 -right-1 w-3 h-3 bg-danger rounded-full"></span>
           </button>
 
           {/* Settings */}
-          <button className="p-2 rounded-lg hover-accent transition-colors">
+          <button className="p-2 rounded-lg hover-light transition-colors">
             <Settings size={20} className="text-muted-foreground" />
           </button>
 
           {/* User Menu */}
-          <div className="flex items-center space-x-2 px-3 py-1.5 rounded-lg hover-accent transition-colors cursor-pointer">
+          <div className="flex items-center space-x-2 px-3 py-1.5 rounded-lg hover-light transition-colors cursor-pointer">
             <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
               <User size={16} className="text-primary-foreground" />
             </div>

@@ -35,11 +35,11 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
 
   return (
-    <div className={`fixed left-0 top-0 h-full bg-card border-r border-default shadow-lg transition-all duration-300 z-40 ${
+    <div className={`fixed left-0 top-0 h-full bg-card/90 backdrop-blur border-r border-default shadow-lg transition-all duration-300 z-40 ${
       collapsed ? 'w-16' : 'w-64'
     }`}>
       {/* Logo Section */}
-      <div className="h-16 flex items-center justify-between px-4 border-b border-default">
+      <div className="h-16 flex items-center justify-between px-3 sm:px-4 border-b border-default">
         {!collapsed && (
           <div className="flex items-center space-x-2">
             <span className="text-xl font-bold text-primary">ByteBoom</span>
@@ -48,7 +48,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
         
         <button
           onClick={onToggle}
-          className="p-1.5 rounded-lg hover-muted transition-colors"
+          className="p-1.5 rounded-lg hover-light transition-colors"
         >
           <ChevronLeft 
             size={20} 
@@ -73,7 +73,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                   className={`flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 group ${
                     isActive
                       ? 'bg-primary text-primary-foreground shadow-md'
-                      : 'text-secondary hover-muted text-card-foreground'
+                      : 'text-secondary hover-light text-card-foreground'
                   }`}
                 >
                   <Icon 

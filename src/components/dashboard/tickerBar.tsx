@@ -55,17 +55,17 @@ export default function TickerBar({
   // Loading state
   if (isLoading || !tickerData) {
     return (
-      <div className="bg-card border-b border-gray-200">
+      <div className="bg-card border-b border-default">
         <div className="px-6 py-3">
           <div className="flex items-center justify-between">
             <div className="animate-pulse flex items-center gap-4">
-              <div className="h-7 bg-gray-200 rounded w-24"></div>
-              <div className="h-7 bg-gray-200 rounded w-32"></div>
-              <div className="h-6 bg-gray-200 rounded w-20"></div>
+              <div className="h-7 bg-muted rounded w-24"></div>
+              <div className="h-7 bg-muted rounded w-32"></div>
+              <div className="h-6 bg-muted rounded w-20"></div>
             </div>
             <div className="animate-pulse flex items-center gap-3">
-              <div className="h-5 bg-gray-200 rounded w-16"></div>
-              <div className="h-5 bg-gray-200 rounded w-20"></div>
+              <div className="h-5 bg-muted rounded w-16"></div>
+              <div className="h-5 bg-muted rounded w-20"></div>
             </div>
           </div>
         </div>
@@ -129,7 +129,7 @@ export default function TickerBar({
   };
 
   return (
-    <div className="bg-card border-b border-gray-200 shadow-sm">
+    <div className="bg-card border-b border-default shadow-sm">
       <div className="px-4 py-2">
         {/* Main Header Row */}
         <div className="flex items-center justify-between mb-3">
@@ -139,25 +139,25 @@ export default function TickerBar({
             <div className="relative">
               <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors"
+                className="flex items-center gap-2 px-3 py-1.5 bg-muted hover:bg-muted-dark rounded-lg border border-default transition-colors"
               >
-                <span className="font-bold text-gray-900">{selectedSymbol}</span>
-                <ChevronDown className={`h-4 w-4 text-gray-600 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                <span className="font-bold text-primary">{selectedSymbol}</span>
+                <ChevronDown className={`h-4 w-4 text-secondary transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
 
               {/* Dropdown Menu */}
               {isDropdownOpen && (
-                <div className="absolute top-full left-0 mt-1 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                <div className="absolute top-full left-0 mt-1 w-64 bg-card rounded-lg shadow-lg border border-default z-50">
                   {/* Search Input */}
                   <div className="p-2 border-b border-gray-100">
                     <div className="relative">
-                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
+                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                       <input
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder="Search symbols..."
-                        className="w-full pl-8 pr-8 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full pl-8 pr-8 py-2 text-sm border border-default rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-input text-card-foreground"
                         autoFocus
                       />
                       {searchQuery && (
@@ -165,7 +165,7 @@ export default function TickerBar({
                           onClick={() => setSearchQuery('')}
                           className="absolute right-2.5 top-2.5"
                         >
-                          <X className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                          <X className="h-4 w-4 text-muted-foreground hover:text-secondary" />
                         </button>
                       )}
                     </div>
@@ -180,16 +180,16 @@ export default function TickerBar({
                           onClick={() => handleSymbolSelect(sym.symbol)}
                           onMouseEnter={() => setHoveredSymbol(sym.symbol)}
                           onMouseLeave={() => setHoveredSymbol(null)}
-                          className={`w-full flex items-center justify-between px-3 py-2 hover:bg-blue-50 transition-colors ${
-                            sym.symbol === selectedSymbol ? 'bg-blue-50 border-l-2 border-blue-500' : ''
+                          className={`w-full flex items-center justify-between px-3 py-2 hover:bg-blue-50 dark:hover:bg-blue-50/10 transition-colors ${
+                            sym.symbol === selectedSymbol ? 'bg-blue-50 dark:bg-blue-50/10 border-l-2 border-blue-500' : ''
                           }`}
                         >
-                          <span className="font-medium text-gray-900">{sym.symbol}</span>
-                          <span className="text-sm text-gray-600">${parseFloat(sym.price).toFixed(4)}</span>
+                          <span className="font-medium text-primary">{sym.symbol}</span>
+                          <span className="text-sm text-secondary">${parseFloat(sym.price).toFixed(4)}</span>
                         </button>
                       ))
                     ) : (
-                      <div className="px-3 py-4 text-center text-sm text-gray-500">
+                      <div className="px-3 py-4 text-center text-sm text-muted-foreground">
                         No symbols found
                       </div>
                     )}
@@ -228,7 +228,7 @@ export default function TickerBar({
               {wsConnected ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
               <span>{wsConnected ? 'Live' : 'Offline'}</span>
             </div>
-            <div className="flex items-center gap-1.5 text-xs text-gray-600 bg-gray-50 px-2.5 py-1 rounded-md border border-gray-200">
+            <div className="flex items-center gap-1.5 text-xs text-secondary bg-muted px-2.5 py-1 rounded-md border border-default">
               <Clock className="h-3 w-3" />
               <span className="font-mono">{new Date().toLocaleTimeString('en-US', { 
                 hour12: false, 
@@ -245,35 +245,35 @@ export default function TickerBar({
           {/* 24h High/Low */}
           <div className="flex flex-col gap-0.5">
             <div className="flex items-center justify-between">
-              <span className="text-gray-500">24h High</span>
-              <span className="font-semibold text-gray-900">${formatPrice(highPrice)}</span>
+              <span className="text-muted-foreground">24h High</span>
+              <span className="font-semibold text-primary">${formatPrice(highPrice)}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-gray-500">24h Low</span>
-              <span className="font-semibold text-gray-900">${formatPrice(lowPrice)}</span>
+              <span className="text-muted-foreground">24h Low</span>
+              <span className="font-semibold text-primary">${formatPrice(lowPrice)}</span>
             </div>
           </div>
 
           {/* Volume */}
           <div className="flex flex-col gap-0.5">
             <div className="flex items-center justify-between">
-              <span className="text-gray-500">Vol({baseAsset})</span>
-              <span className="font-semibold text-gray-900">{formatVolume(volume)}</span>
+              <span className="text-muted-foreground">Vol({baseAsset})</span>
+              <span className="font-semibold text-primary">{formatVolume(volume)}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-gray-500">Vol(USDT)</span>
-              <span className="font-semibold text-gray-900">${formatVolume(quoteVolume)}</span>
+              <span className="text-muted-foreground">Vol(USDT)</span>
+              <span className="font-semibold text-primary">${formatVolume(quoteVolume)}</span>
             </div>
           </div>
 
           {/* Bid/Ask */}
           <div className="flex flex-col gap-0.5">
             <div className="flex items-center justify-between">
-              <span className="text-gray-500">Bid</span>
+              <span className="text-muted-foreground">Bid</span>
               <span className="font-semibold text-green-600">${formatPrice(bidPrice)}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-gray-500">Ask</span>
+              <span className="text-muted-foreground">Ask</span>
               <span className="font-semibold text-red-600">${formatPrice(askPrice)}</span>
             </div>
           </div>
@@ -281,11 +281,11 @@ export default function TickerBar({
           {/* Open Price */}
           <div className="flex flex-col gap-0.5">
             <div className="flex items-center justify-between">
-              <span className="text-gray-500">Open</span>
-              <span className="font-semibold text-gray-900">${formatPrice(openPrice)}</span>
+              <span className="text-muted-foreground">Open</span>
+              <span className="font-semibold text-primary">${formatPrice(openPrice)}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-gray-500">Change</span>
+              <span className="text-muted-foreground">Change</span>
               <span className={`font-semibold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
                 {isPositive ? '+' : ''}{formatPrice(Math.abs(priceChange))}
               </span>
@@ -295,12 +295,12 @@ export default function TickerBar({
           {/* Trades Count */}
           <div className="flex flex-col gap-0.5">
             <div className="flex items-center justify-between">
-              <span className="text-gray-500">Trades</span>
-              <span className="font-semibold text-gray-900">{formatNumber(tradeCount)}</span>
+              <span className="text-muted-foreground">Trades</span>
+              <span className="font-semibold text-primary">{formatNumber(tradeCount)}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-gray-500">Spread</span>
-              <span className="font-semibold text-gray-900">{spreadPercent.toFixed(3)}%</span>
+              <span className="text-muted-foreground">Spread</span>
+              <span className="font-semibold text-primary">{spreadPercent.toFixed(3)}%</span>
             </div>
           </div>
 
