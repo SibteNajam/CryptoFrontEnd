@@ -48,6 +48,7 @@ export default function PortfolioPage() {
 
       setAccountData(accountInfo);
       setOpenOrders(openOrders);
+      // setOrderHistory(orderHistory);
      
       setLastUpdate(new Date());
     } catch (err) {

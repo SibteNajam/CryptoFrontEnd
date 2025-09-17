@@ -355,7 +355,7 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
     return (
         <div className="h-full flex flex-col bg-card">
             {/* Header with Symbol and Balance */}
-            <div className="bg-card brder-b border-gray-200 px-4 py-3">
+            <div className="bg-card brder-b border-gray-200 px-4 py-1">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <span className="text-lg font-bold text-gray-900">{selectedSymbol}</span>
@@ -439,7 +439,7 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                 </div>
 
                 {activeTab === 'limit' ? (
-                    <div className="space-y-1">
+                    <div className="">
                         {/* Price Input */}
                         <div className="flex gap-4">
                             {/* Price Input */}
@@ -517,13 +517,13 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                                 <div className="p-3 bg-gray-50 rounded-lg space-y-3 border border-gray-200">
                                     <div className="grid grid-cols-2 gap-3">
                                         <div>
-                                            <label className="text-xs text-gray-600 mb-1 block">Stop Loss</label>
+                                            <label className="text-xs text-gray-600 mb-1 block ">Stop Loss</label>
                                             <input
                                                 type="text"
                                                 placeholder="0.00"
                                                 value={tpSlForm.stopLossPrice}
                                                 onChange={(e) => setTPSLForm(prev => ({ ...prev, stopLossPrice: e.target.value }))}
-                                                className="w-full px-2.5 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-transparent"
+                                                className="bg-gray-100 w-full px-2.5 py-2 text-sm border  rounded-md focus:outline-none"
                                             />
                                         </div>
                                         <div>
@@ -533,7 +533,7 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                                                 placeholder="0.00"
                                                 value={tpSlForm.takeProfitPrice}
                                                 onChange={(e) => setTPSLForm(prev => ({ ...prev, takeProfitPrice: e.target.value }))}
-                                                className="w-full px-2.5 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-transparent"
+                                                className=" bg-gray-100 w-full px-2.5 py-2 text-sm border rounded-md focus:outline-none"
                                             />
                                         </div>
                                     </div>
@@ -591,9 +591,9 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                 )}
 
                 {/* Total and Submit */}
-                <div className="mt-6 space-y-3">
+                <div className="mt-1">
                     <div className="p-3 bg-gray-50 rounded-lg">
-                        <div className="flex justify-between items-center">
+                        <div className="flex justify-between items-center mt-1">
                             <span className="text-sm text-gray-600">Total</span>
                             <span className="text-lg font-bold text-gray-900">
                                 {activeTab === 'limit' && orderForm.price && orderForm.quantity
@@ -606,7 +606,7 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                     <button
                         onClick={handlePlaceOrder}
                         disabled={orderLoading}
-                        className={`w-full py-3.5 rounded-lg font-semibold text-white transition-all transform hover:scale-[1.02] ${(activeTab === 'limit' ? orderForm.side : marketForm.side) === 'BUY'
+                        className={` mt-2 w-full py-3.5 rounded-lg font-semibold text-white transition-all transform hover:scale-[1.02] ${(activeTab === 'limit' ? orderForm.side : marketForm.side) === 'BUY'
                                 ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 shadow-lg'
                                 : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 shadow-lg'
                             } disabled:opacity-50 disabled:cursor-not-allowed`}
