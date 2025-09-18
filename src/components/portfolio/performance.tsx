@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { TrendingUp, TrendingDown, Activity, BarChart3, Calendar } from 'lucide-react';
-import { AccountSnapshot } from '../../api/PortfolioApi';
+import { AccountSnapshot } from '../../infrastructure/api/PortfolioApi';
 
 interface PerformanceTabProps {
   accountSnapshot: AccountSnapshot | null;

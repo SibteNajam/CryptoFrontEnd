@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Shield, CheckCircle, XCircle, Wallet } from 'lucide-react';
-import { AccountInfo } from '../../api/PortfolioApi';
+import { AccountInfo } from '../../infrastructure/api/PortfolioApi';
 
 interface OverviewTabProps {
   accountData: AccountInfo | null;

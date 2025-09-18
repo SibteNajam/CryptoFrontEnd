@@ -9,7 +9,7 @@ import SymbolCards from '../../../components/dashboard/SymbolCards';
 import TradingPanel from '../../../components/charts/TradingPanel';
 import BinanceOrderBook from '../../../components/dashboard/OrderBook';
 import TradingViewChart from '../../../components/charts/TradingViewChart';
-import { BinanceApiService } from '../../../api/BinanceOrder';
+import { BinanceApiService } from '../../../infrastructure/api/BinanceOrder';
 import PriceClickHandler from '../../../components/charts/priceClickHandler';
 import TradesComponent from '@/components/dashboard/trades';
 import TickerBar from '../../../components/dashboard/tickerBar';

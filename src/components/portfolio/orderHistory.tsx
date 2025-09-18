@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { History } from 'lucide-react';
-import { Order } from '../../api/PortfolioApi';
+import { Order } from '../../infrastructure/api/PortfolioApi';
 
 interface HistoryTabProps {
   orderHistory: Array<{ symbol: string; orders: any[] }>;

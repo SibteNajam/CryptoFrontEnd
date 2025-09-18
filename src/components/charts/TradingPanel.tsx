@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { BinanceApiService, AccountInfo, OpenOrder } from '../../api/BinanceOrder';
+import { BinanceApiService, AccountInfo, OpenOrder } from '../../infrastructure/api/BinanceOrder';
 import OpenedOrders from '../OrderPlacment/openedOrder';
 import { Info, TrendingDown, TrendingUp } from 'lucide-react';
 

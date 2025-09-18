@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { BinanceApiService } from '../../api/BinanceOrder';
+import { BinanceApiService } from '../../infrastructure/api/BinanceOrder';
 
 interface PriceClickHandlerProps {
     selectedSymbol: string;

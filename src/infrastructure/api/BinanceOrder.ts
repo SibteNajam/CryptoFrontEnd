@@ -126,12 +126,15 @@ export class BinanceApiService {
 
     async getAccountInfo(): Promise<AccountInfo> {
         try {
+            const start = Date.now();
             const response = await fetch(`${this.apiUrl}/binance/account-info`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
                 }
             });
+            const duration = Date.now() - start;
+            console.log(`⏱️ Fetched account info in ${duration}ms`);
 
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -253,7 +256,8 @@ async placeOrder(order: OrderRequest): Promise<OrderResult> {
 }
 
 async placeMarketOrder(payload: any): Promise<any> {
-    try {
+     const start = Date.now();
+    try {      
         const response = await fetch('http://localhost:3000/binance/place-market-order', {
             method: 'POST',
             headers: {
@@ -265,6 +269,9 @@ async placeMarketOrder(payload: any): Promise<any> {
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
+        const duration = Date.now() - start;
+
+    console.log(`⏱️ Placed market order in................... ${duration}ms`);
         return await response.json();
     } catch (error) {
         if (error instanceof Error) {
@@ -277,6 +284,7 @@ async placeMarketOrder(payload: any): Promise<any> {
 
 async placeOrderListOTOCO(payload: any): Promise<any> {
     try {
+        const start = Date.now();
         const response = await fetch('http://localhost:3000/binance/place-otoc-order', {
             method: 'POST',
             headers: {
@@ -285,6 +293,8 @@ async placeOrderListOTOCO(payload: any): Promise<any> {
                 },
                 body: JSON.stringify(payload)
             });
+            const duration = Date.now() - start;
+            console.log(`⏱️ Placed OTOCO order in ${duration}ms`);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }

@@ -13,7 +13,7 @@ import {
   Order,
   AccountSnapshot,
   UserAsset
-} from '../../../api/PortfolioApi';
+} from '../../../infrastructure/api/PortfolioApi';
 import OverviewTab from '../../../components/portfolio/overview';
 import BalancesTab from '../../../components/portfolio/balances';
 import OpenOrdersTab from '../../../components/portfolio/openOrders';

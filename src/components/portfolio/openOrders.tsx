@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Clock } from 'lucide-react';
-import { Order } from '../../api/PortfolioApi';
+import { Order } from '../../infrastructure/api/PortfolioApi';
 
 interface OpenOrdersTabProps {
   openOrders: Order[];

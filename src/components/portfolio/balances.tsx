@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Search, Eye, EyeOff, Filter, Download, TrendingUp, TrendingDown, MoreVertical } from 'lucide-react';
-import { AccountInfo } from '../../api/PortfolioApi';
+import { AccountInfo } from '../../infrastructure/api/PortfolioApi';
 
 interface BalancesTabProps {
   accountData: AccountInfo | null;

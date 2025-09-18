@@ -1,5 +1,5 @@
 import React from "react";
-import { OpenOrder, BinanceApiService } from "../../api/BinanceOrder";
+import { OpenOrder, BinanceApiService } from "../../infrastructure/api/BinanceOrder";
 
 interface OpenedOrdersProps {
   openOrders: OpenOrder[];
