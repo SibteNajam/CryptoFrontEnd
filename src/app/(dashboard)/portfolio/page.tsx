@@ -63,11 +63,16 @@ export default function PortfolioPage() {
       // Try to fetch real data, fallback to fake data
       let snapshot, assets, transactions;
       
-      try {
-        snapshot = await getAccountSnapshot();
-      } catch {
-        snapshot = generateFakeAccountSnapshot();
-      }
+    try {
+  snapshot = await getAccountSnapshot(
+    'SPOT', 
+    Date.now() - 30 * 24 * 60 * 60 * 1000, // startTime: 30 days ago
+    Date.now(),                             // endTime: now
+    30                                      // limit: max 30 days
+  );
+} catch {
+  snapshot = generateFakeAccountSnapshot();
+}
 
       try {
         assets = await getUserAssets();
@@ -129,7 +134,7 @@ export default function PortfolioPage() {
         freeze: '0.00000000',
         withdrawing: '0.00000000',
         btcValuation: '0.15234567',
-        usdtValuation: '6855.50',
+        ipoable: '6855.50',
       },
       {
         asset: 'ETH',
@@ -138,7 +143,7 @@ export default function PortfolioPage() {
         freeze: '0.00000000',
         withdrawing: '0.00000000',
         btcValuation: '0.13978000',
-        usdtValuation: '6392.00',
+        ipoable: '6392.00',
       },
       {
         asset: 'USDT',
@@ -147,7 +152,7 @@ export default function PortfolioPage() {
         freeze: '0.00',
         withdrawing: '0.00',
         btcValuation: '0.05555556',
-        usdtValuation: '2500.00',
+        ipoable: '2500.00',
       },
       {
         asset: 'BNB',
@@ -156,7 +161,7 @@ export default function PortfolioPage() {
         freeze: '0.00000000',
         withdrawing: '0.00000000',
         btcValuation: '0.08765432',
-        usdtValuation: '3951.00',
+        ipoable: '3951.00',
       },
     ];
   };
@@ -264,7 +269,7 @@ export default function PortfolioPage() {
       case 'performance':
         return <PerformanceTab accountSnapshot={accountSnapshot} />;
       case 'balances':
-        return <BalancesTab accountData={accountData} />;
+        return <BalancesTab userAssets={userAssets} btcPrice={117300} />;
       case 'transactions':
         return <TransactionsTab transactionHistory={transactionHistory} />;
       case 'orders':

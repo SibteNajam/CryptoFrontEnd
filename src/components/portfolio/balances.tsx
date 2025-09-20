@@ -1,37 +1,31 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Search, Eye, EyeOff, Filter, Download, TrendingUp, TrendingDown, MoreVertical } from 'lucide-react';
-import { AccountInfo } from '../../infrastructure/api/PortfolioApi';
+import { Search, Eye, EyeOff, Filter, Download, MoreVertical, TrendingUp } from 'lucide-react';
 
-interface BalancesTabProps {
-  accountData: AccountInfo | null;
+export interface UserAsset {
+  asset: string;
+  free: string;
+  locked: string;
+  freeze: string;
+  withdrawing: string;
+  ipoable: string;
+  btcValuation: string;
 }
 
-export default function BalancesTab({ accountData }: BalancesTabProps) {
+interface BalancesTabProps {
+  userAssets: UserAsset[];
+  btcPrice: number;
+}
+
+export default function BalancesTab({ userAssets, btcPrice = 117200 }: BalancesTabProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [hideSmallBalances, setHideSmallBalances] = useState(false);
   const [sortBy, setSortBy] = useState<'asset' | 'total' | 'value'>('value');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showValues, setShowValues] = useState(true);
 
-  // Mock price data - In real app, you'd fetch this from API
-  const mockPrices: Record<string, number> = {
-    'BTC': 45000,
-    'ETH': 3200,
-    'BNB': 320,
-    'ADA': 0.45,
-    'SOL': 98,
-    'USDT': 1,
-    'USDC': 1,
-    'BUSD': 1,
-    'DOT': 6.5,
-    'MATIC': 0.85,
-  };
-
-  const getMockPrice = (asset: string) => mockPrices[asset] || Math.random() * 100;
-
-  if (!accountData) {
+  if (!userAssets) {
     return (
       <div className="bg-card rounded-lg border border-default p-8">
         <div className="flex flex-col items-center justify-center space-y-4">
@@ -53,70 +47,86 @@ export default function BalancesTab({ accountData }: BalancesTabProps) {
     return num.toFixed(6);
   };
 
-  const formatValue = (amount: number, price: number) => {
-    const value = amount * price;
-    if (value < 0.01) return '$0.00';
-    if (value < 1) return `$${value.toFixed(4)}`;
-    return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const getValueInUsd = (asset: UserAsset) => {
+    const total = parseFloat(asset.free) + parseFloat(asset.locked) + parseFloat(asset.freeze) + 
+                  parseFloat(asset.withdrawing) + parseFloat(asset.ipoable);
+
+    // Use btcValuation if available
+    if (asset.btcValuation && parseFloat(asset.btcValuation) > 0) {
+      return parseFloat(asset.btcValuation) * btcPrice;
+    }
+
+    // Fallback: assume stablecoins are $1
+    if (['USDT', 'BUSD', 'USDC'].includes(asset.asset)) {
+      return total;
+    }
+
+    return 0;
+  };
+
+  const getTotalAmount = (asset: UserAsset) => {
+    return parseFloat(asset.free) + parseFloat(asset.locked) + parseFloat(asset.freeze) + 
+           parseFloat(asset.withdrawing) + parseFloat(asset.ipoable);
   };
 
   const activeBalances = useMemo(() => {
-    let balances = accountData.balances.filter(
-      balance => parseFloat(balance.free) > 0 || parseFloat(balance.locked) > 0
+    let balances = userAssets.filter(
+      (balance) => 
+        parseFloat(balance.free) > 0 || 
+        parseFloat(balance.locked) > 0 || 
+        parseFloat(balance.freeze) > 0 ||
+        parseFloat(balance.withdrawing) > 0 ||
+        parseFloat(balance.ipoable) > 0
     );
 
     if (hideSmallBalances) {
-      balances = balances.filter(balance => {
-        const total = parseFloat(balance.free) + parseFloat(balance.locked);
-        const price = getMockPrice(balance.asset);
-        return total * price >= 1;
-      });
+      balances = balances.filter((balance) => getValueInUsd(balance) >= 1);
     }
 
     return balances;
-  }, [accountData.balances, hideSmallBalances]);
+  }, [userAssets, hideSmallBalances]);
 
   const filteredAndSortedBalances = useMemo(() => {
-    let filtered = activeBalances.filter(balance =>
+    let filtered = activeBalances.filter((balance) =>
       balance.asset.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     filtered.sort((a, b) => {
-      let aValue, bValue;
-      
+      let aValue: string | number, bValue: string | number;
+
       switch (sortBy) {
         case 'asset':
           aValue = a.asset;
           bValue = b.asset;
           break;
         case 'total':
-          aValue = parseFloat(a.free) + parseFloat(a.locked);
-          bValue = parseFloat(b.free) + parseFloat(b.locked);
+          aValue = getTotalAmount(a);
+          bValue = getTotalAmount(b);
           break;
         case 'value':
-          aValue = (parseFloat(a.free) + parseFloat(a.locked)) * getMockPrice(a.asset);
-          bValue = (parseFloat(b.free) + parseFloat(b.locked)) * getMockPrice(b.asset);
+          aValue = getValueInUsd(a);
+          bValue = getValueInUsd(b);
           break;
         default:
           return 0;
       }
 
       if (typeof aValue === 'string') {
-        return sortOrder === 'asc' ? aValue.localeCompare(bValue as string) : (bValue as string).localeCompare(aValue);
+        return sortOrder === 'asc'
+          ? aValue.localeCompare(bValue as string)
+          : (bValue as string).localeCompare(aValue);
       }
-      
-      return sortOrder === 'asc' ? (aValue as number) - (bValue as number) : (bValue as number) - (aValue as number);
+
+      return sortOrder === 'asc'
+        ? (aValue as number) - (bValue as number)
+        : (bValue as number) - (aValue as number);
     });
 
     return filtered;
   }, [activeBalances, searchTerm, sortBy, sortOrder]);
 
   const totalPortfolioValue = useMemo(() => {
-    return activeBalances.reduce((total, balance) => {
-      const amount = parseFloat(balance.free) + parseFloat(balance.locked);
-      const price = getMockPrice(balance.asset);
-      return total + (amount * price);
-    }, 0);
+    return activeBalances.reduce((total, balance) => total + getValueInUsd(balance), 0);
   }, [activeBalances]);
 
   const handleSort = (column: 'asset' | 'total' | 'value') => {
@@ -130,14 +140,19 @@ export default function BalancesTab({ accountData }: BalancesTabProps) {
 
   return (
     <div className="h-full space-y-4">
-      {/* Portfolio Summary */}
+      {/* Portfolio Summary - Previous Layout */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-card border border-default rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-muted-foreground text-sm">Total Portfolio</p>
               <p className="text-2xl font-semibold text-primary">
-                {showValues ? `$${totalPortfolioValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '••••••••'}
+                {showValues
+                  ? `$${totalPortfolioValue.toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}`
+                  : '••••••••'}
               </p>
             </div>
             <div className="text-success text-sm flex items-center gap-1">
@@ -168,7 +183,7 @@ export default function BalancesTab({ accountData }: BalancesTabProps) {
         </div>
       </div>
 
-      {/* Controls */}
+      {/* Controls - Previous Layout */}
       <div className="bg-card border border-default rounded-lg p-4">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -217,7 +232,7 @@ export default function BalancesTab({ accountData }: BalancesTabProps) {
         </div>
       </div>
 
-      {/* Balances Table */}
+      {/* Balances Table - API Columns Only (7 Total) */}
       <div className="bg-card border border-default rounded-lg overflow-hidden">
         <div className="px-4 py-3 border-b border-default">
           <h3 className="text-lg font-medium text-primary">
@@ -250,13 +265,19 @@ export default function BalancesTab({ accountData }: BalancesTabProps) {
                     </div>
                   </th>
                   <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider text-right">
-                    Price
-                  </th>
-                  <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider text-right">
-                    Available
+                    Free
                   </th>
                   <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider text-right">
                     Locked
+                  </th>
+                  <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider text-right">
+                    Frozen
+                  </th>
+                  <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider text-right">
+                    Withdrawing
+                  </th>
+                  <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider text-right">
+                    IPOable
                   </th>
                   <th 
                     className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider text-right cursor-pointer hover-bg-gray-200"
@@ -284,22 +305,17 @@ export default function BalancesTab({ accountData }: BalancesTabProps) {
                       )}
                     </div>
                   </th>
-                  <th className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider text-right">
-                    24h Change
-                  </th>
                   <th className="px-4 py-3 w-10"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-default">
                 {filteredAndSortedBalances.map((balance) => {
-                  const totalAmount = parseFloat(balance.free) + parseFloat(balance.locked);
-                  const price = getMockPrice(balance.asset);
-                  const value = totalAmount * price;
-                  const change = (Math.random() - 0.5) * 20; // Mock 24h change
-                  const portfolioPercent = ((value / totalPortfolioValue) * 100);
+                  const totalAmount = getTotalAmount(balance);
+                  const usdValue = getValueInUsd(balance);
+                  const portfolioPercent = totalPortfolioValue > 0 ? (usdValue / totalPortfolioValue) * 100 : 0;
                   
                   return (
-                    <tr key={balance.asset} className="hover-bg-blue-50">
+                    <tr key={balance.asset} className="hover:bg-blue-50">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-xs font-medium">
@@ -313,14 +329,11 @@ export default function BalancesTab({ accountData }: BalancesTabProps) {
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="font-medium text-secondary">
-                          ${price.toLocaleString()}
-                        </div>
-                      </td>
+                      {/* Free */}
                       <td className="px-4 py-3 text-right text-secondary">
                         {formatAmount(balance.free, balance.asset)}
                       </td>
+                      {/* Locked */}
                       <td className="px-4 py-3 text-right">
                         {parseFloat(balance.locked) > 0 ? (
                           <span className="text-warning font-medium">
@@ -330,26 +343,55 @@ export default function BalancesTab({ accountData }: BalancesTabProps) {
                           <span className="text-muted-foreground">0.00</span>
                         )}
                       </td>
+                      {/* Frozen */}
+                      <td className="px-4 py-3 text-right">
+                        {parseFloat(balance.freeze) > 0 ? (
+                          <span className="text-orange-600 font-medium">
+                            {formatAmount(balance.freeze, balance.asset)}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">0.00</span>
+                        )}
+                      </td>
+                      {/* Withdrawing */}
+                      <td className="px-4 py-3 text-right">
+                        {parseFloat(balance.withdrawing) > 0 ? (
+                          <span className="text-purple-600 font-medium">
+                            {formatAmount(balance.withdrawing, balance.asset)}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">0.00</span>
+                        )}
+                      </td>
+                      {/* IPOable */}
+                      <td className="px-4 py-3 text-right">
+                        {parseFloat(balance.ipoable) > 0 ? (
+                          <span className="text-green-600 font-medium">
+                            {formatAmount(balance.ipoable, balance.asset)}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">0.00</span>
+                        )}
+                      </td>
+                      {/* Total */}
                       <td className="px-4 py-3 text-right">
                         <div className="font-semibold text-primary">
                           {formatAmount(totalAmount.toString(), balance.asset)}
                         </div>
                       </td>
+                      {/* Value */}
                       <td className="px-4 py-3 text-right">
                         <div className="font-semibold text-primary">
-                          {showValues ? formatValue(totalAmount, price) : '••••••'}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className={`flex items-center justify-end gap-1 text-sm font-medium ${
-                          change >= 0 ? 'text-success' : 'text-danger'
-                        }`}>
-                          {change >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-                          {change >= 0 ? '+' : ''}{change.toFixed(2)}%
+                          {showValues
+                            ? `$${usdValue.toLocaleString(undefined, {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}`
+                            : '••••••'}
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <button className="text-muted-foreground hover-text-gray-700 p-1">
+                        <button className="text-muted-foreground hover:text-gray-700 p-1">
                           <MoreVertical size={16} />
                         </button>
                       </td>

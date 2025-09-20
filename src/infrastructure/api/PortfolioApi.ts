@@ -61,8 +61,8 @@ export interface UserAsset {
   locked: string;
   freeze: string;
   withdrawing: string;
+  ipoable: string;
   btcValuation: string;
-  usdtValuation: string;
 }
 
 export interface Deposit {
@@ -199,14 +199,27 @@ export async function getOrderHistory(): Promise<Array<{ symbol: string; orders:
   }
 }
 // Enhanced API functions
-export async function getAccountSnapshot(): Promise<AccountSnapshot> {
+export async function getAccountSnapshot(
+  type: 'SPOT' | 'MARGIN' | 'FUTURES' = 'SPOT',
+  startTime?: number,
+  endTime?: number,
+  limit: number = 7
+): Promise<any> {
   console.log('📊 Fetching Account Snapshot...');
-  
+
   try {
-    const response = await fetch(`${API_BASE_URL}/binance/account-snapshot`, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-    });
+    const params = new URLSearchParams({ type, limit: limit.toString() });
+
+    if (startTime) params.append('startTime', startTime.toString());
+    if (endTime) params.append('endTime', endTime.toString());
+
+    const response = await fetch(
+      `${API_BASE_URL}/binance/account-snapshot?${params.toString()}`,
+      {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -221,12 +234,13 @@ export async function getAccountSnapshot(): Promise<AccountSnapshot> {
   }
 }
 
+
 export async function getUserAssets(): Promise<UserAsset[]> {
   console.log('💰 Fetching Enhanced User Assets...');
   
   try {
     const response = await fetch(`${API_BASE_URL}/binance/user-assets`, {
-      method: 'POST',
+      method: 'GET',
       headers: { 'Content-Type': 'application/json' },
     });
 
