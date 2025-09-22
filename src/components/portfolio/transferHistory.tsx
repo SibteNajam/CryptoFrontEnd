@@ -98,103 +98,103 @@ export default function TransferHistoryTable({
     );
   }
 
-  return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">
-          Transfer History
-          <span className="ml-2 text-sm text-gray-500">
-            ({pagination.total || 0} total transactions)
-          </span>
-        </h3>
-        
-        {/* Pagination Info */}
-        {pagination.total && pagination.pages && (
-          <div className="text-sm text-gray-500">
-            Page {pagination.current} of {pagination.pages}
-          </div>
-        )}
-      </div>
-
-      {/* Transfer Table */}
-      <div className="overflow-x-auto bg-card border border-default rounded-lg">
-        <table className="w-full text-sm text-left">
-          <thead>
-            <tr className="bg-muted">
-              <th className="px-4 py-2 font-medium">Asset</th>
-              <th className="px-4 py-2 font-medium">Amount</th>
-              <th className="px-4 py-2 font-medium">Type</th>
-              <th className="px-4 py-2 font-medium">Status</th>
-              <th className="px-4 py-2 font-medium">Date & Time</th>
-              <th className="px-4 py-2 font-medium">Transaction ID</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-default">
-            {transfers.map((transfer: TransferRow) => (
-              <tr key={transfer.tranId} className="hover:bg-muted/50">
-                <td className="px-4 py-3 font-medium">
-                  <span className="inline-flex items-center px-2 py-1 rounded-xs text-xs font-medium bg-blue-100 text-blue-800">
-                    {transfer.asset}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  <span className="text-lg font-semibold text-green-600">
-                    {parseFloat(transfer.amount).toFixed(6)}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-xs text-xs font-medium bg-gray-100 text-gray-800">
-                    {transfer.type.replace('_', ' → ')}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-xs text-xs font-medium ${
-                    transfer.status === 'CONFIRMED' 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {transfer.status}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-gray-900">
-                  {format(new Date(transfer.timestamp), 'MMM dd, yyyy HH:mm:ss')}
-                </td>
-                <td className="px-4 py-3">
-                  <span className="text-gray-500 font-mono text-xs">
-                    {transfer.tranId.toString().replace(/(\d{3})(?=\d)/g, '$1 ')}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Pagination Controls */}
-      {pagination.total && pagination.pages && pagination.pages > 1 && (
-        <div className="flex justify-between items-center text-sm text-gray-500">
-          <div>
-            Showing {(current - 1) * size + 1} to {Math.min(current * size, pagination.total)} of {pagination.total} results
-          </div>
-          <div className="flex space-x-2">
-            <button 
-              onClick={() => handlePageChange(current - 1)}
-              disabled={current === 1}
-              className="px-3 py-1 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
-            >
-              Previous
-            </button>
-            <button 
-              onClick={() => handlePageChange(current + 1)}
-              disabled={current === pagination.pages}
-              className="px-3 py-1 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
-            >
-              Next
-            </button>
-          </div>
+ return (
+  <div className="space-y-4">
+    {/* Header */}
+    <div className="flex justify-between items-center">
+      <h3 className="text-lg font-semibold text-card-foreground">
+        Transfer History
+        <span className="ml-2 text-sm text-muted">
+          ({pagination.total || 0} total transactions)
+        </span>
+      </h3>
+      
+      {/* Pagination Info */}
+      {pagination.total && pagination.pages && (
+        <div className="text-sm text-muted">
+          Page {pagination.current} of {pagination.pages}
         </div>
       )}
     </div>
-  );
+
+    {/* Transfer Table */}
+    <div className="overflow-x-auto bg-card border border-default rounded-lg">
+      <table className="w-full text-sm text-left">
+        <thead>
+          <tr className="bg-muted">
+            <th className="px-4 py-2 font-medium text-muted-foreground">Asset</th>
+            <th className="px-4 py-2 font-medium text-muted-foreground">Amount</th>
+            <th className="px-4 py-2 font-medium text-muted-foreground">Type</th>
+            <th className="px-4 py-2 font-medium text-muted-foreground">Status</th>
+            <th className="px-4 py-2 font-medium text-muted-foreground">Date & Time</th>
+            <th className="px-4 py-2 font-medium text-muted-foreground">Transaction ID</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-default">
+          {transfers.map((transfer: TransferRow) => (
+            <tr key={transfer.tranId} className="hover:bg-muted">
+              <td className="px-4 py-3 font-medium">
+                <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                  {transfer.asset}
+                </span>
+              </td>
+              <td className="px-4 py-3">
+                <span className="text-lg font-semibold text-success">
+                  {parseFloat(transfer.amount).toFixed(6)}
+                </span>
+              </td>
+              <td className="px-4 py-3">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                  {transfer.type.replace('_', ' → ')}
+                </span>
+              </td>
+              <td className="px-4 py-3">
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium ${
+                  transfer.status === 'CONFIRMED' 
+                    ? 'bg-green-100 text-green-700' 
+                    : 'bg-warning-light text-warning-foreground'
+                }`}>
+                  {transfer.status}
+                </span>
+              </td>
+              <td className="px-4 py-3 text-card-foreground">
+                {format(new Date(transfer.timestamp), 'MMM dd, yyyy HH:mm:ss')}
+              </td>
+              <td className="px-4 py-3">
+                <span className="text-muted font-mono text-xs">
+                  {transfer.tranId.toString().replace(/(\d{3})(?=\d)/g, '$1 ')}
+                </span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+
+    {/* Pagination Controls */}
+    {pagination.total && pagination.pages && pagination.pages > 1 && (
+      <div className="flex justify-between items-center text-sm text-muted">
+        <div>
+          Showing {(current - 1) * size + 1} to {Math.min(current * size, pagination.total)} of {pagination.total} results
+        </div>
+        <div className="flex space-x-2">
+          <button 
+            onClick={() => handlePageChange(current - 1)}
+            disabled={current === 1}
+            className="px-3 py-1 rounded border border-default text-muted-foreground disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted"
+          >
+            Previous
+          </button>
+          <button 
+            onClick={() => handlePageChange(current + 1)}
+            disabled={current === pagination.pages}
+            className="px-3 py-1 rounded border border-default text-muted-foreground disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted"
+          >
+            Next
+          </button>
+        </div>
+      </div>
+    )}
+  </div>
+);
 }

@@ -348,36 +348,6 @@ export async function getWithdrawHistory(coin?: string, status?: number, limit =
     throw error;
   }
 }
-
-export async function getTransactionHistory(): Promise<{
-  deposits: Deposit[];
-  withdrawals: Withdrawal[];
-  summary: {
-    totalDeposits: number;
-    totalWithdrawals: number;
-  };
-}> {
-  console.log('📜 Fetching Complete Transaction History...');
-  
-  try {
-    const response = await fetch(`${API_BASE_URL}/binance/transaction-history`, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    console.log('✅ Complete Transaction History loaded successfully');
-    return data;
-  } catch (error) {
-    console.error('❌ Complete Transaction History error:', error);
-    throw error;
-  }
-}
-
 export async function getAssetDetail(asset?: string): Promise<AssetDetail> {
   console.log('ℹ️ Fetching Asset Details...');
   

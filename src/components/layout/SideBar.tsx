@@ -25,6 +25,7 @@ const navigation = [
   // { name: 'Markets', href: '/markets', icon: TrendingUp },
   // { name: 'Trading', href: '/trading', icon: BarChart3 },
   { name: 'Portfolio', href: '/portfolio', icon: PieChart },
+  { name: 'Wallet', href: '/wallet', icon: Wallet },
   // { name: 'Wallet', href: '/wallet', icon: Wallet },
   // { name: 'Analytics', href: '/analytics', icon: Activity },
   // { name: 'Alerts', href: '/alerts', icon: Bell },

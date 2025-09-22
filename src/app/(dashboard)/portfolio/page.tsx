@@ -8,7 +8,6 @@ import {
   getOrderHistory,
   getAccountSnapshot,
   getUserAssets,
-  getTransactionHistory,
   AccountInfo, 
   Order,
   AccountSnapshot,
@@ -19,10 +18,9 @@ import BalancesTab from '../../../components/portfolio/balances';
 import OpenOrdersTab from '../../../components/portfolio/openOrders';
 import HistoryTab from '../../../components/portfolio/orderHistory';
 import PerformanceTab from '../../../components/portfolio/performance';
-import TransactionsTab from '../../../components/portfolio/transaction';
 import TransferHistoryTable from '@/components/portfolio/transferHistory';
 
-type TabType = 'overview' | 'balances' | 'orders' | 'history' | 'performance' | 'transactions' | 'transfers';
+type TabType = 'overview' | 'balances' | 'orders' | 'history' | 'performance' | 'transfers';
 
 export default function PortfolioPage() {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
@@ -31,7 +29,6 @@ export default function PortfolioPage() {
   const [orderHistory, setOrderHistory] = useState<Array<{ symbol: string; orders: Order[] }>>([]);
   const [accountSnapshot, setAccountSnapshot] = useState<AccountSnapshot | null>(null);
   const [userAssets, setUserAssets] = useState<UserAsset[]>([]);
-  const [transactionHistory, setTransactionHistory] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
@@ -62,7 +59,7 @@ export default function PortfolioPage() {
   const fetchEnhancedData = async () => {
     try {
       // Try to fetch real data, fallback to fake data
-      let snapshot, assets, transactions;
+      let snapshot, assets ;
       
     try {
   snapshot = await getAccountSnapshot(
@@ -80,16 +77,8 @@ export default function PortfolioPage() {
       } catch {
         assets = generateFakeUserAssets();
       }
-
-      try {
-        transactions = await getTransactionHistory();
-      } catch {
-        transactions = generateFakeTransactionHistory();
-      }
-
       setAccountSnapshot(snapshot);
       setUserAssets(assets);
-      setTransactionHistory(transactions);
     } catch (err) {
       console.error('Enhanced data fetch failed:', err);
     }
@@ -258,7 +247,6 @@ export default function PortfolioPage() {
     { id: 'overview', label: 'Overview', icon: TrendingUp },
     { id: 'performance', label: 'Performance', icon: Activity },
     { id: 'balances', label: 'Balances', icon: Wallet },
-    { id: 'transactions', label: 'Transactions', icon: DollarSign },
     { id: 'orders', label: 'Open Orders', icon: Clock },
     { id: 'history', label: 'History', icon: History },
      { id: 'transfers', label: 'Transfers', icon: History },
@@ -272,8 +260,6 @@ export default function PortfolioPage() {
         return <PerformanceTab accountSnapshot={accountSnapshot} />;
       case 'balances':
         return <BalancesTab userAssets={userAssets} btcPrice={117300} />;
-      case 'transactions':
-        return <TransactionsTab transactionHistory={transactionHistory} />;
       case 'orders':
         return <OpenOrdersTab openOrders={openOrders} />;
       case 'history':
@@ -347,11 +333,6 @@ export default function PortfolioPage() {
                 {tab.id === 'orders' && openOrders.length > 0 && (
                   <span className="ml-1 bg-blue-100 text-blue-600 py-0.5 px-2 rounded-full text-xs">
                     {openOrders.length}
-                  </span>
-                )}
-                {tab.id === 'transactions' && transactionHistory && (
-                  <span className="ml-1 bg-green-100 text-green-600 py-0.5 px-2 rounded-full text-xs">
-                    {transactionHistory.summary?.totalDeposits + transactionHistory.summary?.totalWithdrawals || 0}
                   </span>
                 )}
               </button>
