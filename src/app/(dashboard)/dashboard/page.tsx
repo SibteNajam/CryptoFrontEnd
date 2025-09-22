@@ -144,7 +144,7 @@ export default function Dashboard() {
     const [error, setError] = useState<string | null>(null);
     const [refreshing, setRefreshing] = useState(false);
     const [hoveredCard, setHoveredCard] = useState<string | null>(null);
-    const [selectedSymbol, setSelectedSymbol] = useState<string>('SUIUSDT');
+    const [selectedSymbol, setSelectedSymbol] = useState<string>('XRPUSDT');
     const [selectedInterval, setSelectedInterval] = useState<string>('1m');
     const [wsConnected, setWsConnected] = useState(false);
     const [tickerData, setTickerData] = useState<BinanceTickerData | null>(null);

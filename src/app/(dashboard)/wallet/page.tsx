@@ -1,7 +1,7 @@
-// pages/wallet.tsx - Make sure the import path is correct
+// pages/wallet.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { RefreshCw, TrendingUp, CreditCard, Shield } from 'lucide-react';
 import { 
   getDepositHistory, 
@@ -10,10 +10,10 @@ import {
   DepositHistoryResponse,
   WithdrawHistoryResponse,
   SecurityInfoResponse
-} from '../../../infrastructure/api/WalletApi'; // Make sure this path is correct
+} from '../../../infrastructure/api/WalletApi';
 import DepositsTab from '../../../components/wallet/deposits';
-import WithdrawalsTab from '../../../components/wallet/withdraws';
 import SecurityTab from '../../../components/wallet/security';
+import WithdrawalsTab from '@/components/wallet/withdraws';
 
 type TabType = 'deposits' | 'withdrawals' | 'security';
 
@@ -24,80 +24,54 @@ export default function WalletPage() {
   const [securityInfo, setSecurityInfo] = useState<SecurityInfoResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [lastUpdate, setLastUpdate] = useState<string | null>(null);
+  const [formattedLastUpdate, setFormattedLastUpdate] = useState('No data loaded'); // ✅ client-safe state
+
+  // ✅ Memoize tab badges safely
+  const tabBadges = useMemo(() => ({
+    deposits: depositHistory?.summary?.success ?? 0,
+    withdrawals: withdrawHistory?.summary?.completed ?? 0,
+    security: securityInfo?.isSecure ? 1 : 0,
+  }), [depositHistory, withdrawHistory, securityInfo]);
 
   const fetchWalletData = async () => {
     setLoading(true);
     setError(null);
     
     try {
-      console.log('🔄 Starting to fetch wallet data...'); // Debug log
-      
       const [deposits, withdrawals, security] = await Promise.all([
         getDepositHistory(),
         getWithdrawHistory(),
         getSecurityInfo(),
       ]);
 
-      console.log('✅ Deposit data received:', deposits); // Debug log
-      console.log('✅ Withdrawal data received:', withdrawals); // Debug log
-      console.log('✅ Security data received:', security); // Debug log
-
       setDepositHistory(deposits);
       setWithdrawHistory(withdrawals);
       setSecurityInfo(security);
-      setLastUpdate(new Date());
+      setLastUpdate(new Date().toISOString()); // ✅ always consistent
     } catch (err) {
-      console.error('❌ Error fetching wallet data:', err); // Debug log
       setError(err instanceof Error ? err.message : 'Failed to fetch wallet data');
     } finally {
       setLoading(false);
     }
   };
 
+  // ✅ Only format on client
+  useEffect(() => {
+    if (lastUpdate) {
+      setFormattedLastUpdate(`Last updated: ${new Date(lastUpdate).toLocaleTimeString()}`);
+    }
+  }, [lastUpdate]);
+
   useEffect(() => {
     fetchWalletData();
   }, []);
 
-  const tabs = [
-    { 
-      id: 'deposits', 
-      label: 'Deposits', 
-      icon: TrendingUp,
-      badge: depositHistory?.summary?.success || 0
-    },
-    { 
-      id: 'withdrawals', 
-      label: 'Withdrawals', 
-      icon: CreditCard,
-      badge: withdrawHistory?.summary?.completed || 0
-    },
-    { 
-      id: 'security', 
-      label: 'Security', 
-      icon: Shield,
-      badge: securityInfo?.isSecure ? 1 : 0
-    },
-  ];
-
-  const renderTabContent = () => {
-    console.log('🔄 Rendering tab:', activeTab, 'with deposit data:', depositHistory); // Debug log
-    
-    switch (activeTab) {
-      case 'deposits':
-        return <DepositsTab depositHistory={depositHistory} />;
-      case 'withdrawals':
-        return <WithdrawalsTab withdrawHistory={withdrawHistory} />;
-      case 'security':
-        return <SecurityTab securityInfo={securityInfo} />;
-      default:
-        return (
-          <div className="bg-card border border-default rounded-lg p-8 text-center">
-            <div className="text-muted">Select a tab to view content</div>
-          </div>
-        );
-    }
-  };
+  const tabs = useMemo(() => [
+    { id: 'deposits', label: 'Deposits', icon: TrendingUp, badge: tabBadges.deposits },
+    { id: 'withdrawals', label: 'Withdrawals', icon: CreditCard, badge: tabBadges.withdrawals },
+    { id: 'security', label: 'Security', icon: Shield, badge: tabBadges.security },
+  ], [tabBadges]);
 
   return (
     <div className="bg-card max-w-7xl mx-auto p-6 space-y-6">
@@ -105,9 +79,7 @@ export default function WalletPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-card-foreground">Wallet</h1>
-          <p className="text-sm text-muted mt-1">
-            {lastUpdate ? `Last updated: ${lastUpdate.toLocaleTimeString()}` : 'No data loaded'}
-          </p>
+          <p className="text-sm text-muted mt-1">{formattedLastUpdate}</p>
         </div>
         
         <button 
@@ -118,19 +90,6 @@ export default function WalletPage() {
           <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           {loading ? 'Loading...' : 'Refresh'}
         </button>
-      </div>
-
-      {/* Debug Info - Remove this in production */}
-      <div className="bg-muted p-4 rounded-lg text-sm">
-        <details className="cursor-pointer">
-          <summary className="text-muted-foreground font-medium mb-2">Debug Info (Click to expand)</summary>
-          <div className="text-card-foreground space-y-1">
-            <p>Active Tab: {activeTab}</p>
-            <p>Deposits Data: {depositHistory ? `${depositHistory.total} deposits` : 'null'}</p>
-            <p>Withdrawals Data: {withdrawHistory ? `${withdrawHistory.total} withdrawals` : 'null'}</p>
-            <p>Security Data: {securityInfo ? 'Loaded' : 'null'}</p>
-          </div>
-        </details>
       </div>
 
       {/* Error Display */}
@@ -179,7 +138,9 @@ export default function WalletPage() {
 
       {/* Tab Content */}
       <div className="h-full">
-        {renderTabContent()}
+        {activeTab === 'deposits' && <DepositsTab depositHistory={depositHistory} />}
+        {activeTab === 'withdrawals' && <WithdrawalsTab withdrawHistory={withdrawHistory} />}
+        {activeTab === 'security' && <SecurityTab securityInfo={securityInfo} />}
       </div>
     </div>
   );

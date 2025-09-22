@@ -1,10 +1,59 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
 
+
+
+// ------- performace snapshot api types
+// infrastructure/api/PortfolioApi.ts
+export interface AccountSnapshotResponse {
+  totalSnapshots: number;
+  period: string;
+  snapshots: Snapshot[];
+  currentValue: number;
+  initialValue: number;
+  meaningfulInitialValue: number;
+  performance: {
+    totalReturn: string;
+    rawTotalReturn: string;
+    days: number;
+    avgDailyReturn: string;
+  };
+  summary: {
+    totalPortfolioValue: string;
+    topAssets: TopAsset[];
+    assetPricesUsed?: { [key: string]: number }; // Optional for debugging
+  };
+}
+
+export interface Snapshot {
+  date: string;
+  totalValueUSD: number;
+  totalAssetOfBtc: number;
+  balances: Balance[];
+  updateTime: number;
+  change24h: number;
+  pricesUsed?: { [key: string]: number };
+}
+
 export interface Balance {
   asset: string;
-  free: string;
-  locked: string;
+  free: number;
+  locked: number;
+  total: number;
+  usdValue: number;        // Added
+  pricePerUnit: number;    // Added
 }
+
+export interface TopAsset {
+  asset: string;
+  value: string;
+  percentage: string;
+}
+// ----------
+// export interface Balance {
+//   asset: string;
+//   free: string;
+//   locked: string;
+// }
 
 export interface AccountInfo {
   makerCommission: number;
@@ -41,18 +90,6 @@ export interface Order {
   workingTime: number;
   origQuoteOrderQty: string;
   selfTradePreventionMode: string;
-}
-export interface AccountSnapshot {
-  code: number;
-  msg: string;
-  snapshotVos: Array<{
-    type: string;
-    updateTime: number;
-    data: {
-      balances: Balance[];
-      totalAssetOfBtc: string;
-    };
-  }>;
 }
 
 export interface UserAsset {
@@ -203,42 +240,6 @@ export async function getOrderHistory(): Promise<Array<{ symbol: string; orders:
     throw error;
   }
 }
-// Enhanced API functions
-export async function getAccountSnapshot(
-  type: 'SPOT' | 'MARGIN' | 'FUTURES' = 'SPOT',
-  startTime?: number,
-  endTime?: number,
-  limit: number = 7
-): Promise<any> {
-  console.log('📊 Fetching Account Snapshot...');
-
-  try {
-    const params = new URLSearchParams({ type, limit: limit.toString() });
-
-    if (startTime) params.append('startTime', startTime.toString());
-    if (endTime) params.append('endTime', endTime.toString());
-
-    const response = await fetch(
-      `${API_BASE_URL}/binance/account-snapshot?${params.toString()}`,
-      {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    console.log('✅ Account Snapshot loaded successfully');
-    return data;
-  } catch (error) {
-    console.error('❌ Account Snapshot error:', error);
-    throw error;
-  }
-}
-
 
 export async function getUserAssets(): Promise<UserAsset[]> {
   console.log('💰 Fetching Enhanced User Assets...');
@@ -348,6 +349,38 @@ export async function getWithdrawHistory(coin?: string, status?: number, limit =
     throw error;
   }
 }
+// infrastructure/api/PortfolioApi.ts
+export async function getAccountSnapshot(): Promise<AccountSnapshotResponse> {
+  console.log('🔄 Fetching Account Snapshot...');
+
+  try {
+    // Fixed: Use correct endpoint
+    const response = await fetch(`${API_BASE_URL}/binance/account-snapshot`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ API Error Response:', errorText);
+      throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorText}`);
+    }
+
+    const data: AccountSnapshotResponse = await response.json();
+    console.log('✅ Account Snapshot loaded successfully', {
+      totalSnapshots: data.totalSnapshots,
+      currentValue: data.currentValue,
+      totalReturn: data.performance.totalReturn
+    });
+    return data;
+  } catch (error) {
+    console.error('❌ Account Snapshot error:', error);
+    throw error;
+  }
+}
 export async function getAssetDetail(asset?: string): Promise<AssetDetail> {
   console.log('ℹ️ Fetching Asset Details...');
   
@@ -396,4 +429,8 @@ export async function getTradeFee(symbol?: string): Promise<TradeFee[]> {
     console.error('❌ Trade Fees error:', error);
     throw error;
   }
+
+
+
+  // snapshot api for performace
 }
