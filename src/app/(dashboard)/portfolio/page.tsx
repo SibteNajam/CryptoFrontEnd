@@ -20,8 +20,9 @@ import OpenOrdersTab from '../../../components/portfolio/openOrders';
 import HistoryTab from '../../../components/portfolio/orderHistory';
 import PerformanceTab from '../../../components/portfolio/performance';
 import TransactionsTab from '../../../components/portfolio/transaction';
+import TransferHistoryTable from '@/components/portfolio/transferHistory';
 
-type TabType = 'overview' | 'balances' | 'orders' | 'history' | 'performance' | 'transactions';
+type TabType = 'overview' | 'balances' | 'orders' | 'history' | 'performance' | 'transactions' | 'transfers';
 
 export default function PortfolioPage() {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
@@ -260,6 +261,7 @@ export default function PortfolioPage() {
     { id: 'transactions', label: 'Transactions', icon: DollarSign },
     { id: 'orders', label: 'Open Orders', icon: Clock },
     { id: 'history', label: 'History', icon: History },
+     { id: 'transfers', label: 'Transfers', icon: History },
   ];
 
   const renderTabContent = () => {
@@ -276,6 +278,14 @@ export default function PortfolioPage() {
         return <OpenOrdersTab openOrders={openOrders} />;
       case 'history':
         return <HistoryTab orderHistory={orderHistory} />;
+      case 'transfers':
+        return <TransferHistoryTable 
+        current={1}
+        size={50}
+        onDataLoaded={(data) => {
+          console.log('Transfer data loaded:', data);
+        }}
+      />
       default:
         return null;
     }

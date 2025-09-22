@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.8.2",
+    "date-fns": "^4.1.0",
     "lightweight-charts": "^4.2.3",
     "lucide-react": "^0.539.0",
     "next": "15.3.5",
@@ -21,6 +22,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
+    "@types/date-fns": "^2.5.3",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

@@ -108,16 +108,21 @@ export interface TradeFee {
   takerCommission: string;
 }
 
-export interface TransferHistory {
+export interface TransferRow {
+  timestamp: number; // Unix timestamp in milliseconds
+  asset: string;     // e.g., "USDT"
+  amount: string;    // e.g., "14", "19.56081014"
+  type: string;      // e.g., "UMFUTURE_MAIN", "MAIN_UMFUTURE"
+  status: string;    // e.g., "CONFIRMED"
+  tranId: number;    // e.g., 298218441009
+}
+
+export interface TransferHistoryResponse {
   total: number;
-  rows: Array<{
-    asset: string;
-    amount: string;
-    type: string;
-    status: string;
-    tranId: number;
-    timestamp: number;
-  }>;
+  rows: TransferRow[];
+  current: number;
+  size: number;
+  pages: number;
 }
 
 // Account Info API
@@ -256,6 +261,41 @@ export async function getUserAssets(): Promise<UserAsset[]> {
     throw error;
   }
 }
+// Transfer History API
+export async function getTransferHistory(
+  current: number = 1, 
+  size: number = 100
+): Promise<TransferHistoryResponse> {
+  console.log('🔄 Fetching Internal Transfer History...', { current, size });
+
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/binance/transfer-history?current=${current}&size=${size}`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data: TransferHistoryResponse = await response.json();
+    console.log('✅ Internal Transfer History loaded successfully', {
+      total: data.total,
+      pages: data.pages
+    });
+    return data;
+  } catch (error) {
+    console.error('❌ Internal Transfer History error:', error);
+    throw error;
+  }
+}
+
 
 export async function getDepositHistory(coin?: string, status?: number, limit = 1000): Promise<Deposit[]> {
   console.log('📥 Fetching Deposit History...');
