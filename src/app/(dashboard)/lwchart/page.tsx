@@ -1,311 +1,149 @@
 'use client';
-import React, { useEffect, useRef, useState } from 'react';
-import { createChart, IChartApi, ISeriesApi, CandlestickData, LineData, HistogramData } from 'lightweight-charts';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { createChart, IChartApi, CandlestickData, LineData, ISeriesApi } from 'lightweight-charts';
+import { io, Socket } from 'socket.io-client';
+import { Activity, TrendingUp, BarChart3, Settings, Wifi, WifiOff } from 'lucide-react';
 
-// Technical indicator calculations
-const calculateSMA = (data: number[], period: number): number[] => {
-  const result: number[] = [];
-  for (let i = 0; i < data.length; i++) {
-    if (i < period - 1) {
-      result.push(NaN);
-    } else {
-      const sum = data.slice(i - period + 1, i + 1).reduce((a, b) => a + b, 0);
-      result.push(sum / period);
-    }
-  }
-  return result;
+interface CandleWithIndicators {
+  openTime: string;
+  closeTime: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+  quoteVolume: number;
+  trades: number;
+  indicators: {
+    rsi?: number;
+    ema?: number;
+    bollingerBands?: {
+      upperBand: number;
+      lowerBand: number;
+      sma: number;
+      percentB: number;
+    };
+    cvdSlope?: number;
+    inverseATR?: number;
+  };
+}
+
+interface TickerData {
+  symbol: string;
+  priceChange: string;
+  priceChangePercent: string;
+  lastPrice: string;
+  highPrice: string;
+  lowPrice: string;
+  openPrice: string;
+  volume: string;
+  quoteVolume: string;
+  bidPrice: string;
+  askPrice: string;
+  count: number;
+}
+
+const CHART_CONFIG = {
+  width: 0,
+  height: 600,
+  layout: {
+    background: { color: '#0f1419' },
+    textColor: '#d1d4dc',
+  },
+  grid: {
+    vertLines: { color: '#1e2328' },
+    horzLines: { color: '#1e2328' },
+  },
+  crosshair: {
+    mode: 1,
+    vertLine: {
+      width: 1 as const,
+      color: '#9598a1',
+      style: 3 as const,
+    },
+    horzLine: {
+      width: 1 as const,
+      color: '#9598a1',
+      style: 3 as const,
+    },
+  },
+  rightPriceScale: {
+    borderColor: '#485c7b',
+    scaleMargins: {
+      top: 0.1,
+      bottom: 0.1,
+    },
+  },
+  timeScale: {
+    borderColor: '#485c7b',
+    timeVisible: true,
+    secondsVisible: false,
+  },
 };
 
-const calculateEMA = (data: number[], period: number): number[] => {
-  const result: number[] = [];
-  const multiplier = 2 / (period + 1);
-  
-  for (let i = 0; i < data.length; i++) {
-    if (i === 0) {
-      result.push(data[i]);
-    } else {
-      result.push((data[i] - result[i - 1]) * multiplier + result[i - 1]);
-    }
-  }
-  return result;
+const SYMBOLS = [
+  'BTCUSDT', 'ETHUSDT', 'ADAUSDT', 'DOTUSDT', 'LINKUSDT', 
+  'LTCUSDT', 'BCHUSDT', 'XLMUSDT', 'XRPUSDT', 'BNBUSDT'
+];
+
+const INTERVALS = [
+  { value: '1m', label: '1m' },
+  { value: '5m', label: '5m' },
+  { value: '15m', label: '15m' },
+  { value: '1h', label: '1h' },
+  { value: '4h', label: '4h' },
+  { value: '1d', label: '1D' },
+  { value: '1w', label: '1W' },
+];
+
+const INDICATOR_COLORS = {
+  ema: '#f39c12',
+  rsi: '#e74c3c',
+  bollingerUpper: '#9b59b6',
+  bollingerLower: '#9b59b6',
+  bollingerMiddle: '#8e44ad',
+  cvdSlope: '#00d2ff',
+  inverseATR: '#ff6b6b',
 };
 
-const calculateRSI = (data: number[], period: number = 14): number[] => {
-  const gains: number[] = [];
-  const losses: number[] = [];
-  
-  for (let i = 1; i < data.length; i++) {
-    const diff = data[i] - data[i - 1];
-    gains.push(diff > 0 ? diff : 0);
-    losses.push(diff < 0 ? Math.abs(diff) : 0);
-  }
-  
-  const avgGains = calculateSMA(gains, period);
-  const avgLosses = calculateSMA(losses, period);
-  
-  const result: number[] = [NaN];
-  for (let i = 0; i < avgGains.length; i++) {
-    if (avgLosses[i] === 0) {
-      result.push(100);
-    } else {
-      const rs = avgGains[i] / avgLosses[i];
-      result.push(100 - (100 / (1 + rs)));
-    }
-  }
-  return result;
-};
-
-// Scale RSI to price range for overlay
-const scaleRSIToPrice = (rsi: number[], priceMin: number, priceMax: number): number[] => {
-  const priceRange = priceMax - priceMin;
-  return rsi.map(value => {
-    if (isNaN(value)) return NaN;
-    // Scale RSI (0-100) to bottom 20% of price chart
-    return priceMin + (value / 100) * (priceRange * 0.2);
-  });
-};
-
-const calculateBollingerBands = (data: number[], period: number = 20, stdDev: number = 2) => {
-  const sma = calculateSMA(data, period);
-  const upper: number[] = [];
-  const lower: number[] = [];
-  
-  for (let i = 0; i < data.length; i++) {
-    if (i < period - 1) {
-      upper.push(NaN);
-      lower.push(NaN);
-    } else {
-      const slice = data.slice(i - period + 1, i + 1);
-      const mean = sma[i];
-      const variance = slice.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / period;
-      const std = Math.sqrt(variance);
-      upper.push(mean + stdDev * std);
-      lower.push(mean - stdDev * std);
-    }
-  }
-  
-  return { upper, middle: sma, lower };
-};
-
-const calculateATR = (high: number[], low: number[], close: number[], period: number = 14): number[] => {
-  const trueRanges: number[] = [];
-  
-  for (let i = 1; i < high.length; i++) {
-    const tr1 = high[i] - low[i];
-    const tr2 = Math.abs(high[i] - close[i - 1]);
-    const tr3 = Math.abs(low[i] - close[i - 1]);
-    trueRanges.push(Math.max(tr1, tr2, tr3));
-  }
-  
-  return [NaN, ...calculateSMA(trueRanges, period)];
-};
-
-// Scale ATR to price range for overlay
-const scaleATRToPrice = (atr: number[], closes: number[], priceMin: number, priceMax: number): number[] => {
-  const priceRange = priceMax - priceMin;
-  const maxATR = Math.max(...atr.filter(val => !isNaN(val)));
-  
-  return atr.map((value, i) => {
-    if (isNaN(value)) return NaN;
-    // Scale ATR relative to price and show in middle area
-    const basePrice = closes[i] || priceMin;
-    return basePrice + (value / maxATR) * (priceRange * 0.1);
-  });
-};
-
-const calculateMACD = (data: number[], fastPeriod: number = 12, slowPeriod: number = 26, signalPeriod: number = 9) => {
-  const fastEMA = calculateEMA(data, fastPeriod);
-  const slowEMA = calculateEMA(data, slowPeriod);
-  const macdLine = fastEMA.map((fast, i) => fast - slowEMA[i]);
-  const signalLine = calculateEMA(macdLine.filter(val => !isNaN(val)), signalPeriod);
-  const histogram = macdLine.map((macd, i) => macd - (signalLine[i] || 0));
-  
-  return { macdLine, signalLine, histogram };
-};
-
-// Scale MACD to price range for overlay
-const scaleMACDToPrice = (macd: number[], priceMin: number, priceMax: number): number[] => {
-  const validMacd = macd.filter(val => !isNaN(val));
-  const macdMin = Math.min(...validMacd);
-  const macdMax = Math.max(...validMacd);
-  const macdRange = macdMax - macdMin;
-  const priceRange = priceMax - priceMin;
-  
-  return macd.map(value => {
-    if (isNaN(value) || macdRange === 0) return NaN;
-    // Scale MACD to top 20% of price chart
-    const normalizedValue = (value - macdMin) / macdRange;
-    return priceMax - (normalizedValue * priceRange * 0.2);
-  });
-};
-
-const calculateStochastic = (high: number[], low: number[], close: number[], kPeriod: number = 14, dPeriod: number = 3) => {
-  const kValues: number[] = [];
-  
-  for (let i = 0; i < close.length; i++) {
-    if (i < kPeriod - 1) {
-      kValues.push(NaN);
-    } else {
-      const highestHigh = Math.max(...high.slice(i - kPeriod + 1, i + 1));
-      const lowestLow = Math.min(...low.slice(i - kPeriod + 1, i + 1));
-      kValues.push(((close[i] - lowestLow) / (highestHigh - lowestLow)) * 100);
-    }
-  }
-  
-  const dValues = calculateSMA(kValues, dPeriod);
-  return { k: kValues, d: dValues };
-};
-
-// Scale Stochastic to price range for overlay
-const scaleStochasticToPrice = (stoch: number[], priceMin: number, priceMax: number): number[] => {
-  const priceRange = priceMax - priceMin;
-  return stoch.map(value => {
-    if (isNaN(value)) return NaN;
-    // Scale Stochastic (0-100) to bottom 25% of price chart
-    return priceMin + (value / 100) * (priceRange * 0.25);
-  });
-};
-
-const calculateWilliamsR = (high: number[], low: number[], close: number[], period: number = 14): number[] => {
-  const result: number[] = [];
-  
-  for (let i = 0; i < close.length; i++) {
-    if (i < period - 1) {
-      result.push(NaN);
-    } else {
-      const highestHigh = Math.max(...high.slice(i - period + 1, i + 1));
-      const lowestLow = Math.min(...low.slice(i - period + 1, i + 1));
-      const williamsR = ((highestHigh - close[i]) / (highestHigh - lowestLow)) * -100;
-      result.push(williamsR);
-    }
-  }
-  
-  return result;
-};
-
-const calculateCCI = (high: number[], low: number[], close: number[], period: number = 20): number[] => {
-  const typicalPrice = high.map((h, i) => (h + low[i] + close[i]) / 3);
-  const smaTP = calculateSMA(typicalPrice, period);
-  const result: number[] = [];
-  
-  for (let i = 0; i < typicalPrice.length; i++) {
-    if (i < period - 1) {
-      result.push(NaN);
-    } else {
-      const slice = typicalPrice.slice(i - period + 1, i + 1);
-      const meanDeviation = slice.reduce((sum, val) => sum + Math.abs(val - smaTP[i]), 0) / period;
-      const cci = (typicalPrice[i] - smaTP[i]) / (0.015 * meanDeviation);
-      result.push(cci);
-    }
-  }
-  
-  return result;
-};
-
-// Scale CCI to price range for overlay
-const scaleCCIToPrice = (cci: number[], priceMin: number, priceMax: number): number[] => {
-  const validCCI = cci.filter(val => !isNaN(val));
-  const cciMin = Math.min(...validCCI);
-  const cciMax = Math.max(...validCCI);
-  const cciRange = cciMax - cciMin;
-  const priceRange = priceMax - priceMin;
-  
-  return cci.map(value => {
-    if (isNaN(value) || cciRange === 0) return NaN;
-    // Scale CCI to middle area of price chart
-    const normalizedValue = (value - cciMin) / cciRange;
-    return priceMin + priceRange * 0.3 + (normalizedValue * priceRange * 0.4);
-  });
-};
-
-// Generate sample crypto data
-const generateSampleData = (): CandlestickData[] => {
-  const data: CandlestickData[] = [];
-  let price = 45000; // Starting BTC price
-  
-  for (let i = 0; i < 500; i++) {
-    const time = (Date.now() / 1000 - (500 - i) * 24 * 60 * 60) as any;
-    const change = (Math.random() - 0.5) * 0.04 * price;
-    const open = price;
-    const close = price + change;
-    const high = Math.max(open, close) + Math.random() * 0.02 * price;
-    const low = Math.min(open, close) - Math.random() * 0.02 * price;
-    
-    data.push({
-      time,
-      open,
-      high,
-      low,
-      close
-    });
-    
-    price = close;
-  }
-  
-  return data;
-};
-
-const CryptoTradingChart: React.FC = () => {
+export default function CryptoTradingChart() {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
+  const socketRef = useRef<Socket | null>(null);
+  const seriesRef = useRef<{
+    candlestick?: ISeriesApi<'Candlestick'>;
+    ema?: ISeriesApi<'Line'>;
+    bollingerUpper?: ISeriesApi<'Line'>;
+    bollingerLower?: ISeriesApi<'Line'>;
+    bollingerMiddle?: ISeriesApi<'Line'>;
+    rsi?: ISeriesApi<'Line'>;
+    cvdSlope?: ISeriesApi<'Line'>;
+    inverseATR?: ISeriesApi<'Line'>;
+  }>({});
+
+  // State
+  const [symbol, setSymbol] = useState('BTCUSDT');
+  const [interval, setInterval] = useState('1h');
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected');
+  const [tickerData, setTickerData] = useState<TickerData | null>(null);
   const [activeIndicators, setActiveIndicators] = useState<Set<string>>(
-    new Set(['RSI', 'EMA20', 'BBands', 'MACD'])
+    new Set(['ema', 'bollingerBands', 'rsi'])
   );
-  const [timeframe, setTimeframe] = useState('1D');
-  
-  const indicators = [
-    'RSI', 'MACD', 'BBands', 'EMA20', 'EMA50', 'SMA10', 'ATR', 'Stoch', 'Williams%R', 'CCI'
-  ];
-  
-  const timeframes = ['1m', '5m', '15m', '1h', '4h', '1D', '1W'];
-  
-  useEffect(() => {
-    if (!chartContainerRef.current) return;
-    
-    // Clear any existing child charts
-    while (chartContainerRef.current.children.length > 0) {
-      chartContainerRef.current.removeChild(chartContainerRef.current.children[0]);
-    }
-    
-    // Create main chart
+  const [showSettings, setShowSettings] = useState(false);
+  const [priceRange, setPriceRange] = useState<{ min: number; max: number } | null>(null);
+
+  // Initialize chart
+  const initChart = useCallback(() => {
+    if (!chartContainerRef.current || chartRef.current) return;
+
     const chart = createChart(chartContainerRef.current, {
+      ...CHART_CONFIG,
       width: chartContainerRef.current.clientWidth,
-      height: 700, // Increased height for better visibility
-      layout: {
-        background: { color: '#1a1a1a' },
-        textColor: '#d1d4dc',
-      },
-      grid: {
-        vertLines: { color: '#2a2e39' },
-        horzLines: { color: '#2a2e39' },
-      },
-      crosshair: {
-        mode: 1,
-        vertLine: {
-          width: 1,
-          color: '#758696',
-          style: 3,
-        },
-        horzLine: {
-          width: 1,
-          color: '#758696',
-          style: 3,
-        },
-      },
-      rightPriceScale: {
-        borderColor: '#485c7b',
-      },
-      timeScale: {
-        borderColor: '#485c7b',
-        timeVisible: true,
-        secondsVisible: false,
-      },
     });
-    
+
     chartRef.current = chart;
-    
-    // Generate and add candlestick data
-    const sampleData = generateSampleData();
+
+    // Create candlestick series
     const candlestickSeries = chart.addCandlestickSeries({
       upColor: '#00ff88',
       downColor: '#ff4757',
@@ -314,428 +152,526 @@ const CryptoTradingChart: React.FC = () => {
       wickUpColor: '#00ff88',
       wickDownColor: '#ff4757',
     });
-    
-    candlestickSeries.setData(sampleData);
-    
-    // Extract OHLC data for calculations
-    const closes = sampleData.map(d => d.close);
-    const highs = sampleData.map(d => d.high);
-    const lows = sampleData.map(d => d.low);
-    const times = sampleData.map(d => d.time);
-    
-    // Calculate price range for scaling oscillators
-    const allPrices = [...highs, ...lows];
-    const priceMin = Math.min(...allPrices);
-    const priceMax = Math.max(...allPrices);
-    
-    // Add indicators based on active selection - ALL ON MAIN CHART
-    const seriesMap = new Map<string, ISeriesApi<any>>();
-    
-    // Price-based indicators (overlays)
-    if (activeIndicators.has('EMA20')) {
-      const ema20Series = chart.addLineSeries({
-        color: '#3498db',
-        lineWidth: 2,
-        title: 'EMA 20',
-        priceLineVisible: false,
-      });
-      
-      const ema20Data = calculateEMA(closes, 20).map((value, i) => ({
-        time: times[i],
-        value: isNaN(value) ? null : value
-      })).filter(d => d.value !== null) as LineData[];
-      
-      ema20Series.setData(ema20Data);
-      seriesMap.set('EMA20', ema20Series);
-    }
-    
-    if (activeIndicators.has('EMA50')) {
-      const ema50Series = chart.addLineSeries({
-        color: '#e74c3c',
-        lineWidth: 2,
-        title: 'EMA 50',
-        priceLineVisible: false,
-      });
-      
-      const ema50Data = calculateEMA(closes, 50).map((value, i) => ({
-        time: times[i],
-        value: isNaN(value) ? null : value
-      })).filter(d => d.value !== null) as LineData[];
-      
-      ema50Series.setData(ema50Data);
-      seriesMap.set('EMA50', ema50Series);
-    }
-    
-    if (activeIndicators.has('SMA10')) {
-      const sma10Series = chart.addLineSeries({
-        color: '#f39c12',
-        lineWidth: 2,
-        title: 'SMA 10',
-        priceLineVisible: false,
-      });
-      
-      const sma10Data = calculateSMA(closes, 10).map((value, i) => ({
-        time: times[i],
-        value: isNaN(value) ? null : value
-      })).filter(d => d.value !== null) as LineData[];
-      
-      sma10Series.setData(sma10Data);
-      seriesMap.set('SMA10', sma10Series);
-    }
-    
-    if (activeIndicators.has('BBands')) {
-      const bbands = calculateBollingerBands(closes, 20, 2);
-      
-      const upperBandSeries = chart.addLineSeries({
-        color: '#9b59b6',
-        lineWidth: 1,
-        title: 'BB Upper',
-        priceLineVisible: false,
-      });
-      
-      const lowerBandSeries = chart.addLineSeries({
-        color: '#9b59b6',
-        lineWidth: 1,
-        title: 'BB Lower',
-        priceLineVisible: false,
-      });
-      
-      const middleBandSeries = chart.addLineSeries({
-        color: '#8e44ad',
-        lineWidth: 1,
-        title: 'BB Middle',
-        priceLineVisible: false,
-      });
-      
-      const upperData = bbands.upper.map((value, i) => ({
-        time: times[i],
-        value: isNaN(value) ? null : value
-      })).filter(d => d.value !== null) as LineData[];
-      
-      const lowerData = bbands.lower.map((value, i) => ({
-        time: times[i],
-        value: isNaN(value) ? null : value
-      })).filter(d => d.value !== null) as LineData[];
-      
-      const middleData = bbands.middle.map((value, i) => ({
-        time: times[i],
-        value: isNaN(value) ? null : value
-      })).filter(d => d.value !== null) as LineData[];
-      
-      upperBandSeries.setData(upperData);
-      lowerBandSeries.setData(lowerData);
-      middleBandSeries.setData(middleData);
-      
-      seriesMap.set('BBands', upperBandSeries);
-    }
-    
-    // Oscillator indicators (scaled to fit on main chart)
-    if (activeIndicators.has('RSI')) {
-      const rsiSeries = chart.addLineSeries({
-        color: '#ff6b6b',
-        lineWidth: 2,
-        title: 'RSI (Scaled)',
-        priceLineVisible: false,
-      });
-      
-      const rsiValues = calculateRSI(closes);
-      const scaledRSI = scaleRSIToPrice(rsiValues, priceMin, priceMax);
-      
-      const rsiData = scaledRSI.map((value, i) => ({
-        time: times[i],
-        value: isNaN(value) ? null : value
-      })).filter(d => d.value !== null) as LineData[];
-      
-      rsiSeries.setData(rsiData);
-      seriesMap.set('RSI', rsiSeries);
-    }
-    
-    if (activeIndicators.has('MACD')) {
-      const macd = calculateMACD(closes);
-      
-      const macdSeries = chart.addLineSeries({
-        color: '#00d2ff',
-        lineWidth: 2,
-        title: 'MACD (Scaled)',
-        priceLineVisible: false,
-      });
-      
-      const signalSeries = chart.addLineSeries({
-        color: '#ff4757',
-        lineWidth: 2,
-        title: 'MACD Signal',
-        priceLineVisible: false,
-      });
-      
-      const scaledMACD = scaleMACDToPrice(macd.macdLine, priceMin, priceMax);
-      const scaledSignal = scaleMACDToPrice(macd.signalLine, priceMin, priceMax);
-      
-      const macdData = scaledMACD.map((value, i) => ({
-        time: times[i],
-        value: isNaN(value) ? null : value
-      })).filter(d => d.value !== null) as LineData[];
-      
-      const signalData = scaledSignal.map((value, i) => ({
-        time: times[i],
-        value: isNaN(value) ? null : value
-      })).filter(d => d.value !== null) as LineData[];
-      
-      macdSeries.setData(macdData);
-      signalSeries.setData(signalData);
-      
-      seriesMap.set('MACD', macdSeries);
-    }
-    
-    if (activeIndicators.has('ATR')) {
-      const atr = calculateATR(highs, lows, closes);
-      const scaledATR = scaleATRToPrice(atr, closes, priceMin, priceMax);
-      
-      const atrSeries = chart.addLineSeries({
-        color: '#ff9800',
-        lineWidth: 2,
-        title: 'ATR (Scaled)',
-        priceLineVisible: false,
-      });
-      
-      const atrData = scaledATR.map((value, i) => ({
-        time: times[i],
-        value: isNaN(value) ? null : value
-      })).filter(d => d.value !== null) as LineData[];
-      
-      atrSeries.setData(atrData);
-      seriesMap.set('ATR', atrSeries);
-    }
-    
-    if (activeIndicators.has('Stoch')) {
-      const stoch = calculateStochastic(highs, lows, closes);
-      
-      const stochKSeries = chart.addLineSeries({
-        color: '#4caf50',
-        lineWidth: 2,
-        title: 'Stoch %K (Scaled)',
-        priceLineVisible: false,
-      });
-      
-      const stochDSeries = chart.addLineSeries({
-        color: '#2196f3',
-        lineWidth: 2,
-        title: 'Stoch %D (Scaled)',
-        priceLineVisible: false,
-      });
-      
-      const scaledK = scaleStochasticToPrice(stoch.k, priceMin, priceMax);
-      const scaledD = scaleStochasticToPrice(stoch.d, priceMin, priceMax);
-      
-      const kData = scaledK.map((value, i) => ({
-        time: times[i],
-        value: isNaN(value) ? null : value
-      })).filter(d => d.value !== null) as LineData[];
-      
-      const dData = scaledD.map((value, i) => ({
-        time: times[i],
-        value: isNaN(value) ? null : value
-      })).filter(d => d.value !== null) as LineData[];
-      
-      stochKSeries.setData(kData);
-      stochDSeries.setData(dData);
-      
-      seriesMap.set('Stoch', stochKSeries);
-    }
-    
-    if (activeIndicators.has('Williams%R')) {
-      const williamsR = calculateWilliamsR(highs, lows, closes);
-      const scaledWilliamsR = scaleStochasticToPrice(
-        williamsR.map(val => isNaN(val) ? NaN : val + 100), // Convert from -100,0 to 0,100
-        priceMin, priceMax
-      );
-      
-      const williamsRSeries = chart.addLineSeries({
-        color: '#e91e63',
-        lineWidth: 2,
-        title: 'Williams %R (Scaled)',
-        priceLineVisible: false,
-      });
-      
-      const williamsRData = scaledWilliamsR.map((value, i) => ({
-        time: times[i],
-        value: isNaN(value) ? null : value
-      })).filter(d => d.value !== null) as LineData[];
-      
-      williamsRSeries.setData(williamsRData);
-      seriesMap.set('Williams%R', williamsRSeries);
-    }
-    
-    if (activeIndicators.has('CCI')) {
-      const cci = calculateCCI(highs, lows, closes);
-      const scaledCCI = scaleCCIToPrice(cci, priceMin, priceMax);
-      
-      const cciSeries = chart.addLineSeries({
-        color: '#795548',
-        lineWidth: 2,
-        title: 'CCI (Scaled)',
-        priceLineVisible: false,
-      });
-      
-      const cciData = scaledCCI.map((value, i) => ({
-        time: times[i],
-        value: isNaN(value) ? null : value
-      })).filter(d => d.value !== null) as LineData[];
-      
-      cciSeries.setData(cciData);
-      seriesMap.set('CCI', cciSeries);
-    }
-    
+
+    seriesRef.current.candlestick = candlestickSeries;
+
     // Handle resize
     const handleResize = () => {
-      if (chartContainerRef.current) {
-        chart.applyOptions({
+      if (chartContainerRef.current && chartRef.current) {
+        chartRef.current.applyOptions({
           width: chartContainerRef.current.clientWidth,
         });
       }
     };
-    
+
     window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Scale indicator to price range
+  const scaleIndicatorToPrice = useCallback((value: number, min: number, max: number, position: 'top' | 'bottom' | 'middle' = 'bottom') => {
+    if (!priceRange) return value;
     
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      chart.remove();
-    };
-  }, [activeIndicators, timeframe]);
-  
-  const toggleIndicator = (indicator: string) => {
-    const newActiveIndicators = new Set(activeIndicators);
-    if (newActiveIndicators.has(indicator)) {
-      newActiveIndicators.delete(indicator);
-    } else {
-      newActiveIndicators.add(indicator);
+    const range = priceRange.max - priceRange.min;
+    const normalizedValue = (value - min) / (max - min);
+    
+    switch (position) {
+      case 'top':
+        return priceRange.max - (normalizedValue * range * 0.2);
+      case 'middle':
+        return priceRange.min + range * 0.4 + (normalizedValue * range * 0.2);
+      case 'bottom':
+      default:
+        return priceRange.min + (normalizedValue * range * 0.2);
     }
-    setActiveIndicators(newActiveIndicators);
-  };
-  
-  return (
-    <div className="w-full min-h-screen bg-gray-900 p-4">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-white mb-2">All-in-One Crypto Trading Chart</h1>
-          <p className="text-gray-400">BTC/USDT with All Technical Indicators on Single Chart</p>
-        </div>
+  }, [priceRange]);
+
+  // Update indicators
+  const updateIndicators = useCallback((candles: CandleWithIndicators[]) => {
+    if (!chartRef.current || candles.length === 0) return;
+
+    // Calculate price range
+    const allPrices = candles.flatMap(c => [c.high, c.low]);
+    const min = Math.min(...allPrices);
+    const max = Math.max(...allPrices);
+    setPriceRange({ min, max });
+
+    // Convert to lightweight-charts format
+    const times = candles.map(c => new Date(c.openTime).getTime() / 1000);
+
+    // EMA
+    if (activeIndicators.has('ema') && !seriesRef.current.ema) {
+      seriesRef.current.ema = chartRef.current.addLineSeries({
+        color: INDICATOR_COLORS.ema,
+        lineWidth: 2,
+        title: 'EMA 20',
+        priceLineVisible: false,
+      });
+    }
+
+    if (seriesRef.current.ema && activeIndicators.has('ema')) {
+      const emaData: LineData[] = candles
+        .filter(c => c.indicators.ema)
+        .map((c, i) => ({
+          time: times[candles.indexOf(c)] as any,
+          value: c.indicators.ema!
+        }));
+      seriesRef.current.ema.setData(emaData);
+    }
+
+    // Bollinger Bands
+    if (activeIndicators.has('bollingerBands')) {
+      if (!seriesRef.current.bollingerUpper) {
+        seriesRef.current.bollingerUpper = chartRef.current.addLineSeries({
+          color: INDICATOR_COLORS.bollingerUpper,
+          lineWidth: 1,
+          title: 'BB Upper',
+          priceLineVisible: false,
+        });
+      }
+      if (!seriesRef.current.bollingerLower) {
+        seriesRef.current.bollingerLower = chartRef.current.addLineSeries({
+          color: INDICATOR_COLORS.bollingerLower,
+          lineWidth: 1,
+          title: 'BB Lower',
+          priceLineVisible: false,
+        });
+      }
+      if (!seriesRef.current.bollingerMiddle) {
+        seriesRef.current.bollingerMiddle = chartRef.current.addLineSeries({
+          color: INDICATOR_COLORS.bollingerMiddle,
+          lineWidth: 1,
+          title: 'BB Middle',
+          priceLineVisible: false,
+        });
+      }
+
+      const upperData: LineData[] = candles
+        .filter(c => c.indicators.bollingerBands)
+        .map((c, i) => ({
+          time: times[candles.indexOf(c)] as any,
+          value: c.indicators.bollingerBands!.upperBand
+        }));
+
+      const lowerData: LineData[] = candles
+        .filter(c => c.indicators.bollingerBands)
+        .map((c, i) => ({
+          time: times[candles.indexOf(c)] as any,
+          value: c.indicators.bollingerBands!.lowerBand
+        }));
+
+      const middleData: LineData[] = candles
+        .filter(c => c.indicators.bollingerBands)
+        .map((c, i) => ({
+          time: times[candles.indexOf(c)] as any,
+          value: c.indicators.bollingerBands!.sma
+        }));
+
+      seriesRef.current.bollingerUpper.setData(upperData);
+      seriesRef.current.bollingerLower.setData(lowerData);
+      seriesRef.current.bollingerMiddle.setData(middleData);
+    }
+
+    // RSI (scaled to price range)
+    if (activeIndicators.has('rsi') && !seriesRef.current.rsi) {
+      seriesRef.current.rsi = chartRef.current.addLineSeries({
+        color: INDICATOR_COLORS.rsi,
+        lineWidth: 2,
+        title: 'RSI (Scaled)',
+        priceLineVisible: false,
+      });
+    }
+
+    if (seriesRef.current.rsi && activeIndicators.has('rsi')) {
+      const rsiData: LineData[] = candles
+        .filter(c => c.indicators.rsi)
+        .map((c, i) => ({
+          time: times[candles.indexOf(c)] as any,
+          value: scaleIndicatorToPrice(c.indicators.rsi!, 0, 100, 'bottom')
+        }));
+      seriesRef.current.rsi.setData(rsiData);
+    }
+
+    // CVD Slope (scaled)
+    if (activeIndicators.has('cvdSlope') && !seriesRef.current.cvdSlope) {
+      seriesRef.current.cvdSlope = chartRef.current.addLineSeries({
+        color: INDICATOR_COLORS.cvdSlope,
+        lineWidth: 2,
+        title: 'CVD Slope (Scaled)',
+        priceLineVisible: false,
+      });
+    }
+
+    if (seriesRef.current.cvdSlope && activeIndicators.has('cvdSlope')) {
+      const cvdValues = candles.filter(c => c.indicators.cvdSlope).map(c => c.indicators.cvdSlope!);
+      if (cvdValues.length > 0) {
+        const cvdMin = Math.min(...cvdValues);
+        const cvdMax = Math.max(...cvdValues);
         
-        {/* Controls */}
-        <div className="bg-gray-800 rounded-lg p-4 mb-6">
-          <div className="flex flex-wrap gap-4 items-center">
-            {/* Timeframe Selector */}
+        const cvdData: LineData[] = candles
+          .filter(c => c.indicators.cvdSlope)
+          .map((c, i) => ({
+            time: times[candles.indexOf(c)] as any,
+            value: scaleIndicatorToPrice(c.indicators.cvdSlope!, cvdMin, cvdMax, 'top')
+          }));
+        seriesRef.current.cvdSlope.setData(cvdData);
+      }
+    }
+
+    // Inverse ATR (scaled)
+    if (activeIndicators.has('inverseATR') && !seriesRef.current.inverseATR) {
+      seriesRef.current.inverseATR = chartRef.current.addLineSeries({
+        color: INDICATOR_COLORS.inverseATR,
+        lineWidth: 2,
+        title: 'Inverse ATR (Scaled)',
+        priceLineVisible: false,
+      });
+    }
+
+    if (seriesRef.current.inverseATR && activeIndicators.has('inverseATR')) {
+      const atrValues = candles.filter(c => c.indicators.inverseATR).map(c => c.indicators.inverseATR!);
+      if (atrValues.length > 0) {
+        const atrMin = Math.min(...atrValues);
+        const atrMax = Math.max(...atrValues);
+        
+        const atrData: LineData[] = candles
+          .filter(c => c.indicators.inverseATR)
+          .map((c, i) => ({
+            time: times[candles.indexOf(c)] as any,
+            value: scaleIndicatorToPrice(c.indicators.inverseATR!, atrMin, atrMax, 'middle')
+          }));
+        seriesRef.current.inverseATR.setData(atrData);
+      }
+    }
+  }, [activeIndicators, scaleIndicatorToPrice]);
+
+  // Initialize WebSocket connection
+  const initWebSocket = useCallback(() => {
+    if (socketRef.current) {
+      socketRef.current.disconnect();
+    }
+
+    setConnectionStatus('connecting');
+    const socket = io('http://localhost:3000', {
+      transports: ['websocket'],
+    });
+
+    socketRef.current = socket;
+
+    socket.on('connect', () => {
+      setConnectionStatus('connected');
+      console.log('Connected to WebSocket');
+    });
+
+    socket.on('disconnect', () => {
+      setConnectionStatus('disconnected');
+      console.log('Disconnected from WebSocket');
+    });
+
+    socket.on('connection_status', (data) => {
+      console.log('Connection status:', data);
+    });
+
+    socket.on('historical_candles_with_indicators', (data: {
+      symbol: string;
+      interval: string;
+      data: CandleWithIndicators[];
+      count: number;
+      timestamp: string;
+    }) => {
+      console.log('Received historical data:', data.count, 'candles');
+      
+      if (seriesRef.current.candlestick && data.data.length > 0) {
+        const candleData: CandlestickData[] = data.data.map(c => ({
+          time: new Date(c.openTime).getTime() / 1000 as any,
+          open: c.open,
+          high: c.high,
+          low: c.low,
+          close: c.close,
+        }));
+
+        seriesRef.current.candlestick.setData(candleData);
+        updateIndicators(data.data);
+        
+        if (chartRef.current) {
+          chartRef.current.timeScale().fitContent();
+        }
+      }
+    });
+
+    socket.on('kline_with_indicators', (data: {
+      symbol: string;
+      interval: string;
+      candle: CandleWithIndicators;
+      isClosed: boolean;
+      timestamp: string;
+    }) => {
+      if (seriesRef.current.candlestick) {
+        const candleData: CandlestickData = {
+          time: new Date(data.candle.openTime).getTime() / 1000 as any,
+          open: data.candle.open,
+          high: data.candle.high,
+          low: data.candle.low,
+          close: data.candle.close,
+        };
+
+        seriesRef.current.candlestick.update(candleData);
+        updateIndicators([data.candle]);
+      }
+    });
+
+    socket.on('ticker_data', (data: {
+      symbol: string;
+      ticker: TickerData;
+      timestamp: string;
+    }) => {
+      setTickerData(data.ticker);
+    });
+
+    return socket;
+  }, [updateIndicators]);
+
+  // Subscribe to symbol data
+  const subscribeToSymbol = useCallback(() => {
+    if (socketRef.current && connectionStatus === 'connected') {
+      console.log(`Subscribing to ${symbol} ${interval}`);
+      socketRef.current.emit('subscribe_symbol_with_indicators', {
+        symbol,
+        interval,
+        limit: 500
+      });
+    }
+  }, [symbol, interval, connectionStatus]);
+
+  // Toggle indicator
+  const toggleIndicator = useCallback((indicator: string) => {
+    const newIndicators = new Set(activeIndicators);
+    if (newIndicators.has(indicator)) {
+      newIndicators.delete(indicator);
+      
+      // Remove series from chart
+      if (indicator === 'ema' && seriesRef.current.ema) {
+        chartRef.current?.removeSeries(seriesRef.current.ema);
+        delete seriesRef.current.ema;
+      } else if (indicator === 'bollingerBands') {
+        if (seriesRef.current.bollingerUpper) {
+          chartRef.current?.removeSeries(seriesRef.current.bollingerUpper);
+          delete seriesRef.current.bollingerUpper;
+        }
+        if (seriesRef.current.bollingerLower) {
+          chartRef.current?.removeSeries(seriesRef.current.bollingerLower);
+          delete seriesRef.current.bollingerLower;
+        }
+        if (seriesRef.current.bollingerMiddle) {
+          chartRef.current?.removeSeries(seriesRef.current.bollingerMiddle);
+          delete seriesRef.current.bollingerMiddle;
+        }
+      } else if (indicator === 'rsi' && seriesRef.current.rsi) {
+        chartRef.current?.removeSeries(seriesRef.current.rsi);
+        delete seriesRef.current.rsi;
+      } else if (indicator === 'cvdSlope' && seriesRef.current.cvdSlope) {
+        chartRef.current?.removeSeries(seriesRef.current.cvdSlope);
+        delete seriesRef.current.cvdSlope;
+      } else if (indicator === 'inverseATR' && seriesRef.current.inverseATR) {
+        chartRef.current?.removeSeries(seriesRef.current.inverseATR);
+        delete seriesRef.current.inverseATR;
+      }
+    } else {
+      newIndicators.add(indicator);
+    }
+    setActiveIndicators(newIndicators);
+  }, [activeIndicators]);
+
+  // Effects
+  useEffect(() => {
+    initChart();
+    return () => {
+      if (chartRef.current) {
+        chartRef.current.remove();
+        chartRef.current = null;
+      }
+    };
+  }, [initChart]);
+
+  useEffect(() => {
+    const socket = initWebSocket();
+    return () => {
+      if (socket) {
+        socket.disconnect();
+      }
+    };
+  }, [initWebSocket]);
+
+  useEffect(() => {
+    subscribeToSymbol();
+  }, [subscribeToSymbol]);
+
+  const formatPrice = (price: string) => {
+    return parseFloat(price).toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 8
+    });
+  };
+
+  const formatPercent = (percent: string) => {
+    const val = parseFloat(percent);
+    return `${val >= 0 ? '+' : ''}${val.toFixed(2)}%`;
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-900 text-white">
+      <div className="container mx-auto px-4 py-6">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
-              <span className="text-white font-medium">Timeframe:</span>
-              <div className="flex space-x-1">
-                {timeframes.map((tf) => (
-                  <button
-                    key={tf}
-                    onClick={() => setTimeframe(tf)}
-                    className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                      timeframe === tf
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                    }`}
-                  >
-                    {tf}
-                  </button>
-                ))}
-              </div>
+              <BarChart3 className="w-8 h-8 text-blue-500" />
+              <h1 className="text-2xl font-bold">Crypto Trading Chart</h1>
             </div>
-            
-            {/* Indicator Toggles */}
             <div className="flex items-center space-x-2">
-              <span className="text-white font-medium">Indicators:</span>
-              <div className="flex flex-wrap gap-2">
-                {indicators.map((indicator) => (
-                  <button
-                    key={indicator}
-                    onClick={() => toggleIndicator(indicator)}
-                    className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                      activeIndicators.has(indicator)
-                        ? 'bg-green-600 text-white'
-                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                    }`}
-                  >
-                    {indicator}
-                  </button>
-                ))}
+              {connectionStatus === 'connected' ? (
+                <Wifi className="w-5 h-5 text-green-500" />
+              ) : (
+                <WifiOff className="w-5 h-5 text-red-500" />
+              )}
+              <span className="text-sm capitalize text-gray-400">
+                {connectionStatus}
+              </span>
+            </div>
+          </div>
+          
+          <button
+            onClick={() => setShowSettings(!showSettings)}
+            className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors"
+          >
+            <Settings className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Controls */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+          {/* Symbol & Timeframe */}
+          <div className="bg-gray-800 rounded-lg p-4">
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Symbol</label>
+                <select
+                  value={symbol}
+                  onChange={(e) => setSymbol(e.target.value)}
+                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {SYMBOLS.map((sym) => (
+                    <option key={sym} value={sym}>{sym}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Timeframe</label>
+                <div className="grid grid-cols-4 gap-1">
+                  {INTERVALS.map((int) => (
+                    <button
+                      key={int.value}
+                      onClick={() => setInterval(int.value)}
+                      className={`px-2 py-1 rounded text-sm font-medium transition-colors ${
+                        interval === int.value
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      }`}
+                    >
+                      {int.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
+
+          {/* Price Info */}
+          {tickerData && (
+            <div className="bg-gray-800 rounded-lg p-4">
+              <h3 className="text-sm font-medium text-gray-400 mb-3">Price Data</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-400">Last Price</span>
+                  <span className="font-medium">${formatPrice(tickerData.lastPrice)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-400">24h Change</span>
+                  <span className={`font-medium ${
+                    parseFloat(tickerData.priceChangePercent) >= 0 
+                      ? 'text-green-500' 
+                      : 'text-red-500'
+                  }`}>
+                    {formatPercent(tickerData.priceChangePercent)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-400">24h High</span>
+                  <span className="font-medium">${formatPrice(tickerData.highPrice)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-400">24h Low</span>
+                  <span className="font-medium">${formatPrice(tickerData.lowPrice)}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Indicators */}
+          <div className="bg-gray-800 rounded-lg p-4">
+            <h3 className="text-sm font-medium text-gray-400 mb-3">Technical Indicators</h3>
+            <div className="space-y-2">
+              {[
+                { key: 'ema', label: 'EMA 20', color: INDICATOR_COLORS.ema },
+                { key: 'bollingerBands', label: 'Bollinger Bands', color: INDICATOR_COLORS.bollingerUpper },
+                { key: 'rsi', label: 'RSI (Scaled)', color: INDICATOR_COLORS.rsi },
+                { key: 'cvdSlope', label: 'CVD Slope', color: INDICATOR_COLORS.cvdSlope },
+                { key: 'inverseATR', label: 'Inverse ATR', color: INDICATOR_COLORS.inverseATR },
+              ].map((indicator) => (
+                <button
+                  key={indicator.key}
+                  onClick={() => toggleIndicator(indicator.key)}
+                  className={`flex items-center space-x-2 w-full px-2 py-1 rounded text-sm transition-colors ${
+                    activeIndicators.has(indicator.key)
+                      ? 'bg-gray-600 text-white'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                >
+                  <div
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: indicator.color }}
+                  />
+                  <span>{indicator.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
-        
-        {/* Chart Container */}
+
+        {/* Chart */}
         <div className="bg-gray-800 rounded-lg p-4">
           <div 
             ref={chartContainerRef}
             className="w-full"
-            style={{ minHeight: '700px' }}
+            style={{ height: '600px' }}
           />
         </div>
-        
-        {/* Legend */}
-        <div className="mt-6 bg-gray-800 rounded-lg p-4">
-          <h3 className="text-white font-bold mb-3">Active Indicators (All Overlaid)</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 text-sm">
-            {Array.from(activeIndicators).map((indicator) => (
-              <div key={indicator} className="flex items-center space-x-2">
-                <div className={`w-3 h-3 rounded-full ${
-                  indicator === 'RSI' ? 'bg-red-400' :
-                  indicator === 'EMA20' ? 'bg-blue-400' :
-                  indicator === 'EMA50' ? 'bg-red-500' :
-                  indicator === 'SMA10' ? 'bg-yellow-400' :
-                  indicator === 'BBands' ? 'bg-purple-400' :
-                  indicator === 'MACD' ? 'bg-cyan-400' :
-                  indicator === 'ATR' ? 'bg-orange-400' :
-                  indicator === 'Stoch' ? 'bg-green-400' :
-                  indicator === 'Williams%R' ? 'bg-pink-400' :
-                  indicator === 'CCI' ? 'bg-amber-600' :
-                  'bg-gray-400'
-                }`} />
-                <span className="text-gray-300">{indicator}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-        
-        {/* Info Panel */}
-        <div className="mt-6 bg-gray-800 rounded-lg p-4">
-          <h3 className="text-white font-bold mb-3">Single Chart Integration</h3>
-          <div className="grid md:grid-cols-2 gap-4 text-sm text-gray-300">
-            <div>
-              <h4 className="font-semibold text-white mb-2">Price Overlay Indicators:</h4>
-              <ul className="space-y-1">
-                <li>• EMA 20/50 - Exponential Moving Averages</li>
-                <li>• SMA 10 - Simple Moving Average</li>
-                <li>• Bollinger Bands (20,2) - Volatility bands</li>
-                <li>• ATR - Average True Range (scaled)</li>
-              </ul>
+
+        {/* Status Bar */}
+        <div className="mt-4 bg-gray-800 rounded-lg p-3">
+          <div className="flex items-center justify-between text-sm text-gray-400">
+            <div className="flex items-center space-x-4">
+              <span>Active: {symbol} • {interval}</span>
+              <span>Indicators: {activeIndicators.size}</span>
             </div>
-            <div>
-              <h4 className="font-semibold text-white mb-2">Scaled Oscillators:</h4>
-              <ul className="space-y-1">
-                <li>• RSI (14) - Scaled to bottom area</li>
-                <li>• MACD (12,26,9) - Scaled to top area</li>
-                <li>• Stochastic %K/%D - Scaled to bottom area</li>
-                <li>• Williams %R - Scaled oscillator</li>
-                <li>• CCI - Commodity Channel Index (scaled)</li>
-              </ul>
+            <div className="flex items-center space-x-2">
+              <Activity className="w-4 h-4" />
+              <span>Live Updates</span>
             </div>
-          </div>
-          <div className="mt-4 p-3 bg-gray-700 rounded">
-            <h4 className="font-semibold text-white mb-2">How It Works:</h4>
-            <p className="text-sm text-gray-300">
-              All oscillator indicators (RSI, MACD, Stochastic, etc.) are mathematically scaled to fit within the price chart range. 
-              This allows you to see all technical analysis tools on a single chart while maintaining the relationships between price action and indicators. 
-              Oscillators are positioned in different areas of the chart to avoid overlap.
-            </p>
           </div>
         </div>
       </div>
     </div>
   );
-};
-
-export default CryptoTradingChart;
+}

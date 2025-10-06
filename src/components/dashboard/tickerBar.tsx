@@ -47,6 +47,8 @@ export default function TickerBar({
   const [searchQuery, setSearchQuery] = useState('');
   const [hoveredSymbol, setHoveredSymbol] = useState<string | null>(null);
 
+  console.log('in ticker');
+
   // Filter symbols based on search
   const filteredSymbols = availableSymbols.filter(sym => 
     sym.symbol.toLowerCase().includes(searchQuery.toLowerCase())

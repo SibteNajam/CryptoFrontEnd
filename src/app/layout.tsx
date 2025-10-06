@@ -36,7 +36,6 @@ export default function RootLayout({
         className={`${jakarta.variable} ${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ThemeProvider>
-
           <ClientProvider>
             {children}
           </ClientProvider>

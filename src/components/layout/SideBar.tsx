@@ -109,9 +109,6 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 <p className="text-sm font-medium text-primary truncate">
                   SibteNajam
                 </p>
-                <p className="text-xs text-muted-foreground truncate">
-                  Premium User
-                </p>
               </div>
             </div>
           </div>

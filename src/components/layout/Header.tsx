@@ -1,92 +1,130 @@
 'use client';
 
-import React from 'react';
-import { Menu, Search, Bell, Settings, User, RefreshCw, Sun, Moon } from 'lucide-react';
-import { useTheme } from '../../infrastructure/theme/ThemeContext'; // ✅ Add this import
+import React, { useState } from 'react';
+import { ChevronDown, Moon, Sun } from 'lucide-react';
+import { useTheme } from '@/infrastructure/theme/ThemeContext';
+import { useAppSelector, useAppDispatch } from '@/infrastructure/store/hooks';
+import {
+  ExchangeType,
+  setSelectedExchange,
+  toggleSetupModal,
+} from '@/infrastructure/features/exchange/exchangeSlice';
+import ExchangeSelector from './ExchangeSelector';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
 }
 
 export default function Header({ onToggleSidebar }: HeaderProps) {
-  // ✅ Replace the useState and useEffect with theme context
+  const dispatch = useAppDispatch();
+  const { selectedExchange, exchanges, isSetupModalOpen } = useAppSelector(
+    (state) => state.exchange
+  );
+
+  const [showExchangeDropdown, setShowExchangeDropdown] = useState(false);
   const { isDarkMode, toggleTheme } = useTheme();
 
-  // ✅ Remove the old useState and useEffect - everything else stays the same!
+  const exchangeNames: Record<string, string> = {
+    binance: 'Binance',
+    bitget: 'Bitget',
+  };
+
+  const exchangeLogos: Record<string, string> = {
+    binance: '/exchanges/binance.svg',
+    bitget: '/exchanges/bitget.svg',
+  };
+
+  const handleExchangeClick = (exchangeId: string) => {
+    dispatch(setSelectedExchange(exchangeId as ExchangeType));
+    dispatch(toggleSetupModal());
+    setShowExchangeDropdown(false);
+  };
 
   return (
-    <header className="h-16 sticky top-0 z-30 bg-card/80 backdrop-blur border-b border-default shadow-sm">
-      <div className="h-full flex items-center justify-between px-4 sm:px-6">
-        {/* Left Section */}
-        <div className="flex items-center space-x-4">
+    <header className="bg-card border-b border-default px-6 py-3 flex items-center justify-between">
+      {/* Left side - Sidebar toggle + Title */}
+      <div className="flex items-center space-x-4">
+        <button onClick={onToggleSidebar} className="p-2 hover:bg-muted rounded-lg">
+          <span className="sr-only">Toggle sidebar</span>
+          ☰
+        </button>
+        <h1 className="text-xl font-semibold text-primary">Trading Dashboard</h1>
+      </div>
+
+      {/* Center - Search */}
+      <div className="flex-1 max-w-md mx-8">
+        <input
+          type="text"
+          placeholder="Search symbols, pairs..."
+          className="w-full px-4 py-2 bg-muted border border-light rounded-lg focus-ring"
+        />
+      </div>
+
+      {/* Right side */}
+      <div className="flex items-center space-x-6">
+        {/* Exchange Selector Dropdown */}
+        <div className="relative">
           <button
-            onClick={onToggleSidebar}
-            className="p-2 rounded-lg hover-light transition-colors lg:hidden"
+            onClick={() => setShowExchangeDropdown((prev) => !prev)}
+            className="flex items-center space-x-2 border border-default rounded-lg px-3 py-1.5 hover:bg-muted transition-colors"
           >
-            <Menu size={20} className="text-muted-foreground" />
+            <img
+              src={exchangeLogos[selectedExchange]}
+              alt={exchangeNames[selectedExchange]}
+              className="w-5 h-5"
+            />
+            <span className="font-medium">
+              {exchangeNames[selectedExchange] || 'Select Exchange'}
+            </span>
+            <ChevronDown className="w-4 h-4" />
           </button>
 
-          <div className="hidden md:flex items-center space-x-2">
-            <h1 className="text-xl font-bold text-primary">
-              Trading Dashboard
-            </h1>
-            <div className="flex items-center space-x-1 px-2 py-1 bg-success-light rounded-full">
-              <div className="w-2 h-2 bg-success rounded-full animate-pulse"></div>
-              <span className="text-xs font-medium text-success">Live</span>
+          {showExchangeDropdown && (
+            <div className="absolute right-0 mt-2 bg-card border border-default rounded-lg shadow-lg w-40 z-50">
+              {Object.entries(exchangeNames).map(([id, name]) => (
+                <button
+                  key={id}
+                  onClick={() => handleExchangeClick(id)}
+                  className="flex items-center space-x-2 w-full px-4 py-2 hover:bg-muted text-left"
+                >
+                  <img src={exchangeLogos[id]} alt={name} className="w-5 h-5" />
+                  <span>{name}</span>
+                </button>
+              ))}
             </div>
-          </div>
-
-          {/* Center Section - Search */}
-          <div className="hidden md:flex flex-1 max-w-md mx-4 sm:mx-8">
-            <div className="relative w-full">
-              <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted" />
-              <input
-                type="text"
-                placeholder="Search symbols, pairs..."
-                className="w-full pl-10 pr-4 py-2 bg-input border border-input focus-ring rounded-lg text-card-foreground placeholder:text-muted"
-              />
-            </div>
-          </div>
+          )}
         </div>
 
-        {/* Right Section */}
-        <div className="flex items-center space-x-3">
-          {/* Market Status */}
-          {/* Theme Toggle Button - stays exactly the same */}
-          <button
-            onClick={toggleTheme}
-            className="p-2 rounded-lg hover-light transition-colors duration-300 relative group"
-            title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-          >
-            {isDarkMode ? (
-              <Sun size={20} className="text-primary" />
-            ) : (
-              <Moon size={20} className="text-muted-foreground" />
-            )}
-          </button>
+        {/* Theme Toggle */}
+        <button
+          onClick={toggleTheme}
+          className="p-2 rounded-lg hover:bg-muted transition-colors duration-300"
+          title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
+          {isDarkMode ? (
+            <Sun size={20} className="text-primary" />
+          ) : (
+            <Moon size={20} className="text-muted-foreground" />
+          )}
+        </button>
 
-          {/* Notifications */}
-          <button className="p-2 rounded-lg hover-light transition-colors relative">
-            <Bell size={20} className="text-muted-foreground" />
-            <span className="absolute -top-1 -right-1 w-3 h-3 bg-danger rounded-full"></span>
-          </button>
+        {/* Notification */}
+        <button className="p-2 hover:bg-muted rounded-lg relative">
+          🔔
+          <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-primary rounded-full"></span>
+        </button>
 
-          {/* Settings */}
-          <button className="p-2 rounded-lg hover-light transition-colors">
-            <Settings size={20} className="text-muted-foreground" />
-          </button>
-
-          {/* User Menu */}
-          <div className="flex items-center space-x-2 px-3 py-1.5 rounded-lg hover-light transition-colors cursor-pointer">
-            <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-              <User size={16} className="text-primary-foreground" />
-            </div>
-            <span className="hidden sm:block text-sm font-medium text-secondary">
-              SibteNajam
-            </span>
+        {/* User Profile */}
+        <div className="flex items-center space-x-2 bg-muted px-3 py-2 rounded-lg">
+          <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-semibold">
+            S
           </div>
+          <span className="font-medium">SibteNajam</span>
         </div>
       </div>
+
+      {/* Exchange Setup Modal */}
+      {isSetupModalOpen && <ExchangeSelector />}
     </header>
   );
 }

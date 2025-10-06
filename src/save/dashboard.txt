@@ -1,18 +1,21 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Loader2 } from 'lucide-react';
+import { createChart, ColorType, IChartApi, ISeriesApi, CandlestickData, Time } from 'lightweight-charts';
 import { io, Socket } from 'socket.io-client';
+// import DashboardLayout from '../layout';
 import SymbolCards from '../../../components/dashboard/SymbolCards';
 import TradingPanel from '../../../components/charts/TradingPanel';
 import BinanceOrderBook from '../../../components/dashboard/OrderBook';
 import TradingViewChart from '../../../components/charts/TradingViewChart';
 import { BinanceApiService } from '../../../infrastructure/api/BinanceOrder';
+import PriceClickHandler from '../../../components/charts/priceClickHandler';
 import TradesComponent from '@/components/dashboard/trades';
 import TickerBar from '../../../components/dashboard/tickerBar';
 import { useTheme } from '@/infrastructure/theme/ThemeContext';
-import { useAppSelector } from '@/infrastructure/store/hooks';
 
+// [Keep all your existing interfaces - they remain the same]
 interface SymbolPrice {
     symbol: string;
     price: string;
@@ -70,6 +73,28 @@ interface WebSocketTimingData {
     priceChange: string;
 }
 
+interface BinanceKlineData {
+    symbol: string;
+    kline: {
+        t: number;
+        T: number;
+        s: string;
+        i: string;
+        f: number;
+        L: number;
+        o: string;
+        c: string;
+        h: string;
+        l: string;
+        v: string;
+        n: number;
+        x: boolean;
+        q: string;
+        V: string;
+        Q: string;
+    };
+}
+
 interface BinanceTickerData {
     symbol: string;
     ticker: {
@@ -88,19 +113,34 @@ interface BinanceTickerData {
     };
 }
 
-const API_BASE_URL = 'http://localhost:3000';
+interface HistoricalKlines {
+    symbol: string;
+    interval: string;
+    data: Array<[
+        number, // Open time
+        string, // Open price
+        string, // High price
+        string, // Low price
+        string, // Close price
+        string, // Volume
+        number, // Close time
+        string, // Quote asset volume
+        number, // Number of trades
+        string, // Taker buy base asset volume
+        string, // Taker buy quote asset volume
+        string  // Ignore
+    ]>;
+    timestamp: string;
+}
+
+const API_BASE_URL =  'http://localhost:3000';
 
 export default function Dashboard() {
-      const { selectedExchange, exchanges, connectionStatus } = useAppSelector((state) => state.exchange);
-        const currentExchangeConfig = exchanges[selectedExchange];
+    const { theme } = useTheme(); // ✅ Get current theme
 
-
-    console.log('Selected Exchange in Dashboard:', selectedExchange);
-    console.log('Current Exchange Config in Dashboard:', currentExchangeConfig);
-    console.log('Connection Status in Dashboard:', connectionStatus);
-    const { theme } = useTheme();
     const [symbols, setSymbols] = useState<SymbolPrice[]>([]);
     const [loading, setLoading] = useState(true);
+    const [chartLoading, setChartLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [refreshing, setRefreshing] = useState(false);
     const [hoveredCard, setHoveredCard] = useState<string | null>(null);
@@ -108,17 +148,27 @@ export default function Dashboard() {
     const [selectedInterval, setSelectedInterval] = useState<string>('1m');
     const [wsConnected, setWsConnected] = useState(false);
     const [tickerData, setTickerData] = useState<BinanceTickerData | null>(null);
+    const [klineData, setKlineData] = useState<BinanceKlineData | null>(null);
     const [tickerUpdateCount, setTickerUpdateCount] = useState(0);
+
     const [restPriceData, setRestPriceData] = useState<RestPriceData | null>(null);
     const [restPollCount, setRestPollCount] = useState(0);
     const [restPollingActive, setRestPollingActive] = useState(false);
-    const [restPollingInterval, setRestPollingInterval] = useState(2000);
-    const [isRequestPending, setIsRequestPending] = useState(false);
-    const [webSocketTiming, setWebSocketTiming] = useState<WebSocketTimingData | null>(null);
     const [priceComparison, setPriceComparison] = useState<PriceComparison | null>(null);
+    const [restPollingInterval, setRestPollingInterval] = useState(2000);
+
+    const [restLatency, setRestLatency] = useState<RestLatencyData | null>(null);
+    const [isRequestPending, setIsRequestPending] = useState(false);
+
+    const [webSocketTiming, setWebSocketTiming] = useState<WebSocketTimingData | null>(null);
     const [lastWebSocketUpdateTime, setLastWebSocketUpdateTime] = useState<number>(0);
     const [webSocketUpdateHistory, setWebSocketUpdateHistory] = useState<WebSocketTimingData[]>([]);
+
+    const chartContainerRef = useRef<HTMLDivElement>(null);
+    const chartRef = useRef<IChartApi | null>(null);
+    const candlestickSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
     const socketRef = useRef<Socket | null>(null);
+
     const [orderBookData, setOrderBookData] = useState<OrderBookData | null>(null);
     const [orderBookLoading, setOrderBookLoading] = useState(false);
     const [orderBookDepth, setOrderBookDepth] = useState(200);
@@ -126,23 +176,24 @@ export default function Dashboard() {
     const [apiService] = useState(() => new BinanceApiService());
     const [recentOrders, setRecentOrders] = useState<any[]>([]);
 
+
     useEffect(() => {
-            console.log('🔌 Initializing WebSocket connection...');
         const socket = io('http://localhost:3000', {
             transports: ['websocket'],
-            reconnection: true,
-            reconnectionDelay: 1000,
-            reconnectionAttempts: 5,
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionAttempts: 5,
         });
-        
 
         socketRef.current = socket;
 
         socket.on('connect', () => {
-        console.log('✅ Connected to server - Socket ID:', socket.id);
-        setError(null);
+            console.log('Connected to server');
             setWsConnected(true);
-            socket.emit('subscribe_symbol_with_indicators', {
+            setChartLoading(true);
+            setLastWebSocketUpdateTime(0);
+            setWebSocketUpdateHistory([]);
+        socket.emit('subscribe_symbol_with_indicators', {
                 symbol: selectedSymbol,
                 interval: selectedInterval,
                 limit: 1000,
@@ -159,65 +210,83 @@ export default function Dashboard() {
         });
 
         socket.on('binance_connection_status', (data) => {
-        console.log('📊 Binance connection status:', data);
-        if (data.status === 'connected') {
-            console.log('✅ Binance WebSocket connected');
-        }
+            console.log('Binance connection status:', data);
+        });
+
+      socket.on('historical_candles_with_indicators', (data) => { // ✅ Listen for correct event
+        console.log('📊 Received historical klines:', {
+            symbol: data.symbol,
+            interval: data.interval,
+            candleCount: data.count,
+            timestamp: data.timestamp
+        });
+        setChartLoading(false);
+        // loadHistoricalDataToChart(data);
     });
+    socket.on('kline_data', (data: BinanceKlineData) => {
+        console.log('🔴 Received live kline:', {
+            symbol: data.symbol,
+            interval: data.kline.i,
+            close: data.kline.c,
+            isClosed: data.kline.x
+        });
+        setKlineData(data);
+        // updateChartWithKline(data);
+     });
 
-
-        socket.on('ticker_data', (data: any) => {
+        socket.on('ticker_data', (data: BinanceTickerData) => {
             console.log('📈 Received ticker data:', {
-                symbol: data.symbol,
-                lastPrice: data.ticker.lastPrice,
-                priceChange: data.ticker.priceChange,
-                priceChangePercent: data.ticker.priceChangePercent,
-            });
+            symbol: data.symbol,
+            lastPrice: data.ticker.lastPrice,
+            priceChange: data.ticker.priceChange,
+            priceChangePercent: data.ticker.priceChangePercent,
+            // timestamp: data.timestamp || new Date().toISOString()
+        });
             const currentUpdateTime = performance.now();
             const updateTimestamp = new Date().toISOString();
 
-            // let intervalBetweenUpdates = 0;
-            // let timingData: WebSocketTimingData | null = null;
+            let intervalBetweenUpdates = 0;
+            let timingData: WebSocketTimingData | null = null;
 
-            // if (lastWebSocketUpdateTime > 0) {
-            //     intervalBetweenUpdates = currentUpdateTime - lastWebSocketUpdateTime;
+            if (lastWebSocketUpdateTime > 0) {
+                intervalBetweenUpdates = currentUpdateTime - lastWebSocketUpdateTime;
 
-            //     timingData = {
-            //         previousUpdateTime: lastWebSocketUpdateTime,
-            //         currentUpdateTime,
-            //         intervalBetweenUpdates,
-            //         updateTimestamp,
-            //         price: data.ticker.lastPrice,
-            //         priceChange: data.ticker.priceChangePercent
-            //     };
+                timingData = {
+                    previousUpdateTime: lastWebSocketUpdateTime,
+                    currentUpdateTime,
+                    intervalBetweenUpdates,
+                    updateTimestamp,
+                    price: data.ticker.lastPrice,
+                    priceChange: data.ticker.priceChangePercent
+                };
 
-            //     setWebSocketTiming(timingData);
+                setWebSocketTiming(timingData);
 
-            //     setWebSocketUpdateHistory(prev => {
-            //         const newHistory = [...prev.slice(-9), timingData!];
-            //         return newHistory;
-            //     });
+                setWebSocketUpdateHistory(prev => {
+                    const newHistory = [...prev.slice(-9), timingData!];
+                    return newHistory;
+                });
 
-            //     console.log('📈 WebSocket Ticker Update with Timing:', {
-            //         symbol: data.symbol,
-            //         price: data.ticker.lastPrice,
-            //         change: data.ticker.priceChangePercent,
-            //         intervalSinceLastUpdate: `${intervalBetweenUpdates.toFixed(2)}ms`,
-            //         timestamp: new Date().toLocaleTimeString()
-            //     });
-            // } else {
-            //     console.log('📈 WebSocket First Ticker Update:', {
-            //         symbol: data.symbol,
-            //         price: data.ticker.lastPrice,
-            //         change: data.ticker.priceChangePercent,
-            //         note: 'First update - no interval calculated',
-            //         timestamp: new Date().toLocaleTimeString()
-            //     });
-            // }
+                console.log('📈 WebSocket Ticker Update with Timing:', {
+                    symbol: data.symbol,
+                    price: data.ticker.lastPrice,
+                    change: data.ticker.priceChangePercent,
+                    intervalSinceLastUpdate: `${intervalBetweenUpdates.toFixed(2)}ms`,
+                    timestamp: new Date().toLocaleTimeString()
+                });
+            } else {
+                console.log('📈 WebSocket First Ticker Update:', {
+                    symbol: data.symbol,
+                    price: data.ticker.lastPrice,
+                    change: data.ticker.priceChangePercent,
+                    note: 'First update - no interval calculated',
+                    timestamp: new Date().toLocaleTimeString()
+                });
+            }
 
-            // setLastWebSocketUpdateTime(currentUpdateTime);
+            setLastWebSocketUpdateTime(currentUpdateTime);
             setTickerData(data);
-            // setTickerUpdateCount(prev => prev + 1);
+            setTickerUpdateCount(prev => prev + 1);
         });
 
         socket.on('subscription_status', (data) => {
@@ -226,32 +295,19 @@ export default function Dashboard() {
 
         socket.on('subscription_error', (data) => {
             console.error('❌ Subscription error:', data);
+            setChartLoading(false);
             setError(`Error loading ${data.symbol}: ${data.error}`);
         });
+           socket.on('connect_error', (error) => {
+        console.error('❌ Connection error:', error.message);
+        setError(`Connection error: ${error.message}`);
+       });
 
-        socket.on('connect_error', (error) => {
-            console.error('❌ Connection error:', error.message);
-            setError(`Connection error: ${error.message}`);
-        });
 
-       return () => {
-        console.log('🔌 Cleaning up WebSocket connection');
-        socket.off('connect');
-        socket.off('disconnect');
-        socket.off('connect_error');
-        socket.off('connection_status');
-        socket.off('binance_connection_status');
-        socket.off('subscription_status');
-        socket.off('subscription_error');
-        socket.off('ticker_data');
-        socket.offAny();
-        socket.disconnect();
-    };
+        return () => {
+            socket.disconnect();
+        };
     }, [selectedInterval, selectedSymbol]);
-
-
-
-    
 
     const useRestPricePolling = (symbol: string, interval: number, active: boolean) => {
         const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -285,6 +341,15 @@ export default function Dashboard() {
 
                 const responseEnd = performance.now();
                 const totalLatency = responseEnd - requestStart;
+
+                const latencyData: RestLatencyData = {
+                    requestStartTime: requestStart,
+                    responseEndTime: responseEnd,
+                    totalLatency,
+                    networkLatency,
+                    requestTimestamp
+                };
+
                 console.log('💰 REST Response completed:', {
                     symbol: data.symbol,
                     price: data.currentPrice,
@@ -295,6 +360,7 @@ export default function Dashboard() {
 
                 setRestPriceData(data);
                 setRestPollCount(prev => prev + 1);
+                setRestLatency(latencyData);
 
                 return data;
 
@@ -379,6 +445,102 @@ export default function Dashboard() {
         restPollingActive
     );
 
+    useEffect(() => {
+        if (chartContainerRef.current && !chartRef.current) {
+            console.log('🎨 Initializing chart...');
+            console.log('Container dimensions:', {
+                width: chartContainerRef.current.clientWidth,
+                height: chartContainerRef.current.clientHeight
+            });
+
+            const chart = createChart(chartContainerRef.current, {
+                layout: {
+                    background: { type: ColorType.Solid, color: '#ffffff' },
+                    textColor: '#1e293b',
+                },
+                grid: {
+                    vertLines: { color: '#e2e8f0' },
+                    horzLines: { color: '#e2e8f0' },
+                },
+                crosshair: {
+                    mode: 1,
+                },
+                rightPriceScale: {
+                    borderColor: '#e2e8f0',
+                },
+                timeScale: {
+                    borderColor: '#e2e8f0',
+                    timeVisible: true,
+                    secondsVisible: false,
+                },
+                width: chartContainerRef.current.clientWidth || 800,
+                height: 400,
+            });
+
+            const candlestickSeries = chart.addCandlestickSeries({
+                upColor: '#10b981',
+                downColor: '#ef4444',
+                borderDownColor: '#ef4444',
+                borderUpColor: '#10b981',
+                wickDownColor: '#ef4444',
+                wickUpColor: '#10b981',
+            });
+
+            chartRef.current = chart;
+            candlestickSeriesRef.current = candlestickSeries;
+
+            console.log('✅ Chart initialized successfully');
+
+            const handleResize = () => {
+                if (chartContainerRef.current && chartRef.current) {
+                    const newWidth = chartContainerRef.current.clientWidth;
+                    console.log('📏 Resizing chart to width:', newWidth);
+                    chartRef.current.applyOptions({
+                        width: newWidth,
+                    });
+                }
+            };
+
+            window.addEventListener('resize', handleResize);
+            return () => window.removeEventListener('resize', handleResize);
+        }
+    }, []);
+
+    const loadHistoricalDataToChart = (data: HistoricalKlines) => {
+        if (candlestickSeriesRef.current) {
+            const candlestickData: CandlestickData[] = data.data.map(kline => ({
+                time: (kline[0] / 1000) as Time,
+                open: parseFloat(kline[1]),
+                high: parseFloat(kline[2]),
+                low: parseFloat(kline[3]),
+                close: parseFloat(kline[4]),
+            }));
+
+            candlestickSeriesRef.current.setData(candlestickData);
+            console.log(`📊 Loaded ${candlestickData.length} historical candles for ${data.symbol}`);
+        }
+    };
+
+    const updateChartWithKline = (data: BinanceKlineData) => {
+        if (candlestickSeriesRef.current) {
+            const candle: CandlestickData = {
+                time: (data.kline.t / 1000) as Time,
+                open: parseFloat(data.kline.o),
+                high: parseFloat(data.kline.h),
+                low: parseFloat(data.kline.l),
+                close: parseFloat(data.kline.c),
+            };
+
+            candlestickSeriesRef.current.update(candle);
+
+            if (data.kline.x) {
+                console.log(`✅ Candle closed for ${data.symbol} at ${new Date(data.kline.T).toLocaleString()}`);
+            } else {
+                console.log(`🟡 Candle forming for ${data.symbol} - Close: $${data.kline.c}`);
+            }
+        }
+    };
+
     const fetchSymbols = async () => {
         try {
             setError(null);
@@ -393,6 +555,12 @@ export default function Dashboard() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleRefresh = async () => {
+        setRefreshing(true);
+        await fetchSymbols();
+        setTimeout(() => setRefreshing(false), 500);
     };
 
     const fetchOrderBook = async (symbol: string, limit: number = orderBookDepth) => {
@@ -432,6 +600,7 @@ export default function Dashboard() {
 
     useEffect(() => {
         fetchSymbols();
+        setChartLoading(true);
     }, []);
 
     useEffect(() => {
@@ -444,7 +613,9 @@ export default function Dashboard() {
         if (symbol === selectedSymbol) return;
 
         setSelectedSymbol(symbol);
+        setChartLoading(true);
         setError(null);
+
         setLastWebSocketUpdateTime(0);
         setWebSocketUpdateHistory([]);
         setWebSocketTiming(null);
@@ -454,6 +625,7 @@ export default function Dashboard() {
                 symbol: symbol,
                 interval: selectedInterval,
                 limit: 1000,
+                loadHistorical: true
             });
         }
     };
@@ -462,16 +634,19 @@ export default function Dashboard() {
         if (interval === selectedInterval) return;
 
         setSelectedInterval(interval);
+        setChartLoading(true);
         setError(null);
+
         setLastWebSocketUpdateTime(0);
         setWebSocketUpdateHistory([]);
         setWebSocketTiming(null);
-        setTickerData(null);
+            setTickerData(null); 
+
         if (socketRef.current && wsConnected) {
             socketRef.current.emit('subscribe_symbol_with_indicators', {
                 symbol: selectedSymbol,
                 interval: interval,
-                limit: 1000,
+                    limit: 1000,
             });
         }
     };
@@ -485,6 +660,7 @@ export default function Dashboard() {
             {/* Status Bar */}
             <div className="flex items-center justify-between bg-card px-1 shadow-sm">
                 <div className="flex items-center space-x-4">
+                    {/* Ticker Updates Display */}
                     <div className="inline-flex items-center gap-4 px-3 py-1 rounded-full text-xs bg-card text-info">
                         <span>📊 Updates: {tickerUpdateCount}</span>
                         {tickerData && (
@@ -493,6 +669,11 @@ export default function Dashboard() {
                         {webSocketTiming && (
                             <span className="text-success">
                                 | 🔴 WS: {webSocketTiming.intervalBetweenUpdates.toFixed(0)}ms
+                            </span>
+                        )}
+                        {restLatency && (
+                            <span className="text-warning">
+                                | 📡 REST: {restLatency.totalLatency.toFixed(0)}ms
                             </span>
                         )}
                     </div>
@@ -512,17 +693,20 @@ export default function Dashboard() {
                     tickerData={tickerData}
                     userBalance={undefined}
                     wsConnected={wsConnected}
-                    availableSymbols={symbols}
-                    onSymbolChange={handleSymbolClick}
+                    availableSymbols={symbols} // Pass your fetched symbols array
+                    onSymbolChange={handleSymbolClick} // Use existing handler
                 />
             )}
 
-            {/* Main Trading Layout */}
+            {/* UPDATED MAIN TRADING LAYOUT */}
             <div className="bg-muted min-h-screen">
-                <div className="max-w-7xl mx-auto">
+                <div className="max-w-7xl mx-auto ">
+                    {/* Chart and Trades Row */}
                     <div className="grid grid-cols-1 lg:grid-cols-3">
+                        {/* Chart Section - Takes 2/3 width */}
                         <div className="lg:col-span-2">
                             <div className="bg-card rounded-sm border border-default shadow-sm overflow-hidden h-full">
+                                {/* Chart Header */}
                                 <div className="border-b border-default px-6 py-3 flex items-center justify-between bg-card flex-shrink-0">
                                     <div className="flex items-center space-x-6">
                                         <h2 className="text-lg font-semibold text-primary">{selectedSymbol}</h2>
@@ -554,6 +738,8 @@ export default function Dashboard() {
                                         )}
                                     </div>
                                 </div>
+
+                                {/* Chart Container */}
                                 <div className="bg-card flex-1" style={{ height: '500px' }}>
                                     <TradingViewChart
                                         symbol={`BINANCE:${selectedSymbol}`}
@@ -567,6 +753,7 @@ export default function Dashboard() {
                             </div>
                         </div>
 
+                        {/* Trades Section */}
                         <div className="lg:col-span-1">
                             {orderBookData ? (
                                 <div className="h-full">
@@ -593,9 +780,12 @@ export default function Dashboard() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3">
+                    {/* Trading Panel and Order Book Row */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 ">
+                        {/* Trading Panel Section */}
                         <div className="lg:col-span-2">
                             <div className="bg-card rounded-sm border border-default shadow-sm" style={{ height: '580px' }}>
+                                {/* Trading Panel Content */}
                                 <div className="p-3 h-full overflow-hidden">
                                     <TradingPanel
                                         selectedSymbol={selectedSymbol}
@@ -605,6 +795,7 @@ export default function Dashboard() {
                             </div>
                         </div>
 
+                        {/* Order Book Section */}
                         <div className="lg:col-span-1">
                             <TradesComponent symbol={selectedSymbol} />
                         </div>

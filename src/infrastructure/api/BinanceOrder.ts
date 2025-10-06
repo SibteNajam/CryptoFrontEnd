@@ -149,8 +149,8 @@ export class BinanceApiService {
 
 async placeOrder(order: OrderRequest): Promise<OrderResult> {
     try {
-        console.log('🚀 Frontend API Service - Placing order:', order);
-        console.log('🌐 Calling URL:', `${this.apiUrl}/binance/place-order`);
+        console.log(' Frontend API Service - Placing order:', order);
+        console.log(' Calling URL:', `${this.apiUrl}/binance/place-order`);
         
         // Log the exact same format that worked in console
         const orderPayload = {
@@ -162,7 +162,7 @@ async placeOrder(order: OrderRequest): Promise<OrderResult> {
             timeInForce: order.timeInForce ? order.timeInForce : undefined
         };
         
-        console.log('📦 Exact payload being sent:', JSON.stringify(orderPayload, null, 2));
+        console.log(' Exact payload being sent:', JSON.stringify(orderPayload, null, 2));
         
         const response = await fetch(`${this.apiUrl}/binance/place-order`, {
             method: 'POST',
@@ -172,21 +172,21 @@ async placeOrder(order: OrderRequest): Promise<OrderResult> {
             body: JSON.stringify(orderPayload)
         });
 
-        console.log('📡 Response status:', response.status);
-        console.log('📡 Response ok:', response.ok);
+        console.log(' Response status:', response.status);
+        console.log(' Response ok:', response.ok);
         
         if (!response.ok) {
             const errorText = await response.text();
-            console.error('❌ Error response text:', errorText);
+            console.error(' Error response text:', errorText);
             throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
         }
 
         const result = await response.json();
-        console.log('✅ Order placed successfully:', result);
+        console.log(' Order placed successfully:', result);
         return result;
 
     } catch (error) {
-        console.error('❌ Frontend API Service - Error details:', {
+        console.error('Frontend API Service - Error details:', {
             error: error,
             message: error instanceof Error ? error.message : 'Unknown error',
             stack: error instanceof Error ? error.stack : undefined
@@ -213,7 +213,7 @@ async placeOrder(order: OrderRequest): Promise<OrderResult> {
 
             return await response.json();
         } catch (error) {
-            console.error('❌ Error fetching open orders:', error);
+            console.error('Error fetching open orders:', error);
             throw error;
         }
     }
@@ -250,7 +250,7 @@ async placeOrder(order: OrderRequest): Promise<OrderResult> {
     console.log('✅ Order cancelled:', result);
     return result;
   } catch (error) {
-    console.error('❌ Error cancelling order:', error);
+    console.error('Error cancelling order:', error);
     throw error;
   }
 }
@@ -271,7 +271,7 @@ async placeMarketOrder(payload: any): Promise<any> {
         }
         const duration = Date.now() - start;
 
-    console.log(`⏱️ Placed market order in................... ${duration}ms`);
+    console.log(`Placed market order in................... ${duration}ms`);
         return await response.json();
     } catch (error) {
         if (error instanceof Error) {
@@ -294,7 +294,7 @@ async placeOrderListOTOCO(payload: any): Promise<any> {
                 body: JSON.stringify(payload)
             });
             const duration = Date.now() - start;
-            console.log(`⏱️ Placed OTOCO order in ${duration}ms`);
+            console.log(`Placed OTOCO order in ${duration}ms`);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -326,7 +326,7 @@ async placeOrderListOTOCO(payload: any): Promise<any> {
 
             return await response.json();
         } catch (error) {
-            console.error('❌ Error fetching trades:', error);
+            console.error('Error fetching trades:', error);
             throw error;
         }
     }
