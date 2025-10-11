@@ -355,7 +355,7 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
     return (
         <div className="h-full flex flex-col bg-card">
             {/* Header with Symbol and Balance */}
-            <div className="bg-card brder-b border-gray-200 px-4 py-1">
+            <div className="bg-card px-4 py-1">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <span className="text-lg font-bold text-gray-900">{selectedSymbol}</span>
@@ -379,12 +379,12 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
             </div>
 
             {/* Tab Navigation */}
-            <div className="bg-card border-b border-gray-200">
+                    <div className="bg-card">
                 <div className="flex">
                     <button
                         onClick={() => setActiveTab('limit')}
-                        className={`px-6 py-3 text-sm font-medium transition-all relative ${activeTab === 'limit'
-                                ? 'text-blue-600 border-b-2 border-blue-600'
+                                className={`px-6 py-3 text-sm font-medium transition-all relative ${activeTab === 'limit'
+                                ? 'text-blue-600'
                                 : 'text-gray-500 hover:text-gray-700'
                             }`}
                     >
@@ -392,8 +392,8 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                     </button>
                     <button
                         onClick={() => setActiveTab('market')}
-                        className={`px-6 py-3 text-sm font-medium transition-all relative ${activeTab === 'market'
-                                ? 'text-blue-600 border-b-2 border-blue-600'
+                                className={`px-6 py-3 text-sm font-medium transition-all relative ${activeTab === 'market'
+                                ? 'text-blue-600'
                                 : 'text-gray-500 hover:text-gray-700'
                             }`}
                     >
@@ -412,7 +412,7 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                             setMarketForm(prev => ({ ...prev, side: 'BUY' }));
                         }}
                         className={`py-3 rounded-lg font-semibold transition-all ${(activeTab === 'limit' ? orderForm.side : marketForm.side) === 'BUY'
-                                ? 'bg-green-500 text-white shadow-lg transform scale-[1.02]'
+                                ? 'bg-green-600 text-white'
                                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                             }`}
                     >
@@ -427,7 +427,7 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                             setMarketForm(prev => ({ ...prev, side: 'SELL' }));
                         }}
                         className={`py-3 rounded-lg font-semibold transition-all ${(activeTab === 'limit' ? orderForm.side : marketForm.side) === 'SELL'
-                                ? 'bg-red-500 text-white shadow-lg transform scale-[1.02]'
+                                ? 'bg-red-600 text-white'
                                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                             }`}
                     >
@@ -456,9 +456,9 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                                         onChange={(e) =>
                                             setOrderForm((prev) => ({ ...prev, price: e.target.value }))
                                         }
-                                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg 
-                   focus:outline-none focus:ring-2 focus:ring-blue-500 
-                   focus:border-transparent transition-all"
+                                        className="w-full px-3 py-2.5  rounded-md
+                           focus:outline-none focus:ring-2
+                           focus:border-transparent transition-all"
                                     />
                                     <button className="absolute right-2 top-1/2 -translate-y-1/2 
                          text-xs text-blue-600 hover:text-blue-700 font-medium">
@@ -481,8 +481,8 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                                         setOrderForm((prev) => ({ ...prev, quantity: e.target.value }))
                                     }
                                     className="w-full px-3 py-2.5 border border-gray-300 rounded-lg 
-                 focus:outline-none focus:ring-2 focus:ring-blue-500 
-                 focus:border-transparent transition-all"
+                     focus:outline-none focus:ring-2 focus:ring-blue-500 
+                     focus:border-transparent transition-all"
                                 />
                             </div>
                         </div>
@@ -514,7 +514,7 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                             </label>
 
                             {enableTPSL && (
-                                <div className="p-3 bg-gray-50 rounded-lg space-y-3 border border-gray-200">
+                                <div className="p-3 bg-card rounded-lg space-y-3">
                                     <div className="grid grid-cols-2 gap-3">
                                         <div>
                                             <label className="text-xs text-gray-600 mb-1 block ">Stop Loss</label>
@@ -558,8 +558,8 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                 ) : (
                     <div className="space-y-4">
                         {/* Market Order Form */}
-                        <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                            <p className="text-xs text-yellow-800">
+                        <div className="p-3 bg-card rounded-lg">
+                            <p className="text-xs text-gray-400">
                                 Market orders execute immediately at the best available price
                             </p>
                         </div>
@@ -591,8 +591,8 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                 )}
 
                 {/* Total and Submit */}
-                <div className="mt-1">
-                    <div className="p-3 bg-gray-50 rounded-lg">
+                    <div className="mt-1">
+                    <div className="p-3 bg-card rounded-lg">
                         <div className="flex justify-between items-center mt-1">
                             <span className="text-sm text-gray-600">Total</span>
                             <span className="text-lg font-bold text-gray-900">
@@ -606,9 +606,9 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                     <button
                         onClick={handlePlaceOrder}
                         disabled={orderLoading}
-                        className={` mt-2 w-full py-3.5 rounded-lg font-semibold text-white transition-all transform hover:scale-[1.02] ${(activeTab === 'limit' ? orderForm.side : marketForm.side) === 'BUY'
-                                ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 shadow-lg'
-                                : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 shadow-lg'
+                        className={` mt-2 w-full py-3.5 rounded-lg font-semibold text-white transition-all ${(activeTab === 'limit' ? orderForm.side : marketForm.side) === 'BUY'
+                                ? 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800'
+                                : 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800'
                             } disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
                         {orderLoading ? (
@@ -623,7 +623,7 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                 </div>
 
                 {/* Open Orders */}
-                <div className="mt-6 pt-6 border-t border-gray-200">
+                <div className="mt-6 pt-6">
                     <div className="flex items-center justify-between mb-3">
                         <h3 className="text-sm font-semibold text-gray-900">Open Orders ({openOrders.length})</h3>
                         <button className="text-xs text-blue-600 hover:text-blue-700">View All</button>

@@ -102,8 +102,6 @@ export default function Dashboard() {
     const [symbols, setSymbols] = useState<SymbolPrice[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [refreshing, setRefreshing] = useState(false);
-    const [hoveredCard, setHoveredCard] = useState<string | null>(null);
     const [selectedSymbol, setSelectedSymbol] = useState<string>('BTCUSDT');
     const [selectedInterval, setSelectedInterval] = useState<string>('1m');
     const [wsConnected, setWsConnected] = useState(false);
@@ -126,119 +124,119 @@ export default function Dashboard() {
     const [apiService] = useState(() => new BinanceApiService());
     const [recentOrders, setRecentOrders] = useState<any[]>([]);
 
-    useEffect(() => {
-            console.log('🔌 Initializing WebSocket connection...');
-        const socket = io('http://localhost:3000', {
-            transports: ['websocket'],
-            reconnection: true,
-            reconnectionDelay: 1000,
-            reconnectionAttempts: 5,
+// Replace the useEffect that initializes WebSocket with this:
+
+useEffect(() => {
+    console.log('🔌 Initializing WebSocket connection...');
+    
+    // Use environment variable or fallback to localhost:3000
+    const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:3000';
+    console.log('🌐 Connecting to WebSocket URL:', WS_URL);
+    
+    const socket = io(WS_URL, {
+        transports: ['websocket', 'polling'], // Try websocket first, fallback to polling
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionAttempts: 5,
+        timeout: 10000, // 10 second timeout
+        autoConnect: true,
+        // Add these options for better debugging
+        upgrade: true,
+        rememberUpgrade: true,
+        forceNew: true,
+    });
+    
+    socketRef.current = socket;
+
+    // Connection event handlers
+    socket.on('connect', () => {
+        console.log('✅ Connected to server - Socket ID:', socket.id);
+        console.log('🔗 Transport type:', socket.io.engine.transport.name);
+        setError(null);
+        setWsConnected(true);
+        
+        // Subscribe to the selected symbol
+        socket.emit('subscribe_symbol_with_indicators', {
+            symbol: selectedSymbol,
+            interval: selectedInterval,
+            limit: 1000,
+        });
+    });
+
+    socket.on('connect_error', (error) => {
+        console.error('❌ Connection error:', error);
+        console.error('Error details:', {
+            message: error.message,
         });
         
+        setWsConnected(false);
+        const errMsg = error.message || String(error);
+        setError(`Connection error: ${errMsg}. Make sure backend is running on ${WS_URL}`);
+    });
 
-        socketRef.current = socket;
-
-        socket.on('connect', () => {
-        console.log('✅ Connected to server - Socket ID:', socket.id);
-        setError(null);
-            setWsConnected(true);
-            socket.emit('subscribe_symbol_with_indicators', {
-                symbol: selectedSymbol,
-                interval: selectedInterval,
-                limit: 1000,
-            });
-        });
-
-        socket.on('disconnect', () => {
-            console.log('Disconnected from server');
-            setWsConnected(false);
-        });
-
-        socket.on('connection_status', (data) => {
-            console.log('Connection status:', data);
-        });
-
-        socket.on('binance_connection_status', (data) => {
-        console.log('📊 Binance connection status:', data);
-        if (data.status === 'connected') {
-            console.log('✅ Binance WebSocket connected');
+    socket.on('disconnect', (reason) => {
+        console.log('🔌 Disconnected from server. Reason:', reason);
+        setWsConnected(false);
+        
+        if (reason === 'io server disconnect') {
+            // Server disconnected, need to reconnect manually
+            socket.connect();
         }
     });
 
+    socket.on('reconnect_attempt', (attemptNumber) => {
+        console.log(`🔄 Reconnection attempt ${attemptNumber}...`);
+    });
 
-        socket.on('ticker_data', (data: any) => {
-            console.log('📈 Received ticker data:', {
-                symbol: data.symbol,
-                lastPrice: data.ticker.lastPrice,
-                priceChange: data.ticker.priceChange,
-                priceChangePercent: data.ticker.priceChangePercent,
-            });
-            const currentUpdateTime = performance.now();
-            const updateTimestamp = new Date().toISOString();
+    socket.on('reconnect_failed', () => {
+        console.error('❌ Reconnection failed after all attempts');
+        setError('Failed to reconnect to server. Please refresh the page.');
+    });
 
-            // let intervalBetweenUpdates = 0;
-            // let timingData: WebSocketTimingData | null = null;
+    socket.on('connection_status', (data) => {
+        console.log('📡 Connection status:', data);
+    });
 
-            // if (lastWebSocketUpdateTime > 0) {
-            //     intervalBetweenUpdates = currentUpdateTime - lastWebSocketUpdateTime;
+    socket.on('binance_connection_status', (data) => {
+        console.log('📊 Binance connection status:', data);
+        if (data.status === 'connected') {
+            console.log('✅ Binance WebSocket connected');
+        } else if (data.status === 'error') {
+            console.error('❌ Binance connection error:', data.error);
+        }
+    });
 
-            //     timingData = {
-            //         previousUpdateTime: lastWebSocketUpdateTime,
-            //         currentUpdateTime,
-            //         intervalBetweenUpdates,
-            //         updateTimestamp,
-            //         price: data.ticker.lastPrice,
-            //         priceChange: data.ticker.priceChangePercent
-            //     };
-
-            //     setWebSocketTiming(timingData);
-
-            //     setWebSocketUpdateHistory(prev => {
-            //         const newHistory = [...prev.slice(-9), timingData!];
-            //         return newHistory;
-            //     });
-
-            //     console.log('📈 WebSocket Ticker Update with Timing:', {
-            //         symbol: data.symbol,
-            //         price: data.ticker.lastPrice,
-            //         change: data.ticker.priceChangePercent,
-            //         intervalSinceLastUpdate: `${intervalBetweenUpdates.toFixed(2)}ms`,
-            //         timestamp: new Date().toLocaleTimeString()
-            //     });
-            // } else {
-            //     console.log('📈 WebSocket First Ticker Update:', {
-            //         symbol: data.symbol,
-            //         price: data.ticker.lastPrice,
-            //         change: data.ticker.priceChangePercent,
-            //         note: 'First update - no interval calculated',
-            //         timestamp: new Date().toLocaleTimeString()
-            //     });
-            // }
-
-            // setLastWebSocketUpdateTime(currentUpdateTime);
-            setTickerData(data);
-            // setTickerUpdateCount(prev => prev + 1);
+    socket.on('ticker_data', (data: any) => {
+        console.log('📈 Received ticker data:', {
+            symbol: data.symbol,
+            lastPrice: data.ticker.lastPrice,
+            priceChange: data.ticker.priceChange,
+            priceChangePercent: data.ticker.priceChangePercent,
         });
+        
+        const currentUpdateTime = performance.now();
+        const updateTimestamp = new Date().toISOString();
 
-        socket.on('subscription_status', (data) => {
-            console.log('✅ Subscription status:', data);
-        });
+        setTickerData(data);
+    });
 
-        socket.on('subscription_error', (data) => {
-            console.error('❌ Subscription error:', data);
-            setError(`Error loading ${data.symbol}: ${data.error}`);
-        });
+    socket.on('subscription_status', (data) => {
+        console.log('✅ Subscription status:', data);
+    });
 
-        socket.on('connect_error', (error) => {
-            console.error('❌ Connection error:', error.message);
-            setError(`Connection error: ${error.message}`);
-        });
+    socket.on('subscription_error', (data) => {
+        console.error('❌ Subscription error:', data);
+        setError(`Error loading ${data.symbol}: ${data.error}`);
+    });
 
-       return () => {
+    // Cleanup function
+    return () => {
         console.log('🔌 Cleaning up WebSocket connection');
         socket.off('connect');
         socket.off('disconnect');
         socket.off('connect_error');
+        socket.off('reconnect_attempt');
+        socket.off('reconnect_failed');
         socket.off('connection_status');
         socket.off('binance_connection_status');
         socket.off('subscription_status');
@@ -247,8 +245,7 @@ export default function Dashboard() {
         socket.offAny();
         socket.disconnect();
     };
-    }, [selectedInterval, selectedSymbol]);
-
+}, [selectedInterval, selectedSymbol]);
 
 
     

@@ -200,11 +200,11 @@ export default function TradesComponent({ symbol }: TradesProps) {
                 </div>
 
                 {/* Trade Type Toggle */}
-                <div className="flex rounded-lg p-1 border border-primary-light">
+                <div className="flex rounded-lg p-1">
                     <button
                         onClick={() => handleTradeTypeChange('market')}
                         className={`flex-1 px-3 py-2 text-xs font-medium rounded-md transition-all duration-300 ease-out transform ${tradeType === 'market'
-                                ? 'bg-primary text-primary-foreground shadow-md scale-105'
+                                ? 'bg-primary text-primary-foreground'
                                 : 'text-primary hover:text-primary-dark hover:bg-primary-hover'
                             }`}
                     >
@@ -216,7 +216,7 @@ export default function TradesComponent({ symbol }: TradesProps) {
                     <button
                         onClick={() => handleTradeTypeChange('my')}
                         className={`flex-1 px-3 py-2 text-xs font-medium rounded-md transition-all duration-300 ease-out transform ${tradeType === 'my'
-                                ? 'bg-primary text-primary-foreground shadow-md scale-105'
+                                ? 'bg-primary text-primary-foreground'
                                 : 'text-primary hover:text-primary-dark hover:bg-primary-hover'
                             }`}
                     >

@@ -49,13 +49,14 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
         
         <button
           onClick={onToggle}
-          className="p-1.5 rounded-lg hover-light transition-colors"
+          className="p-1.5 rounded-lg hover-light transition-colors border-0"
+          title="Toggle sidebar"
         >
           <ChevronLeft 
             size={20} 
-            className={`text-muted-foreground transition-transform duration-300 ${
+            className={`transition-transform duration-300 ${
               collapsed ? 'rotate-180' : ''
-            }`} 
+            } text-[var(--bb-accent-strong)]`} 
           />
         </button>
       </div>
@@ -73,7 +74,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                   href={item.href}
                   className={`flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 group ${
                     isActive
-                      ? 'bg-primary text-primary-foreground shadow-md'
+                      ? 'bg-[rgba(0, 213, 255, 0.06)] text-[var(--bb-accent-strong)]'
                       : 'text-secondary hover-light text-card-foreground'
                   }`}
                 >
@@ -100,10 +101,10 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
       {/* User Section */}
       {!collapsed && (
         <div className="absolute bottom-4 left-0 right-0 px-3">
-          <div className="bg-gradient-light rounded-lg p-3 border border-info">
+              <div className="rounded-lg p-3" style={{ background: 'rgba(75,214,241,0.06)' }}>
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                <span className="text-primary-foreground text-sm font-semibold">SN</span>
+                <span className="text-[var(--bb-accent-strong)] text-sm font-semibold">SN</span>
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-primary truncate">

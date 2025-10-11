@@ -1,0 +1,196 @@
+/* Bloomberg-style dark theme (scoped to .dark)
+   Accent: #4BD6F1 (user reference). Applies only when .dark is present.
+   - No box-shadows on borders (clear, flashy borders only)
+   - Slight spacing between major cards/panels
+   - Mono font applied for terminal feel (uses next/font variable)
+   - Consistent inputs and buttons for dark mode
+*/
+
+.dark {
+  /* Accent */
+  --bb-accent: #4BD6F1;
+  --bb-accent-strong: rgba(75,214,241,0.9);
+  --bb-accent-60: rgba(75,214,241,0.6);
+  --bb-accent-36: rgba(75,214,241,0.36);
+  --bb-accent-18: rgba(75,214,241,0.18);
+  --bb-accent-12: rgba(75,214,241,0.12);
+
+  /* Panels / surface */
+  --bb-panel-bg: linear-gradient(180deg,#020305,#050608);
+  --bb-panel-bg-flat: #060708;
+  --bb-border-width: 1.5px;
+
+  /* Typography */
+  --bb-font-mono: var(--font-geist-mono);
+  --bb-text: var(--text-primary);
+}
+
+/* Apply mono font and base background for dark mode */
+.dark body {
+  background: #000000 !important;
+  color: var(--bb-text) !important;
+  font-family: var(--bb-font-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, 'Roboto Mono', monospace !important;
+}
+
+/* Global card/panel treatment: crisp border, no shadow, slight spacing */
+.dark .bg-card {
+  background: var(--bb-panel-bg) !important;
+  border: var(--bb-border-width) solid var(--bb-accent-12) !important;
+  box-shadow: none !important;
+  margin-bottom: 10px !important; /* small space between components */
+  border-radius: 6px !important;
+}
+
+/* Default border token used across components */
+.dark .border-default { border-color: var(--bb-accent-12) !important; }
+.dark .border { border-color: var(--bb-accent-12) !important; }
+
+/* Header specifics: slightly brighter border */
+.dark header.bg-card {
+  border-bottom: var(--bb-border-width) solid var(--bb-accent-18) !important;
+  background: linear-gradient(180deg,#030406,#040506) !important;
+}
+
+/* Sidebar: strong left border accent, no shadow */
+.dark .fixed.left-0.top-0.h-full {
+  background: linear-gradient(180deg,#03040a,#02050a) !important;
+  border-right: var(--bb-border-width) solid var(--bb-accent-12) !important;
+  box-shadow: none !important;
+}
+
+/* Panels used for trading components: brighter, clearer border */
+.dark .bb-panel, .dark .panel, .dark .card, .dark .bg-card.rounded-sm {
+  background: var(--bb-panel-bg) !important;
+  border: var(--bb-border-width) solid var(--bb-accent-36) !important;
+  box-shadow: none !important;
+  padding: 10px !important;
+  border-radius: 6px !important;
+}
+
+/* Chart containers: slightly subtler border */
+.dark .bb-chart, .dark .chart, .dark .chart-wrapper {
+  border: var(--bb-border-width) solid var(--bb-accent-12) !important;
+  background: var(--bb-panel-bg-flat) !important;
+  box-shadow: none !important;
+}
+
+/* Order book / trades rows: subtle hover background using faint accent */
+.dark .bb-orderbook .row:hover, .dark .bb-trades .row:hover {
+  background: rgba(75,214,241,0.02) !important;
+}
+
+/* Inputs / selects / textareas: consistent background and border */
+.dark input, .dark select, .dark textarea {
+  background: rgba(255,255,255,0.01) !important;
+  color: var(--bb-text) !important;
+  border: 1px solid var(--bb-accent-12) !important;
+  border-radius: 6px !important;
+  padding: 6px 8px !important;
+  box-shadow: none !important;
+}
+
+/* Specific trading panel inputs (if present) */
+.dark .bb-orderpanel input, .dark .bb-orderpanel select {
+  background: rgba(0,0,0,0.12) !important;
+  border: 1px solid var(--bb-accent-18) !important;
+  color: var(--bb-text) !important;
+}
+
+/* Buttons: transparent/dark background with accent border; clear on hover */
+.dark button, .dark .btn, .dark .bb-button {
+  background: transparent !important;
+  color: var(--bb-text) !important;
+  border: 1.5px solid var(--bb-accent-18) !important;
+  padding: 8px 12px !important;
+  border-radius: 6px !important;
+  box-shadow: none !important;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease !important;
+}
+.dark button:hover, .dark .btn:hover { background: rgba(75,214,241,0.03) !important; border-color: var(--bb-accent-60) !important; }
+
+/* Buy/Sell buttons: keep green/red but framed by accent border */
+.dark .btn.buy, .dark button.buy { background: linear-gradient(180deg, rgba(2,192,118,0.06), rgba(2,192,118,0.03)) !important; border: 1.5px solid rgba(2,192,118,0.18) !important; color: #eafaf0 !important; }
+.dark .btn.sell, .dark button.sell { background: linear-gradient(180deg, rgba(248,73,96,0.06), rgba(248,73,96,0.03)) !important; border: 1.5px solid rgba(248,73,96,0.18) !important; color: #fff0f2 !important; }
+
+/* Badges and small chips: accent background with crisp border */
+.dark .bb-badge, .dark .badge {
+  background: rgba(75,214,241,0.06) !important;
+  border: 1px solid var(--bb-accent-12) !important;
+  color: #001217 !important;
+  padding: 4px 8px !important;
+  border-radius: 6px !important;
+}
+
+/* Tables: clear borders only */
+.dark .bb-table th, .dark .bb-table td, .dark table th, .dark table td {
+  border-bottom: 1px solid var(--bb-accent-12) !important;
+}
+
+/* Remove any shadows used by default components so borders remain crisp */
+.dark .shadow, .dark .shadow-sm, .dark .shadow-lg, .dark .shadow-md { box-shadow: none !important; }
+
+/* Small utility to increase spacing when borders are flashy */
+.dark .container, .dark .page, .dark .grid, .dark .main {
+  gap: 12px !important;
+}
+
+/* Overwrite common background utilities to match dark-panel look */
+.dark .bg-muted, .dark .bg-muted-dark, .dark .bg-gray-50, .dark .bg-gray-100, .dark .bg-gray-200, .dark .bg-card, .dark .bg-gradient-light {
+  background: var(--bb-panel-bg) !important;
+}
+
+/* Map gray borders to subtle accent borders in dark mode */
+.dark .border-gray-200, .dark .border-gray-300, .dark .border-light, .dark .border-default, .dark .border {
+  border-color: var(--bb-accent-12) !important;
+}
+
+/* Remove leftover box-shadows added by individual elements */
+.dark .hover\:shadow-sm:hover, .dark .shadow-sm, .dark .hover\:shadow-md:hover, .dark .shadow-md { box-shadow: none !important; }
+
+/* Replace specific yellow warnings inside components (e.g., chat boxes, info banners) */
+.dark .bg-yellow-50, .dark .bg-warning-light, .dark .border-yellow-200, .dark .border-warning { background-color: rgba(75,214,241,0.02) !important; border-color: var(--bb-accent-12) !important; }
+
+/* Replace bg-success-light to be subtle but still green when used */
+.dark .bg-success-light { background-color: rgba(2,192,118,0.03) !important; }
+
+/* Make small status dots crisp without shadow */
+.dark .w-2.h-2.bg-green-500, .dark .w-2.h-2.bg-red-500 { box-shadow: none !important; border: 1px solid rgba(255,255,255,0.02) !important; }
+
+/* Ensure highlight/tab active styles using borders look clear on dark background */
+.dark .border-b-2, .dark .border-t, .dark .border-b { border-color: var(--bb-accent-36) !important; }
+
+/* Trading panel: make sure badges and highlighted gradients don't produce heavy shadows */
+.dark .bg-gradient-to-r, .dark .from-green-500, .dark .to-green-600, .dark .from-red-500, .dark .to-red-600 { box-shadow: none !important; }
+
+/* Input consistency: any explicit bg classes used on inputs should map to our dark input background */
+.dark .bg-gray-50 input, .dark .bg-muted input, .dark .bg-card input, .dark input.bg-gray-50, .dark input.bg-muted { background: rgba(255,255,255,0.01) !important; }
+
+
+/* Titles & subtitles: terminal-style weight */
+.dark .bb-title, .dark .title, .dark h1, .dark h2 {
+  font-weight: 700 !important;
+  color: var(--bb-text) !important;
+}
+.dark .bb-subtitle, .dark .subtitle { color: rgba(255,255,255,0.7) !important; }
+
+/* Make sure links/readouts that used yellow keep readable accent color (replace any gold highlights) */
+.dark a, .dark .link { color: var(--bb-accent-strong) !important; text-decoration: underline dotted rgba(75,214,241,0.12); }
+
+/* Accessibility: focus ring uses accent */
+.dark :focus { outline: 2px solid var(--bb-accent-60) !important; outline-offset: 2px !important; }
+
+/* Replace warning/yellow utility usage in dark mode with accent (user requested no yellow) */
+.dark .bg-yellow-50, .dark .bg-yellow-100, .dark .bg-warning, .dark .bg-warning-light, .dark .bg-yellow-200 {
+  background-color: rgba(75,214,241,0.02) !important;
+}
+.dark .text-warning, .dark .text-yellow-600, .dark .text-yellow-500 { color: var(--bb-accent-strong) !important; }
+.dark .border-warning, .dark .border-yellow-200, .dark .border-warning-light { border-color: var(--bb-accent-12) !important; }
+.dark .bg-success-light { background-color: rgba(2,192,118,0.03) !important; } /* keep green subtle */
+
+/* If any components used yellow-specific badges, remap to accent */
+.dark .badge-warning, .dark .chip-warning { background: rgba(75,214,241,0.06) !important; color: #001217 !important; border-color: var(--bb-accent-12) !important; }
+
+/* Ensure no leftover box-shadows on common container utilities */
+.dark .card, .dark .panel, .dark .container { box-shadow: none !important; }
+
+/* End of bloomberg-dark.css */

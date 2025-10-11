@@ -41,7 +41,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
   };
 
   return (
-    <header className="bg-card border-b border-default px-6 py-3 flex items-center justify-between">
+  <header className="bg-card border-b border-default px-6 py-3 flex items-center justify-between">
       {/* Left side - Sidebar toggle + Title */}
       <div className="flex items-center space-x-4">
         <button onClick={onToggleSidebar} className="p-2 hover:bg-muted rounded-lg">
@@ -56,7 +56,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
         <input
           type="text"
           placeholder="Search symbols, pairs..."
-          className="w-full px-4 py-2 bg-muted border border-light rounded-lg focus-ring"
+          className="w-full px-4 py-2 bg-card border-0 rounded-lg focus-ring"
         />
       </div>
 
@@ -66,7 +66,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
         <div className="relative">
           <button
             onClick={() => setShowExchangeDropdown((prev) => !prev)}
-            className="flex items-center space-x-2 border border-default rounded-lg px-3 py-1.5 hover:bg-muted transition-colors"
+            className="flex items-center space-x-2 rounded-lg px-3 py-1.5 hover:bg-muted transition-colors"
           >
             <img
               src={exchangeLogos[selectedExchange]}
@@ -76,7 +76,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
             <span className="font-medium">
               {exchangeNames[selectedExchange] || 'Select Exchange'}
             </span>
-            <ChevronDown className="w-4 h-4" />
+            <ChevronDown className="w-4 h-4 text-[var(--bb-accent)]" />
           </button>
 
           {showExchangeDropdown && (

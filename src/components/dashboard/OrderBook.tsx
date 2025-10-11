@@ -242,10 +242,10 @@ export default function BinanceOrderBook({
         <div className="grid grid-cols-2 gap-px">
           {/* Bids (Buy Orders) - Left Side */}
           <div className="bids-container">
-            <div className="grid grid-cols-3 text-xs font-medium text-muted-foreground px-3 py-2 bg-success-light border-b border-success-bg">
-              <div>Price</div>
-              <div className="text-right">Amount</div>
-              <div className="text-right">Total</div>
+            <div className="grid grid-cols-3 text-xs font-medium px-3 py-2 bg-success-light border-b border-success-bg">
+              <div className="text-gray-200">Price</div>
+              <div className="text-right text-gray-200">Amount</div>
+              <div className="text-right text-gray-200">Total</div>
             </div>
             {processedData.bids.map((bid, index) => (
               <div key={`bid-${index}-${bid.price}`} className="relative grid grid-cols-3 text-xs py-2 px-3 hover-success transition-colors duration-200">
@@ -269,10 +269,10 @@ export default function BinanceOrderBook({
           
           {/* Asks (Sell Orders) - Right Side */}
           <div className="asks-container">
-            <div className="grid grid-cols-3 text-xs font-medium text-muted-foreground px-3 py-2 bg-danger-light border-b border-danger-bg">
-              <div>Price</div>
-              <div className="text-right">Amount</div>
-              <div className="text-right">Total</div>
+            <div className="grid grid-cols-3 text-xs font-medium px-3 py-2 bg-danger-light border-b border-danger-bg">
+              <div className="text-gray-200">Price</div>
+              <div className="text-right text-gray-200">Amount</div>
+              <div className="text-right text-gray-200">Total</div>
             </div>
             {processedData.asks.map((ask, index) => (
               <div key={`ask-${index}-${ask.price}`} className="relative grid grid-cols-3 text-xs py-2 px-3 hover-danger transition-colors duration-200">

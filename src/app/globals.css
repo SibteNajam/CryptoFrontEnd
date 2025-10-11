@@ -228,7 +228,7 @@
   
   /* Muted colors for backgrounds */
   --muted: #2b3139;
-  --muted-foreground: #848e9c;
+  --muted-foreground: #000000;
   --muted-dark: #181a20;
   
   /* Border and input colors */
