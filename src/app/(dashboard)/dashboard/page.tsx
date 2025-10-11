@@ -10,6 +10,7 @@ import TradingViewChart from '../../../components/charts/TradingViewChart';
 import { BinanceApiService } from '../../../infrastructure/api/BinanceOrder';
 import TradesComponent from '@/components/dashboard/trades';
 import TickerBar from '../../../components/dashboard/tickerBar';
+import BitgetTickerBar from '../../../components/dashboard/BitgetTickerBar';
 import { useTheme } from '@/infrastructure/theme/ThemeContext';
 import { useAppSelector } from '@/infrastructure/store/hooks';
 
@@ -128,25 +129,37 @@ export default function Dashboard() {
 // Replace the useEffect that initializes WebSocket with this:
 
 useEffect(() => {
-    console.log('🔌 Initializing WebSocket connection...');
-    
-    // Use environment variable or fallback to localhost:3000
+    // Only initialize the dashboard (Binance) socket when Binance is selected
+    if (selectedExchange !== 'binance') {
+        // If there's an existing socket, clean it up
+        if (socketRef.current) {
+            try {
+                socketRef.current.offAny();
+                socketRef.current.disconnect();
+            } catch (e) {
+                console.error('Error cleaning up previous socket', e);
+            }
+            socketRef.current = null;
+        }
+        return;
+    }
+
+    console.log('🔌 Initializing WebSocket connection for Binance...');
     const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:3000';
     console.log('🌐 Connecting to WebSocket URL:', WS_URL);
-    
+
     const socket = io(WS_URL, {
-        transports: ['websocket', 'polling'], // Try websocket first, fallback to polling
+        transports: ['websocket', 'polling'],
         reconnection: true,
         reconnectionDelay: 1000,
         reconnectionAttempts: 5,
-        timeout: 10000, // 10 second timeout
+        timeout: 10000,
         autoConnect: true,
-        // Add these options for better debugging
         upgrade: true,
         rememberUpgrade: true,
         forceNew: true,
     });
-    
+
     socketRef.current = socket;
 
     // Connection event handlers
@@ -155,7 +168,7 @@ useEffect(() => {
         console.log('🔗 Transport type:', socket.io.engine.transport.name);
         setError(null);
         setWsConnected(true);
-        
+
         // Subscribe to the selected symbol
         socket.emit('subscribe_symbol_with_indicators', {
             symbol: selectedSymbol,
@@ -166,10 +179,6 @@ useEffect(() => {
 
     socket.on('connect_error', (error) => {
         console.error('❌ Connection error:', error);
-        console.error('Error details:', {
-            message: error.message,
-        });
-        
         setWsConnected(false);
         const errMsg = error.message || String(error);
         setError(`Connection error: ${errMsg}. Make sure backend is running on ${WS_URL}`);
@@ -178,11 +187,6 @@ useEffect(() => {
     socket.on('disconnect', (reason) => {
         console.log('🔌 Disconnected from server. Reason:', reason);
         setWsConnected(false);
-        
-        if (reason === 'io server disconnect') {
-            // Server disconnected, need to reconnect manually
-            socket.connect();
-        }
     });
 
     socket.on('reconnect_attempt', (attemptNumber) => {
@@ -192,10 +196,6 @@ useEffect(() => {
     socket.on('reconnect_failed', () => {
         console.error('❌ Reconnection failed after all attempts');
         setError('Failed to reconnect to server. Please refresh the page.');
-    });
-
-    socket.on('connection_status', (data) => {
-        console.log('📡 Connection status:', data);
     });
 
     socket.on('binance_connection_status', (data) => {
@@ -210,14 +210,10 @@ useEffect(() => {
     socket.on('ticker_data', (data: any) => {
         console.log('📈 Received ticker data:', {
             symbol: data.symbol,
-            lastPrice: data.ticker.lastPrice,
-            priceChange: data.ticker.priceChange,
-            priceChangePercent: data.ticker.priceChangePercent,
+            lastPrice: data.ticker?.lastPrice,
+            priceChange: data.ticker?.priceChange,
+            priceChangePercent: data.ticker?.priceChangePercent,
         });
-        
-        const currentUpdateTime = performance.now();
-        const updateTimestamp = new Date().toISOString();
-
         setTickerData(data);
     });
 
@@ -230,24 +226,27 @@ useEffect(() => {
         setError(`Error loading ${data.symbol}: ${data.error}`);
     });
 
-    // Cleanup function
+    // Cleanup function for this Binance socket
     return () => {
-        console.log('🔌 Cleaning up WebSocket connection');
-        socket.off('connect');
-        socket.off('disconnect');
-        socket.off('connect_error');
-        socket.off('reconnect_attempt');
-        socket.off('reconnect_failed');
-        socket.off('connection_status');
-        socket.off('binance_connection_status');
-        socket.off('subscription_status');
-        socket.off('subscription_error');
-        socket.off('ticker_data');
-        socket.offAny();
-        socket.disconnect();
+        console.log('🔌 Cleaning up Binance WebSocket connection');
+        try {
+            socket.off('connect');
+            socket.off('disconnect');
+            socket.off('connect_error');
+            socket.off('reconnect_attempt');
+            socket.off('reconnect_failed');
+            socket.off('binance_connection_status');
+            socket.off('subscription_status');
+            socket.off('subscription_error');
+            socket.off('ticker_data');
+            socket.offAny();
+            socket.disconnect();
+        } catch (e) {
+            console.error('Error during Binance socket cleanup', e);
+        }
+        if (socketRef.current === socket) socketRef.current = null;
     };
-}, [selectedInterval, selectedSymbol]);
-
+}, [selectedInterval, selectedSymbol, selectedExchange]);
 
     
 
@@ -503,7 +502,13 @@ useEffect(() => {
                 </div>
             )}
 
-            {tickerData && (
+            {selectedExchange === 'bitget' ? (
+                <BitgetTickerBar
+                    selectedSymbol={selectedSymbol}
+                    availableSymbols={symbols}
+                    onSymbolChange={handleSymbolClick}
+                />
+            ) : tickerData && (
                 <TickerBar
                     selectedSymbol={selectedSymbol}
                     tickerData={tickerData}
@@ -520,37 +525,6 @@ useEffect(() => {
                     <div className="grid grid-cols-1 lg:grid-cols-3">
                         <div className="lg:col-span-2">
                             <div className="bg-card rounded-sm border border-default shadow-sm overflow-hidden h-full">
-                                <div className="border-b border-default px-6 py-3 flex items-center justify-between bg-card flex-shrink-0">
-                                    <div className="flex items-center space-x-6">
-                                        <h2 className="text-lg font-semibold text-primary">{selectedSymbol}</h2>
-                                        <select
-                                            value={selectedInterval}
-                                            onChange={(e) => handleIntervalChange(e.target.value)}
-                                            className="text-sm border border-light rounded-md px-3 py-1.5 text-secondary bg-card focus-ring"
-                                        >
-                                            <option value="1m">1m</option>
-                                            <option value="5m">5m</option>
-                                            <option value="15m">15m</option>
-                                            <option value="1h">1h</option>
-                                            <option value="4h">4h</option>
-                                            <option value="1d">1D</option>
-                                        </select>
-                                        {tickerData && (
-                                            <div className="flex items-center space-x-4">
-                                                <span className="text-lg font-medium text-primary">
-                                                    ${parseFloat(tickerData.ticker.lastPrice).toLocaleString()}
-                                                </span>
-                                                <span className={`text-sm font-medium px-2 py-1 rounded ${parseFloat(tickerData.ticker.priceChangePercent) >= 0
-                                                    ? 'text-success bg-success-light'
-                                                    : 'text-danger bg-danger-light'
-                                                    }`}>
-                                                    {parseFloat(tickerData.ticker.priceChangePercent) >= 0 ? '+' : ''}
-                                                    {parseFloat(tickerData.ticker.priceChangePercent).toFixed(2)}%
-                                                </span>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
                                 <div className="bg-card flex-1" style={{ height: '500px' }}>
                                     <TradingViewChart
                                         symbol={`BINANCE:${selectedSymbol}`}

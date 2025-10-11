@@ -3,20 +3,17 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 export type ExchangeType = 'binance' | 'bitget';
 
-
-
-
 export interface ExchangeCredentials {
   apiKey: string;
   secretKey: string;
-  passphrase?: string; // For Bitget
+  passphrase?: string;
 }
 
 interface ExchangeConfig {
   name: ExchangeType;
   apiKey: string;
   secretKey: string;
-  passphrase?: string; // For Bitget
+  passphrase?: string;
   isConnected: boolean;
   lastConnected?: string;
 }
