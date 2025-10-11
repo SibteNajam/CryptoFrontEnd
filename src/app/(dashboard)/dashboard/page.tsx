@@ -102,6 +102,7 @@ export default function Dashboard() {
     const [symbols, setSymbols] = useState<SymbolPrice[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [allSymbols, setAllSymbols] = useState<string[]>([]);
     const [selectedSymbol, setSelectedSymbol] = useState<string>('BTCUSDT');
     const [selectedInterval, setSelectedInterval] = useState<string>('1m');
     const [wsConnected, setWsConnected] = useState(false);
@@ -376,17 +377,15 @@ useEffect(() => {
         restPollingActive
     );
 
-    const fetchSymbols = async () => {
-        try {
-            setError(null);
-            const response = await fetch(`${API_BASE_URL}/binance/limit-symbols?limit=20`);
-            if (!response.ok) throw new Error('Failed to fetch symbols');
-
-            const data: SymbolPrice[] = await response.json();
+     const fetchSymbols = async () => {
+       try {
+            //call getSymbolsWithPrices
+            console.log('🔄 Fetching symbols with prices...');
+            const data = await apiService.getSymbolsWithPrice(1000);
             setSymbols(data);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to fetch symbols');
-            console.error('Error fetching symbols:', err);
+            console.log('fetched data',data);
+        } catch (err: any) {
+            setError(err.message || "Failed to fetch symbols");
         } finally {
             setLoading(false);
         }
@@ -430,6 +429,7 @@ useEffect(() => {
     useEffect(() => {
         fetchSymbols();
     }, []);
+    
 
     useEffect(() => {
         if (selectedSymbol) {

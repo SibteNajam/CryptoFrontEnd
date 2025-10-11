@@ -124,6 +124,48 @@ export class BinanceApiService {
         this.apiUrl = apiUrl;
     }
 
+
+async getSymbolsWithPrice(limit = 20): Promise<any[]> {
+  try {
+    const response = await fetch(`${this.apiUrl}/binance/prices?limit=${limit}`, {
+      method: "GET",
+      headers: {
+        accept: "*/*",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("❌ Error fetching prices:", error);
+    throw error;
+  }
+}
+
+
+async getAllSymbols(): Promise<string[]> {
+    try {
+        const response = await fetch(`${this.apiUrl}/binance/symbols`, {
+            method: 'GET',
+            headers: {
+                'accept': '*/*',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('❌ Error fetching all symbols:', error);
+        throw error;
+    }
+}
+
     async getAccountInfo(): Promise<AccountInfo> {
         try {
             const start = Date.now();

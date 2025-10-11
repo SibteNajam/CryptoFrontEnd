@@ -179,6 +179,13 @@
 /* Accessibility: focus ring uses accent */
 .dark :focus { outline: 2px solid var(--bb-accent-60) !important; outline-offset: 2px !important; }
 
+/* Opt-out for elements that should not use the global focus outline (use sparingly) */
+.dark .no-focus-ring:focus {
+  outline: none !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
+}
+
 /* Replace warning/yellow utility usage in dark mode with accent (user requested no yellow) */
 .dark .bg-yellow-50, .dark .bg-yellow-100, .dark .bg-warning, .dark .bg-warning-light, .dark .bg-yellow-200 {
   background-color: rgba(75,214,241,0.02) !important;

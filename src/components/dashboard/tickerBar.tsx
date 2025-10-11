@@ -27,7 +27,7 @@ interface TickerBarProps {
   };
   wsConnected?: boolean;
   isLoading?: boolean;
-  availableSymbols?: SymbolOption[];
+  availableSymbols?: any[];
   onSymbolChange?: (symbol: string) => void;
 }
 
@@ -151,8 +151,8 @@ export default function TickerBar({
               {isDropdownOpen && (
                 <div className="absolute top-full left-0 mt-1 w-64 bg-card rounded-lg shadow-lg border border-default z-50">
                   {/* Search Input */}
-                  <div className="p-2 border-b border-gray-100">
-                    <div className="relative">
+                  <div className="p-2 border-b border-gray-100 scrollbar-hide">
+                    <div className="relative scrollbar-hide">
                       <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                       <input
                         type="text"
@@ -173,8 +173,9 @@ export default function TickerBar({
                     </div>
                   </div>
 
+
                   {/* Symbol List */}
-                  <div className="max-h-80 overflow-y-auto">
+                  <div className="max-h-80 overflow-y-auto scrollbar-hide">
                     {filteredSymbols.length > 0 ? (
                       filteredSymbols.map((sym) => (
                         <button
