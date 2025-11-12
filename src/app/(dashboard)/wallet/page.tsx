@@ -1,7 +1,7 @@
 // pages/wallet.tsx
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { RefreshCw, TrendingUp, CreditCard, Shield } from 'lucide-react';
 import { 
   getDepositHistory, 
@@ -18,6 +18,38 @@ import WithdrawalsTab from '@/components/wallet/withdraws';
 type TabType = 'deposits' | 'withdrawals' | 'security';
 
 export default function WalletPage() {
+  // Cache utilities
+  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+  
+  const getCacheKey = (key: string) => `wallet_${key}`;
+  
+  const getCachedData = (key: string) => {
+    try {
+      const cached = localStorage.getItem(getCacheKey(key));
+      if (!cached) return null;
+      
+      const { data, timestamp } = JSON.parse(cached);
+      if (Date.now() - timestamp > CACHE_DURATION) {
+        localStorage.removeItem(getCacheKey(key));
+        return null;
+      }
+      
+      return data;
+    } catch {
+      return null;
+    }
+  };
+  
+  const setCachedData = (key: string, data: any) => {
+    try {
+      localStorage.setItem(getCacheKey(key), JSON.stringify({
+        data,
+        timestamp: Date.now()
+      }));
+    } catch {
+      // Ignore storage errors
+    }
+  };
   const [activeTab, setActiveTab] = useState<TabType>('deposits');
   const [depositHistory, setDepositHistory] = useState<DepositHistoryResponse | null>(null);
   const [withdrawHistory, setWithdrawHistory] = useState<WithdrawHistoryResponse | null>(null);
@@ -25,6 +57,7 @@ export default function WalletPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
+  const [securityLoading, setSecurityLoading] = useState(false);
   const [formattedLastUpdate, setFormattedLastUpdate] = useState('No data loaded'); // ✅ client-safe state
 
   // ✅ Memoize tab badges safely
@@ -34,25 +67,61 @@ export default function WalletPage() {
     security: securityInfo?.isSecure ? 1 : 0,
   }), [depositHistory, withdrawHistory, securityInfo]);
 
-  const fetchWalletData = async () => {
+  const fetchWalletData = useCallback(async (forceRefresh = false) => {
     setLoading(true);
     setError(null);
     
     try {
-      const [deposits, withdrawals, security] = await Promise.all([
+      // Check cache first (unless force refresh)
+      if (!forceRefresh) {
+        const cachedDeposits = getCachedData('deposits');
+        const cachedWithdrawals = getCachedData('withdrawals');
+        
+        if (cachedDeposits && cachedWithdrawals) {
+          setDepositHistory(cachedDeposits);
+          setWithdrawHistory(cachedWithdrawals);
+          setLastUpdate(new Date().toISOString());
+          
+          // Load security info in background
+          fetchSecurityInfo();
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Load critical data first (deposits and withdrawals)
+      const [deposits, withdrawals] = await Promise.all([
         getDepositHistory(),
         getWithdrawHistory(),
-        getSecurityInfo(),
       ]);
 
       setDepositHistory(deposits);
       setWithdrawHistory(withdrawals);
-      setSecurityInfo(security);
-      setLastUpdate(new Date().toISOString()); // ✅ always consistent
+      
+      // Cache the data
+      setCachedData('deposits', deposits);
+      setCachedData('withdrawals', withdrawals);
+      
+      setLastUpdate(new Date().toISOString());
+      
+      // Load security info in background (non-blocking)
+      fetchSecurityInfo();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch wallet data');
     } finally {
       setLoading(false);
+    }
+  }, []);
+
+  const fetchSecurityInfo = async () => {
+    try {
+      setSecurityLoading(true);
+      const security = await getSecurityInfo();
+      setSecurityInfo(security);
+    } catch (error) {
+      console.warn('Failed to fetch security info:', error);
+    } finally {
+      setSecurityLoading(false);
     }
   };
 
@@ -64,8 +133,9 @@ export default function WalletPage() {
   }, [lastUpdate]);
 
   useEffect(() => {
+    // Start fetching immediately but don't block rendering
     fetchWalletData();
-  }, []);
+  }, [fetchWalletData]);
 
   const tabs = useMemo(() => [
     { id: 'deposits', label: 'Deposits', icon: TrendingUp, badge: tabBadges.deposits },
@@ -75,15 +145,24 @@ export default function WalletPage() {
 
   return (
     <div className="bg-card max-w-7xl mx-auto p-6 space-y-6">
-      {/* Header */}
+      {/* Header - Always visible */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-card-foreground">Wallet</h1>
-          <p className="text-sm text-muted mt-1">{formattedLastUpdate}</p>
+          <p className="text-sm text-muted mt-1">
+            {loading && !lastUpdate ? (
+              <span className="inline-flex items-center gap-2">
+                <span className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></span>
+                Loading data...
+              </span>
+            ) : (
+              formattedLastUpdate
+            )}
+          </p>
         </div>
         
         <button 
-          onClick={fetchWalletData} 
+          onClick={() => fetchWalletData(true)} 
           disabled={loading}
           className="inline-flex items-center gap-2 px-4 py-2 bg-card border border-default rounded-lg hover:bg-muted disabled:opacity-50 transition-colors text-sm font-medium text-muted-foreground"
         >
@@ -138,9 +217,31 @@ export default function WalletPage() {
 
       {/* Tab Content */}
       <div className="h-full">
-        {activeTab === 'deposits' && <DepositsTab depositHistory={depositHistory} />}
-        {activeTab === 'withdrawals' && <WithdrawalsTab withdrawHistory={withdrawHistory} />}
-        {activeTab === 'security' && <SecurityTab securityInfo={securityInfo} />}
+        {loading && !depositHistory && !withdrawHistory ? (
+          <div className="flex items-center justify-center py-16">
+            <div className="text-center">
+              <div className="w-12 h-12 border-3 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-lg text-muted-foreground">Loading wallet data...</p>
+            </div>
+          </div>
+        ) : (
+          <>
+            {activeTab === 'deposits' && <DepositsTab depositHistory={depositHistory} />}
+            {activeTab === 'withdrawals' && <WithdrawalsTab withdrawHistory={withdrawHistory} />}
+            {activeTab === 'security' && (
+              securityLoading && !securityInfo ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="text-center">
+                    <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-muted-foreground">Loading security information...</p>
+                  </div>
+                </div>
+              ) : (
+                <SecurityTab securityInfo={securityInfo} />
+              )
+            )}
+          </>
+        )}
       </div>
     </div>
   );

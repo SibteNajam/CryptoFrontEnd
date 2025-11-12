@@ -2,24 +2,25 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Filter, ArrowDown, RefreshCw, BarChart3 } from 'lucide-react';
+import { useAppSelector } from '@/infrastructure/store/hooks';
 
-interface OrderBookEntry {
-  price: string | number;
-  qty: string | number;
+// Normalized OrderBook entry - common format for all exchanges
+interface NormalizedOrderBookEntry {
+  price: string;
+  qty: string;
   total?: number;
   accumulated?: number;
 }
 
+interface OrderBookData {
+  lastUpdateId: number;
+  bids: NormalizedOrderBookEntry[];
+  asks: NormalizedOrderBookEntry[];
+  timestamp?: string;
+}
+
 interface OrderBookProps {
   symbol: string;
-  bids: OrderBookEntry[];
-  asks: OrderBookEntry[];
-  precision?: number;
-  depth?: number;
-  isLoading: boolean;
-  lastUpdateTime?: string;
-  onRefresh: () => void;
-  refreshInterval?: number;
 }
 
 const FILTER_OPTIONS = [
@@ -31,43 +32,114 @@ const FILTER_OPTIONS = [
   { value: 100, label: '100' },
 ];
 
-export default function BinanceOrderBook({
-  symbol,
-  bids,
-  asks,
-  precision = 2,
-  depth = 15,
-  isLoading,
-  lastUpdateTime,
-  onRefresh,
-  refreshInterval = 3000,
-}: OrderBookProps) {
+export default function BinanceOrderBook({ symbol }: OrderBookProps) {
+  // Get selected exchange from Redux
+  const { selectedExchange } = useAppSelector(state => state.exchange);
+  
+  // OrderBook internal state
+  const [orderBookData, setOrderBookData] = useState<OrderBookData | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [orderBookDepth, setOrderBookDepth] = useState<string>('150');
+  const [refreshInterval] = useState(3000);
+  
   const [quantityFilter, setQuantityFilter] = useState<number>(0.1);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [timeSinceRefresh, setTimeSinceRefresh] = useState<number>(0);
-  const [isManualRefreshing, setIsManualRefreshing] = useState(false); // Only for manual refresh
+  const [isManualRefreshing, setIsManualRefreshing] = useState(false);
+  
   const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
   const refreshCountdownRef = useRef<NodeJS.Timeout | null>(null);
+  
+  const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
 
-  // Enhanced refresh function to handle manual vs auto refresh
-  const handleRefresh = (isManual = false) => {
+  // Fetch OrderBook data
+  const fetchOrderBook = async (isManual = false) => {
+    if (!symbol) return;
+
     if (isManual) {
       setIsManualRefreshing(true);
+    } else {
+      setIsLoading(true);
     }
-    onRefresh();
-    setLastRefresh(new Date());
-    setTimeSinceRefresh(0);
-    
-    // Reset manual refresh state after a short delay
-    if (isManual) {
-      setTimeout(() => {
-        setIsManualRefreshing(false);
-      }, 500);
+
+    try {
+      console.log(`🔄 Fetching order book for ${symbol} from ${selectedExchange}`);
+
+      let response;
+      if (selectedExchange === 'binance') {
+        response = await fetch(
+          `${API_BASE_URL}/binance/orderBook?symbol=${symbol}&limit=${orderBookDepth}`
+        );
+      } else if (selectedExchange === 'bitget') {
+        response = await fetch(
+          `${API_BASE_URL}/bitget/orderbook?symbol=${symbol}&limit=${orderBookDepth}`
+        );
+      } else {
+        throw new Error(`Unsupported exchange: ${selectedExchange}`);
+      }
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      // Normalize Bitget response to match Binance format
+      let normalizedData;
+      if (selectedExchange === 'bitget') {
+        normalizedData = {
+          lastUpdateId: parseInt(data.timestamp || '0'),
+          bids: data.bids.map((bid: any) => ({
+            price: bid.price,
+            qty: bid.quantity
+          })),
+          asks: data.asks.map((ask: any) => ({
+            price: ask.price,
+            qty: ask.quantity
+          }))
+        };
+      } else {
+        normalizedData = data;
+      }
+
+      const orderBookWithTimestamp: OrderBookData = {
+        ...normalizedData,
+        timestamp: new Date().toISOString()
+      };
+
+      setOrderBookData(orderBookWithTimestamp);
+      setLastRefresh(new Date());
+      setTimeSinceRefresh(0);
+      
+      console.log('📊 Order Book Data loaded:', {
+        exchange: selectedExchange,
+        symbol: symbol,
+        bids: orderBookWithTimestamp.bids.length,
+        asks: orderBookWithTimestamp.asks.length,
+        timestamp: new Date().toLocaleTimeString()
+      });
+
+    } catch (error) {
+      console.error('❌ Error fetching order book:', error);
+    } finally {
+      setIsLoading(false);
+      if (isManual) {
+        setTimeout(() => {
+          setIsManualRefreshing(false);
+        }, 500);
+      }
     }
   };
 
-  // Set up auto-refresh with silent updates
+  // Fetch data when symbol or exchange changes
+  useEffect(() => {
+    if (symbol) {
+      fetchOrderBook(false);
+    }
+  }, [symbol, selectedExchange, orderBookDepth]);
+
+  // Set up auto-refresh
   useEffect(() => {
     if (refreshTimerRef.current) {
       clearInterval(refreshTimerRef.current);
@@ -76,13 +148,14 @@ export default function BinanceOrderBook({
       clearInterval(refreshCountdownRef.current);
     }
 
-    // Silent auto-refresh (no visual feedback)
+    // Silent auto-refresh
     refreshTimerRef.current = setInterval(() => {
-      if (!isManualRefreshing) {
-        handleRefresh(false); // Silent refresh
+      if (!isManualRefreshing && symbol) {
+        fetchOrderBook(false);
       }
     }, refreshInterval);
 
+    // Countdown timer
     refreshCountdownRef.current = setInterval(() => {
       setTimeSinceRefresh(prev => prev + 100);
     }, 100);
@@ -91,19 +164,31 @@ export default function BinanceOrderBook({
       if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
       if (refreshCountdownRef.current) clearInterval(refreshCountdownRef.current);
     };
-  }, [refreshInterval, isManualRefreshing]);
+  }, [refreshInterval, isManualRefreshing, symbol, selectedExchange]);
+
+  // Determine precision based on symbol
+  const precision = useMemo(() => {
+    return symbol.includes('BTC') ? 2 : symbol.includes('ETH') ? 2 : 4;
+  }, [symbol]);
+
+  // Display depth
+  const displayDepth = 20;
 
   // Process bids and asks with accumulation and apply filter
   const processedData = useMemo(() => {
-    const processedAsks = [...asks]
-      .sort((a, b) => parseFloat(a.price as string) - parseFloat(b.price as string))
-      .filter(ask => parseFloat(ask.qty as string) >= quantityFilter)
+    if (!orderBookData) {
+      return { asks: [], bids: [] };
+    }
+
+    const processedAsks = [...orderBookData.asks]
+      .sort((a, b) => parseFloat(a.price) - parseFloat(b.price))
+      .filter(ask => parseFloat(ask.qty) >= quantityFilter)
       .map((ask, index, array) => {
-        const price = parseFloat(ask.price as string);
-        const quantity = parseFloat(ask.qty as string);
+        const price = parseFloat(ask.price);
+        const quantity = parseFloat(ask.qty);
         const accumulated = array
           .slice(0, index + 1)
-          .reduce((sum, item) => sum + parseFloat(item.qty as string), 0);
+          .reduce((sum, item) => sum + parseFloat(item.qty), 0);
         
         return {
           ...ask,
@@ -113,17 +198,17 @@ export default function BinanceOrderBook({
           accumulated,
         };
       })
-      .slice(0, depth);
+      .slice(0, displayDepth);
 
-    const processedBids = [...bids]
-      .sort((a, b) => parseFloat(b.price as string) - parseFloat(a.price as string))
-      .filter(bid => parseFloat(bid.qty as string) >= quantityFilter)
+    const processedBids = [...orderBookData.bids]
+      .sort((a, b) => parseFloat(b.price) - parseFloat(a.price))
+      .filter(bid => parseFloat(bid.qty) >= quantityFilter)
       .map((bid, index, array) => {
-        const price = parseFloat(bid.price as string);
-        const quantity = parseFloat(bid.qty as string);
+        const price = parseFloat(bid.price);
+        const quantity = parseFloat(bid.qty);
         const accumulated = array
           .slice(0, index + 1)
-          .reduce((sum, item) => sum + parseFloat(item.qty as string), 0);
+          .reduce((sum, item) => sum + parseFloat(item.qty), 0);
         
         return {
           ...bid,
@@ -133,13 +218,13 @@ export default function BinanceOrderBook({
           accumulated,
         };
       })
-      .slice(0, depth);
+      .slice(0, displayDepth);
 
     return {
       asks: processedAsks,
       bids: processedBids,
     };
-  }, [bids, asks, depth, quantityFilter]);
+  }, [orderBookData, displayDepth, quantityFilter]);
 
   const formatNumber = (num: number, places: number = precision) => {
     return num.toLocaleString(undefined, {
@@ -165,18 +250,39 @@ export default function BinanceOrderBook({
 
   const refreshProgress = (timeSinceRefresh / refreshInterval) * 100;
 
+  // Show loading state
+  if (!orderBookData && isLoading) {
+    return (
+      <div className="bg-card rounded-sm border border-gray-200 shadow-sm overflow-hidden flex flex-col h-full">
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center py-8">
+            <div className="w-8 h-8 border-2 border-light border-t-primary rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading order book...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!orderBookData) {
+    return null;
+  }
+
  return (
   <div className="bg-card rounded-sm border border-gray-200 shadow-sm overflow-hidden flex flex-col h-full">
     {/* Enhanced Header */}
     <div className="border-b border-gray-200 px-3 py-3 flex-shrink-0">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold text-primary flex items-center gap-2">
-          Order Book <span className="text-blue-600 font-bold">{symbol}</span>
+          <BarChart3 size={14} />
+          Order Book
+          <span className="text-blue-600 font-bold">{symbol}</span>
+          <span className="text-xs text-gray-500 font-normal">({selectedExchange.toUpperCase()})</span>
         </h3>
         
         {/* Manual Refresh Button */}
         <button
-          onClick={() => handleRefresh(true)}
+          onClick={() => fetchOrderBook()}
           disabled={isManualRefreshing}
           className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 transform hover:scale-105 ${
             isManualRefreshing 
@@ -225,7 +331,7 @@ export default function BinanceOrderBook({
         <div className="text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
             <BarChart3 size={10} />
-            Depth: {depth}
+            Depth: {orderBookDepth}
           </span>
         </div>
       </div>

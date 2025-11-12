@@ -1,12 +1,13 @@
 "use client";
 import { useSelector, useDispatch } from 'react-redux';
-import { RootState, AppDispatch } from '@/store';
-import { loginUser, signupUser, logoutUser, getCurrentUser, clearError } from '@/store/authSlice';
+import { RootState, AppDispatch } from '@/infrastructure/store';
+import { loginUser, signupUser, logoutUser, getCurrentUser, clearError } from '@/infrastructure/features/auth/authSlice';
 import { LoginCredentials, SignupCredentials } from '@/types/auth';
 
 export const useAuth = () => {
     const dispatch = useDispatch<AppDispatch>();
-    const { user, isLoading, error } = useSelector((state: RootState) => state.auth);
+    const authState = useSelector((state: RootState) => state.auth);
+    const { user, isLoading, error } = authState;
 
     const login = async (credentials: LoginCredentials) => {
         return dispatch(loginUser(credentials));

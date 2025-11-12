@@ -14,14 +14,8 @@ export default function LoginForm() {
     });
     const [showPassword, setShowPassword] = useState(false);
 
-    const { login, isLoading, error, isAuthenticated, clearAuthError } = useAuth();
+    const { login, isLoading, error, clearAuthError } = useAuth();
     const router = useRouter();
-
-    useEffect(() => {
-        if (isAuthenticated) {
-            router.push('/chat');
-        }
-    }, [isAuthenticated, router]);
 
     useEffect(() => {
         return () => {
@@ -49,7 +43,6 @@ export default function LoginForm() {
             console.log('Login result: user expected', result);
             if (result) {
                 console.log('Login successful:', result);
-                router.push('/chat');
             }
         } catch (error) {
             console.error('Login failed:', error);
@@ -63,7 +56,7 @@ export default function LoginForm() {
             <div className="max-w-md w-full space-y-8">
                 <div>
                     <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-                        Sign in to ChatCraftAI
+                        Sign in to ByteBoom
                     </h2>
                     <p className="mt-2 text-center text-sm text-gray-600">
                         Dont have an account?{' '}

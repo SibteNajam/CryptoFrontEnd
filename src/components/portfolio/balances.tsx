@@ -2,23 +2,21 @@
 
 import React, { useState, useMemo } from 'react';
 import { Search, Eye, EyeOff, Filter, Download, MoreVertical, TrendingUp } from 'lucide-react';
-
-export interface UserAsset {
-  asset: string;
-  free: string;
-  locked: string;
-  freeze: string;
-  withdrawing: string;
-  ipoable: string;
-  btcValuation: string;
-}
+import { NormalizedUserAsset } from '../../infrastructure/api/PortfolioApi';
 
 interface BalancesTabProps {
-  userAssets: UserAsset[];
+  userAssets: NormalizedUserAsset[];
   btcPrice: number;
 }
 
 export default function BalancesTab({ userAssets, btcPrice = 117200 }: BalancesTabProps) {
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('💼 BALANCES TAB - Rendering');
+  console.log('   User Assets Count:', userAssets?.length || 0);
+  console.log('   First Asset:', userAssets?.[0]);
+  console.log('   Exchange Tag:', userAssets?.[0]?.exchange);
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [hideSmallBalances, setHideSmallBalances] = useState(false);
   const [sortBy, setSortBy] = useState<'asset' | 'total' | 'value'>('value');
@@ -47,7 +45,7 @@ export default function BalancesTab({ userAssets, btcPrice = 117200 }: BalancesT
     return num.toFixed(6);
   };
 
-  const getValueInUsd = (asset: UserAsset) => {
+  const getValueInUsd = (asset: NormalizedUserAsset) => {
     const total = parseFloat(asset.free) + parseFloat(asset.locked) + parseFloat(asset.freeze) + 
                   parseFloat(asset.withdrawing) + parseFloat(asset.ipoable);
 
@@ -64,7 +62,7 @@ export default function BalancesTab({ userAssets, btcPrice = 117200 }: BalancesT
     return 0;
   };
 
-  const getTotalAmount = (asset: UserAsset) => {
+  const getTotalAmount = (asset: NormalizedUserAsset) => {
     return parseFloat(asset.free) + parseFloat(asset.locked) + parseFloat(asset.freeze) + 
            parseFloat(asset.withdrawing) + parseFloat(asset.ipoable);
   };

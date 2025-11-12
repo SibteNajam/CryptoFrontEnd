@@ -2,31 +2,37 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { RefreshCw, TrendingUp, TrendingDown, Clock, User, BarChart3 } from 'lucide-react';
+import { useAppSelector } from '@/infrastructure/store/hooks';
 
-interface TradeEntry {
-    id: number;
+// Normalized trade interface - common format for all exchanges
+interface NormalizedTradeEntry {
+    id: string;
     price: string;
     qty: string;
     quoteQty: string;
     time: number;
     isBuyerMaker: boolean;
-    isBestMatch: boolean;
 }
 
-interface MyTradeEntry {
-    symbol: string;
-    id: number;
-    orderId: number;
-    orderListId: number;
+// Binance raw response
+interface BinanceTradeEntry {
+    id?: number;
+    tradeId?: number;
     price: string;
     qty: string;
     quoteQty: string;
-    commission: string;
-    commissionAsset: string;
-    time: number;
-    isBuyer: boolean;
-    isMaker: boolean;
-    isBestMatch: boolean;
+    time: number | string;
+    isBuyerMaker: boolean | string;
+}
+
+// Bitget raw response
+interface BitgetTradeEntry {
+    id: string;
+    price: string;
+    quantity: string;
+    time: string;
+    isBuyerMaker: boolean;
+    side: 'buy' | 'sell';
 }
 
 interface TradesProps {
@@ -34,16 +40,15 @@ interface TradesProps {
 }
 
 export default function TradesComponent({ symbol }: TradesProps) {
+    // Get selected exchange from Redux
+    const { selectedExchange } = useAppSelector(state => state.exchange);
+    
     // Internal state management
-    const [tradeType, setTradeType] = useState<'market' | 'my'>('market');
-    const [marketTrades, setMarketTrades] = useState<TradeEntry[]>([]);
-    const [myTrades, setMyTrades] = useState<MyTradeEntry[]>([]);
-    const [tradesLoading, setTradesLoading] = useState(false);
+    const [marketTrades, setMarketTrades] = useState<NormalizedTradeEntry[]>([]);
     const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
     const [timeSinceRefresh, setTimeSinceRefresh] = useState<number>(0);
     const [error, setError] = useState<string | null>(null);
-    const [isTabSwitching, setIsTabSwitching] = useState(false); // Only for tab switching
-    const [isRefreshing, setIsRefreshing] = useState(false); // Separate state for refresh
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
     // Internal configuration
     const refreshInterval = 5000; // 5 seconds
@@ -53,39 +58,79 @@ export default function TradesComponent({ symbol }: TradesProps) {
     const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
     const refreshCountdownRef = useRef<NodeJS.Timeout | null>(null);
 
+    // Normalize Binance trade data
+    const normalizeBinanceTrade = (trade: BinanceTradeEntry): NormalizedTradeEntry => {
+        const tradeId = trade.id || trade.tradeId || 0;
+        const timestamp = typeof trade.time === 'string' ? new Date(trade.time).getTime() : trade.time;
+        const isMaker = typeof trade.isBuyerMaker === 'string' 
+            ? trade.isBuyerMaker === 'Maker' 
+            : trade.isBuyerMaker;
+
+        return {
+            id: String(tradeId),
+            price: trade.price,
+            qty: trade.qty,
+            quoteQty: trade.quoteQty || '0',
+            time: timestamp,
+            isBuyerMaker: isMaker,
+        };
+    };
+
+    // Normalize Bitget trade data
+    const normalizeBitgetTrade = (trade: BitgetTradeEntry): NormalizedTradeEntry => {
+        const price = parseFloat(trade.price);
+        const quantity = parseFloat(trade.quantity);
+        const quoteQty = (price * quantity).toFixed(8);
+        
+        // Bitget time is string in milliseconds
+        const timestamp = parseInt(trade.time);
+
+        return {
+            id: trade.id,
+            price: trade.price,
+            qty: trade.quantity, // Map quantity to qty
+            quoteQty: quoteQty, // Calculate quote quantity
+            time: timestamp, // Parse time to number
+            isBuyerMaker: trade.side === 'sell', // sell side means buyer is maker
+        };
+    };
+
     // Fetch trades function
     const fetchTrades = async (isManualRefresh = false) => {
         if (!symbol) return;
 
-        // Only show loading state for manual refresh, not auto-refresh
+        // Only show loading state for manual refresh
         if (isManualRefresh) {
             setIsRefreshing(true);
         }
         setError(null);
 
         try {
-            if (tradeType === 'market') {
-                // Fetch recent market trades - limit to 50 for better performance
-                const response = await fetch(`${API_BASE_URL}/binance/trades?symbol=${symbol}&limit=50`);
-                if (!response.ok) throw new Error('Failed to fetch market trades');
+            let normalizedTrades: NormalizedTradeEntry[] = [];
 
-                const data: TradeEntry[] = await response.json();
-                setMarketTrades(data);
-                console.log(`📊 Fetched ${data.length} market trades for ${symbol}`);
-            } else {
-                // Fetch my trades
-                const response = await fetch(`${API_BASE_URL}/binance/my-trades?symbol=${symbol}&limit=50`);
-                if (!response.ok) {
-                    if (response.status === 401) {
-                        throw new Error('Authentication required for personal trades');
-                    }
-                    throw new Error('Failed to fetch my trades');
+            if (selectedExchange === 'binance') {
+                    // Fetch Binance market trades
+                    const response = await fetch(`${API_BASE_URL}/binance/trades?symbol=${symbol}&limit=50`);
+                    if (!response.ok) throw new Error('Failed to fetch Binance market trades');
+
+                    const data: BinanceTradeEntry[] = await response.json();
+                    normalizedTrades = data.map(normalizeBinanceTrade);
+                    console.log(`📊 Fetched ${normalizedTrades.length} Binance market trades for ${symbol}`);
+                    
+                } else if (selectedExchange === 'bitget') {
+                    // Fetch Bitget market trades
+                    const response = await fetch(`${API_BASE_URL}/bitget/trades?symbol=${symbol}&limit=50`);
+                    if (!response.ok) throw new Error('Failed to fetch Bitget market trades');
+
+                    const data: BitgetTradeEntry[] = await response.json();
+                    console.log('🔍 Bitget raw data sample:', data[0]); // Debug first trade
+                    normalizedTrades = data.map(normalizeBitgetTrade);
+                    console.log('🔍 Bitget normalized sample:', normalizedTrades[0]); // Debug first normalized trade
+                    console.log(`📊 Fetched ${normalizedTrades.length} Bitget market trades for ${symbol}`);
                 }
 
-                const data: MyTradeEntry[] = await response.json();
-                setMyTrades(data);
-                console.log(`👤 Fetched ${data.length} personal trades for ${symbol}`);
-            }
+                setMarketTrades(normalizedTrades);
+                
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Failed to fetch trades';
             setError(errorMessage);
@@ -102,19 +147,6 @@ export default function TradesComponent({ symbol }: TradesProps) {
         fetchTrades(true); // Manual refresh
         setLastRefresh(new Date());
         setTimeSinceRefresh(0);
-    };
-
-    // Handle trade type change with animation (keep this animation)
-    const handleTradeTypeChange = (newType: 'market' | 'my') => {
-        if (newType === tradeType) return;
-
-        setIsTabSwitching(true);
-        setTimeout(() => {
-            setTradeType(newType);
-            setTimeout(() => {
-                setIsTabSwitching(false);
-            }, 150);
-        }, 150);
     };
 
     // Set up auto-refresh timers
@@ -145,23 +177,22 @@ export default function TradesComponent({ symbol }: TradesProps) {
             if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
             if (refreshCountdownRef.current) clearInterval(refreshCountdownRef.current);
         };
-    }, [symbol, tradeType, isRefreshing]);
+    }, [symbol, isRefreshing, selectedExchange]);
 
-    // Fetch trades when symbol or trade type changes
+    // Fetch trades when symbol or exchange changes
     useEffect(() => {
         if (symbol) {
             setTimeSinceRefresh(0);
             fetchTrades(true); // Initial fetch with loading
         }
-    }, [symbol, tradeType]);
+    }, [symbol, selectedExchange]);
 
     // Process trades with limited display count
     const processedTrades = useMemo(() => {
-        const trades = tradeType === 'market' ? marketTrades : myTrades;
-        return trades
+        return marketTrades
             .sort((a, b) => b.time - a.time) // Most recent first
-            .slice(0, 25); // Limit to 25 trades to fit in the available space
-    }, [marketTrades, myTrades, tradeType]);
+            .slice(0, 25); // Limit to 25 trades
+    }, [marketTrades]);
 
     // Format number with specified precision
     const formatNumber = (num: number, places: number = 2) => {
@@ -195,37 +226,13 @@ export default function TradesComponent({ symbol }: TradesProps) {
             <div className="border-b border-gray-200 px-3 py-3 flex-shrink-0 bg-card" style={{ minHeight: '73px' }}>
                 <div className="flex items-center justify-between mb-3">
                     <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                        Trades <span className="text-blue-600 font-bold">{symbol}</span>
+                        <BarChart3 size={14} />
+                        Market Trades
+                        <span className="text-blue-600 font-bold">{symbol}</span>
+                        <span className="text-xs text-gray-500 font-normal">({selectedExchange.toUpperCase()})</span>
                     </h3>
                 </div>
 
-                {/* Trade Type Toggle */}
-                <div className="flex rounded-lg p-1">
-                    <button
-                        onClick={() => handleTradeTypeChange('market')}
-                        className={`flex-1 px-3 py-2 text-xs font-medium rounded-md transition-all duration-300 ease-out transform ${tradeType === 'market'
-                                ? 'bg-primary text-primary-foreground'
-                                : 'text-primary hover:text-primary-dark hover:bg-primary-hover'
-                            }`}
-                    >
-                        <div className="flex items-center justify-center gap-1.5">
-                            <BarChart3 size={12} />
-                            <span>Market Trades</span>
-                        </div>
-                    </button>
-                    <button
-                        onClick={() => handleTradeTypeChange('my')}
-                        className={`flex-1 px-3 py-2 text-xs font-medium rounded-md transition-all duration-300 ease-out transform ${tradeType === 'my'
-                                ? 'bg-primary text-primary-foreground'
-                                : 'text-primary hover:text-primary-dark hover:bg-primary-hover'
-                            }`}
-                    >
-                        <div className="flex items-center justify-center gap-1.5">
-                            <User size={12} />
-                            <span>My Trades</span>
-                        </div>
-                    </button>
-                </div>
                 {/* Error Display */}
                 {error && (
                     <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-md text-xs text-red-700">
@@ -244,13 +251,12 @@ export default function TradesComponent({ symbol }: TradesProps) {
                 </div>
             </div>
 
-            {/* Trades List - Only animate during tab switching, not refresh */}
-            <div className={`flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden transition-all duration-300 ease-out ${isTabSwitching ? 'opacity-50 scale-95' : 'opacity-100 scale-100'
-                }`} style={{ maxHeight: '460px', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            {/* Trades List */}
+            <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden" style={{ maxHeight: '460px', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                 {processedTrades.length === 0 ? (
                     <div className="flex items-center justify-center h-full">
                         <div className="text-center py-8">
-                            {(isRefreshing || (tradeType === 'market' ? marketTrades.length === 0 : myTrades.length === 0)) && !error ? (
+                            {(isRefreshing || marketTrades.length === 0) && !error ? (
                                 <>
                                     <div className="w-8 h-8 border-3 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-3"></div>
                                     <p className="text-blue-600 text-sm font-medium">Loading trades...</p>
@@ -270,10 +276,9 @@ export default function TradesComponent({ symbol }: TradesProps) {
                     </div>
                 ) : (
                     <div className="divide-y divide-gray-50">
-                        {processedTrades.map((trade, index) => {
-                            const isBuy = tradeType === 'market'
-                                ? !(trade as TradeEntry).isBuyerMaker
-                                : (trade as MyTradeEntry).isBuyer;
+                        {processedTrades.map((trade: NormalizedTradeEntry, index: number) => {
+                            // For market trades: isBuyerMaker false = buy (taker buy)
+                            const isBuy = !trade.isBuyerMaker;
                             const price = parseFloat(trade.price);
                             const quantity = parseFloat(trade.qty);
 
@@ -320,7 +325,7 @@ export default function TradesComponent({ symbol }: TradesProps) {
                     </div>
                 </div>
                 <span className="text-blue-600 font-semibold">
-                    {processedTrades.length} {tradeType === 'market' ? 'Market' : 'My'} Trades
+                    {processedTrades.length} Market Trades • {selectedExchange.toUpperCase()}
                 </span>
             </div>
         </div>

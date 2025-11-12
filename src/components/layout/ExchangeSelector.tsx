@@ -3,51 +3,80 @@
 import React, { useState, useEffect } from 'react';
 import { useAppSelector, useAppDispatch } from '@/infrastructure/store/hooks';
 import { 
-  setExchangeCredentials, 
-  toggleSetupModal, 
-  setConnectionStatus 
+  setCredentials,
+  ExchangeType,
+  getCredentialsForExchange
 } from '@/infrastructure/features/exchange/exchangeSlice';
-import { useExchange } from '@/hooks/useExchange';
-import { X, Eye, EyeOff, Loader2 } from 'lucide-react';
+import TokenStorage from '@/lib/tokenStorage';
+import { X, Eye, EyeOff, Loader2, Check } from 'lucide-react';
 
-export default function ExchangeSelector () {
+interface ExchangeSelectorProps {
+  isOpen: boolean;
+  onClose: () => void;
+  exchangeToSetup: ExchangeType;
+}
+
+export default function ExchangeSelector({ isOpen, onClose, exchangeToSetup }: ExchangeSelectorProps) {
   const dispatch = useAppDispatch();
-  const { selectedExchange, exchanges, isSetupModalOpen } = useAppSelector(state => state.exchange);
-  const { connectToExchange } = useExchange();
+  const selectedExchange = useAppSelector(state => state.exchange.selectedExchange);
+  
+  // Get credentials for the exchange being set up
+  const credentials = useAppSelector(getCredentialsForExchange(exchangeToSetup));
   
   const [formData, setFormData] = useState({
     apiKey: '',
     secretKey: '',
-    passphrase: '',
+    passphrase: '', // Added passphrase
+    label: '',
   });
   
   const [showSecrets, setShowSecrets] = useState({
     apiKey: false,
     secretKey: false,
-    passphrase: false,
+    passphrase: false, // Added passphrase toggle
   });
   
-  const [isConnecting, setIsConnecting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [successMessage, setSuccessMessage] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  
+  const isUpdating = !!credentials; // Check if we're updating existing credentials
 
-  // Load existing credentials when modal opens or exchange changes
+  // Reset form when modal opens or exchange changes
   useEffect(() => {
-    if (isSetupModalOpen && selectedExchange) {
-      const currentConfig = exchanges[selectedExchange];
-      setFormData({
-        apiKey: currentConfig?.apiKey || '',
-        secretKey: currentConfig?.secretKey || '',
-        passphrase: currentConfig?.passphrase || '',
-      });
+    if (isOpen) {
+      // Load existing credentials if available
+      if (credentials && credentials.exchange === exchangeToSetup) {
+        setFormData({
+          apiKey: credentials.apiKey,
+          secretKey: credentials.secretKey,
+          passphrase: credentials.passphrase || '',
+          label: credentials.label,
+        });
+      } else {
+        setFormData({
+          apiKey: '',
+          secretKey: '',
+          passphrase: '',
+          label: '',
+        });
+      }
       setErrors({});
+      setSuccessMessage('');
     }
-  }, [isSetupModalOpen, selectedExchange, exchanges]);
+  }, [isOpen, exchangeToSetup, credentials]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    // Clear error when user starts typing
+    
+    // Clear error when typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
+    }
+    
+    // Clear success message when editing
+    if (successMessage) {
+      setSuccessMessage('');
     }
   };
 
@@ -65,10 +94,14 @@ export default function ExchangeSelector () {
     if (!formData.secretKey.trim()) {
       newErrors.secretKey = 'Secret Key is required';
     }
-    
-    // Passphrase is required for Bitget
-    if (selectedExchange === 'bitget' && !formData.passphrase.trim()) {
+
+    // Passphrase required for Bitget
+    if (exchangeToSetup === 'bitget' && !formData.passphrase.trim()) {
       newErrors.passphrase = 'Passphrase is required for Bitget';
+    }
+
+    if (!formData.label.trim()) {
+      newErrors.label = 'Label is required';
     }
     
     setErrors(newErrors);
@@ -78,87 +111,110 @@ export default function ExchangeSelector () {
   const handleSave = async () => {
     if (!validateForm()) return;
     
-    setIsConnecting(true);
+    setIsSaving(true);
     
     try {
-      // Save credentials to store
-      dispatch(setExchangeCredentials({
-        exchange: selectedExchange,
+      const token = TokenStorage.getAccessToken();
+      
+      if (!token) {
+        throw new Error('Please login first');
+      }
+
+      // Save to Redux - this replaces any previous credentials for this exchange
+      dispatch(setCredentials({
+        exchange: exchangeToSetup,
         apiKey: formData.apiKey.trim(),
         secretKey: formData.secretKey.trim(),
-        passphrase: selectedExchange === 'bitget' ? formData.passphrase.trim() : undefined,
+        passphrase: formData.passphrase.trim() || undefined,
+        label: formData.label.trim(),
       }));
+
+      console.log(`✅ Credentials ${isUpdating ? 'updated' : 'saved'} for ${exchangeToSetup}`);
+
+      // Show success message
+      setSuccessMessage(`Credentials ${isUpdating ? 'updated' : 'saved'} successfully!`);
       
-      // Set connecting status
-      dispatch(setConnectionStatus({
-        exchange: selectedExchange,
-        status: 'connecting'
-      }));
-      
-      // Wait a bit for the store to update, then try to connect
-      setTimeout(async () => {
-        const connected = await connectToExchange();
-        
-        if (connected) {
-          dispatch(toggleSetupModal());
-        }
-        
-        setIsConnecting(false);
-      }, 100);
+      // Close modal after 1.5 seconds
+      setTimeout(() => {
+        onClose();
+      }, 1500);
       
     } catch (error) {
       console.error('Failed to save credentials:', error);
-      dispatch(setConnectionStatus({
-        exchange: selectedExchange,
-        status: 'error'
-      }));
-      setIsConnecting(false);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save credentials';
+      setErrors({ submit: errorMessage });
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const handleTestConnection = async () => {
-    if (!validateForm()) return;
-    
-    setIsConnecting(true);
-    
-    // Temporarily save credentials for testing
-    dispatch(setExchangeCredentials({
-      exchange: selectedExchange,
-      apiKey: formData.apiKey.trim(),
-      secretKey: formData.secretKey.trim(),
-      passphrase: selectedExchange === 'bitget' ? formData.passphrase.trim() : undefined,
-    }));
-    
-    setTimeout(async () => {
-      await connectToExchange();
-      setIsConnecting(false);
-    }, 100);
-  };
+  if (!isOpen) return null;
 
-  if (!isSetupModalOpen) return null;
-
-  const exchangeNames = {
+  const exchangeNames: Record<ExchangeType, string> = {
     binance: 'Binance',
     bitget: 'Bitget'
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-card border border-default rounded-lg w-full max-w-md mx-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Blurred backdrop */}
+      <div 
+        className="absolute inset-0 backdrop-blur-sm bg-black/30"
+        onClick={() => !isSaving && onClose()}
+      />
+      
+      {/* Modal card */}
+      <div className="relative bg-card border border-default rounded-lg w-full max-w-md shadow-2xl">
+        {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-default">
           <h2 className="text-lg font-semibold">
-            Setup {exchangeNames[selectedExchange]} API
+            {isUpdating ? 'Update' : 'Setup'} {exchangeNames[exchangeToSetup]} API
           </h2>
           <button
-            onClick={() => dispatch(toggleSetupModal())}
-            className="p-1 hover:bg-muted rounded"
-            disabled={isConnecting}
+            onClick={onClose}
+            className="p-1 hover:bg-muted rounded transition-colors"
+            disabled={isSaving}
           >
             <X className="w-5 h-5" />
           </button>
         </div>
         
+        {/* Form */}
         <div className="p-4 space-y-4">
+          {/* Success Message */}
+          {successMessage && (
+            <div className="p-3 bg-success/10 border border-success rounded-lg flex items-center gap-2">
+              <Check className="w-4 h-4 text-success" />
+              <p className="text-sm text-success">{successMessage}</p>
+            </div>
+          )}
+
+          {/* Error Message */}
+          {errors.submit && (
+            <div className="p-3 bg-danger/10 border border-danger rounded-lg">
+              <p className="text-sm text-danger">{errors.submit}</p>
+            </div>
+          )}
+
+          {/* Label Field */}
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Label <span className="text-danger">*</span>
+            </label>
+            <input
+              type="text"
+              value={formData.label}
+              onChange={(e) => handleInputChange('label', e.target.value)}
+              placeholder="e.g., My Trading Account"
+              className={`w-full px-3 py-2 border rounded-lg bg-background ${
+                errors.label ? 'border-danger' : 'border-default'
+              } focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent`}
+              disabled={isSaving}
+            />
+            {errors.label && <p className="text-sm text-danger mt-1">{errors.label}</p>}
+            <p className="text-xs text-muted-foreground mt-1">A friendly name to identify this credential</p>
+          </div>
+
           {/* API Key */}
           <div>
             <label className="block text-sm font-medium mb-2">
@@ -173,13 +229,13 @@ export default function ExchangeSelector () {
                 className={`w-full px-3 py-2 pr-10 border rounded-lg bg-background ${
                   errors.apiKey ? 'border-danger' : 'border-default'
                 } focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent`}
-                disabled={isConnecting}
+                disabled={isSaving}
               />
               <button
                 type="button"
                 onClick={() => toggleShowSecret('apiKey')}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                disabled={isConnecting}
+                disabled={isSaving}
               >
                 {showSecrets.apiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -201,13 +257,13 @@ export default function ExchangeSelector () {
                 className={`w-full px-3 py-2 pr-10 border rounded-lg bg-background ${
                   errors.secretKey ? 'border-danger' : 'border-default'
                 } focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent`}
-                disabled={isConnecting}
+                disabled={isSaving}
               />
               <button
                 type="button"
                 onClick={() => toggleShowSecret('secretKey')}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                disabled={isConnecting}
+                disabled={isSaving}
               >
                 {showSecrets.secretKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -215,70 +271,60 @@ export default function ExchangeSelector () {
             {errors.secretKey && <p className="text-sm text-danger mt-1">{errors.secretKey}</p>}
           </div>
 
-          {/* Passphrase (Bitget only) */}
-          {selectedExchange === 'bitget' && (
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Passphrase <span className="text-danger">*</span>
-              </label>
-              <div className="relative">
-                <input
-                  type={showSecrets.passphrase ? 'text' : 'password'}
-                  value={formData.passphrase}
-                  onChange={(e) => handleInputChange('passphrase', e.target.value)}
-                  placeholder="Enter your passphrase"
-                  className={`w-full px-3 py-2 pr-10 border rounded-lg bg-background ${
-                    errors.passphrase ? 'border-danger' : 'border-default'
-                  } focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent`}
-                  disabled={isConnecting}
-                />
-                <button
-                  type="button"
-                  onClick={() => toggleShowSecret('passphrase')}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  disabled={isConnecting}
-                >
-                  {showSecrets.passphrase ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-              {errors.passphrase && <p className="text-sm text-danger mt-1">{errors.passphrase}</p>}
+          {/* Passphrase (Optional - mainly for Bitget) */}
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Passphrase {exchangeToSetup === 'bitget' && <span className="text-danger">*</span>}
+              <span className="text-muted-foreground text-xs ml-2">(Optional for Binance, Required for Bitget)</span>
+            </label>
+            <div className="relative">
+              <input
+                type={showSecrets.passphrase ? 'text' : 'password'}
+                value={formData.passphrase}
+                onChange={(e) => handleInputChange('passphrase', e.target.value)}
+                placeholder="Enter your API passphrase"
+                className={`w-full px-3 py-2 pr-10 border rounded-lg bg-background ${
+                  errors.passphrase ? 'border-danger' : 'border-default'
+                } focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent`}
+                disabled={isSaving}
+              />
+              <button
+                type="button"
+                onClick={() => toggleShowSecret('passphrase')}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                disabled={isSaving}
+              >
+                {showSecrets.passphrase ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
-          )}
+            {errors.passphrase && <p className="text-sm text-danger mt-1">{errors.passphrase}</p>}
+          </div>
 
           {/* Info text */}
           <div className="text-sm text-muted-foreground bg-muted p-3 rounded-lg">
-            <p className="font-medium mb-1">Security Note:</p>
-            <p>Your API keys are stored locally and never sent to our servers. Make sure to use API keys with limited permissions (trading only, no withdrawal).</p>
+            <p className="font-medium mb-1">🔒 Security Note:</p>
+            <p>Your API keys are encrypted and securely stored. They are only used for trading operations. Make sure to use API keys with limited permissions (trading only, no withdrawal).</p>
           </div>
         </div>
 
-        <div className="flex justify-between p-4 border-t border-default">
+        {/* Footer */}
+        <div className="flex justify-end gap-2 p-4 border-t border-default">
           <button
-            onClick={handleTestConnection}
-            disabled={isConnecting}
-            className="px-4 py-2 text-sm border border-default rounded-lg hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+            onClick={onClose}
+            disabled={isSaving}
+            className="px-4 py-2 text-sm border border-default rounded-lg hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isConnecting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-            <span>Test Connection</span>
+            Cancel
           </button>
-          
-          <div className="flex space-x-2">
-            <button
-              onClick={() => dispatch(toggleSetupModal())}
-              disabled={isConnecting}
-              className="px-4 py-2 text-sm border border-default rounded-lg hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={isConnecting}
-              className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-            >
-              {isConnecting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              <span>Save & Connect</span>
-            </button>
-          </div>
+          <button
+            onClick={handleSave}
+            disabled={isSaving || !!successMessage}
+            className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+            {successMessage && <Check className="w-4 h-4" />}
+            <span>{isSaving ? 'Saving...' : successMessage ? 'Saved!' : isUpdating ? 'Update Credentials' : 'Save Credentials'}</span>
+          </button>
         </div>
       </div>
     </div>

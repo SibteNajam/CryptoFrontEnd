@@ -7,6 +7,7 @@ const initialState: AuthState = {
     user: null,
     isLoading: false,
     error: null,
+    isAuthenticated: false,
 };
 
 // Async thunks
@@ -79,6 +80,11 @@ const authSlice = createSlice({
         },
         clearUser: (state) => {
             state.user = null;
+            state.isAuthenticated = false;
+        },
+        setUser: (state, action: PayloadAction<User>) => {
+            state.user = action.payload;
+            state.isAuthenticated = true;
         },
     },
     extraReducers: (builder) => {
@@ -91,6 +97,7 @@ const authSlice = createSlice({
             .addCase(loginUser.fulfilled, (state, action: PayloadAction<User>) => {
                 state.isLoading = false;
                 state.user = action.payload;
+                state.isAuthenticated = true;
                 state.error = null;
             })
             .addCase(loginUser.rejected, (state, action) => {
@@ -105,6 +112,7 @@ const authSlice = createSlice({
             .addCase(signupUser.fulfilled, (state, action: PayloadAction<User>) => {
                 state.isLoading = false;
                 state.user = action.payload;
+                state.isAuthenticated = true;
                 state.error = null;
             })
             .addCase(signupUser.rejected, (state, action) => {
@@ -116,6 +124,7 @@ const authSlice = createSlice({
                 state.user = null;
                 state.isLoading = false;
                 state.error = null;
+                state.isAuthenticated = false;
             })
             // Get current user
             .addCase(getCurrentUser.pending, (state) => {
@@ -124,14 +133,16 @@ const authSlice = createSlice({
             .addCase(getCurrentUser.fulfilled, (state, action: PayloadAction<User>) => {
                 state.isLoading = false;
                 state.user = action.payload;
+                state.isAuthenticated = true;
                 state.error = null;
             })
             .addCase(getCurrentUser.rejected, (state, action) => {
                 state.isLoading = false;
                 state.error = action.payload as string;
+                state.isAuthenticated = false;
             });
     },
 });
 
-export const { clearError, clearUser } = authSlice.actions;
+export const { clearError, clearUser, setUser } = authSlice.actions;
 export default authSlice.reducer;

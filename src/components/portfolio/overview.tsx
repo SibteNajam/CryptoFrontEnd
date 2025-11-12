@@ -2,13 +2,23 @@
 
 import React from 'react';
 import { Shield, CheckCircle, XCircle, Wallet } from 'lucide-react';
-import { AccountInfo } from '../../infrastructure/api/PortfolioApi';
+import { NormalizedAccountInfo } from '../../infrastructure/api/PortfolioApi';
 
 interface OverviewTabProps {
-  accountData: AccountInfo | null;
+  accountData: NormalizedAccountInfo | null;
 }
 
 export default function OverviewTab({ accountData }: OverviewTabProps) {
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('📊 OVERVIEW TAB - Rendering');
+  console.log('   Account Data:', accountData ? {
+    exchange: accountData.exchange,
+    accountType: accountData.accountType,
+    balancesCount: accountData.balances.length,
+    firstBalance: accountData.balances[0]
+  } : 'null');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  
   if (!accountData) {
     return (
       <div className="text-center py-12">
@@ -30,7 +40,7 @@ export default function OverviewTab({ accountData }: OverviewTabProps) {
   };
 
   const activeBalances = accountData.balances.filter(
-    balance => parseFloat(balance.free) > 0 || parseFloat(balance.locked) > 0
+    balance => balance.free > 0 || balance.locked > 0
   );
 
   return (
@@ -110,7 +120,7 @@ export default function OverviewTab({ accountData }: OverviewTabProps) {
         <div className="p-6">
           <div className="space-y-4">
             {activeBalances.slice(0, 5).map((balance) => {
-              const totalAmount = parseFloat(balance.free) + parseFloat(balance.locked);
+              const totalAmount = balance.free + balance.locked;
               
               return (
                 <div key={balance.asset} className="flex items-center justify-between">
@@ -124,7 +134,7 @@ export default function OverviewTab({ accountData }: OverviewTabProps) {
                     <div>
                       <p className="font-medium text-gray-900">{balance.asset}</p>
                       <p className="text-sm text-gray-500">
-                        Available: {formatAmount(balance.free, balance.asset)}
+                        Available: {formatAmount(balance.free.toString(), balance.asset)}
                       </p>
                     </div>
                   </div>
@@ -132,9 +142,9 @@ export default function OverviewTab({ accountData }: OverviewTabProps) {
                     <p className="font-medium text-gray-900">
                       {formatAmount(totalAmount.toString(), balance.asset)}
                     </p>
-                    {parseFloat(balance.locked) > 0 && (
+                    {balance.locked > 0 && (
                       <p className="text-sm text-orange-600">
-                        Locked: {formatAmount(balance.locked, balance.asset)}
+                        Locked: {formatAmount(balance.locked.toString(), balance.asset)}
                       </p>
                     )}
                   </div>

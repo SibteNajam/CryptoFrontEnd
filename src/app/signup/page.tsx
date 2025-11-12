@@ -17,14 +17,8 @@ export default function SignupForm() {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-    const { signup, isLoading, error, isAuthenticated, clearAuthError } = useAuth();
+    const { signup, isLoading, error, clearAuthError } = useAuth();
     const router = useRouter();
-
-    useEffect(() => {
-        if (isAuthenticated) {
-            router.push('/chat');
-        }
-    }, [isAuthenticated, router]);
 
     useEffect(() => {
         return () => {

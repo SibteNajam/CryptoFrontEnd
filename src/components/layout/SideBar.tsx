@@ -36,11 +36,11 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
 
   return (
-    <div className={`fixed left-0 top-0 h-full bg-card/90 backdrop-blur border-r border-default shadow-lg transition-all duration-300 z-40 ${
+    <div className={`fixed left-0 top-0 h-full bg-card backdrop-blur shadow-lg transition-all duration-300 z-40 ${
       collapsed ? 'w-16' : 'w-64'
     }`}>
       {/* Logo Section */}
-      <div className="h-16 flex items-center justify-between px-3 sm:px-4 border-b border-default">
+      <div className="h-16 flex items-center justify-between px-3 sm:px-4">
         {!collapsed && (
           <div className="flex items-center space-x-2">
             <span className="text-xl font-bold text-primary">ByteBoom</span>
@@ -49,14 +49,14 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
         
         <button
           onClick={onToggle}
-          className="p-1.5 rounded-lg hover-light transition-colors border-0"
+          className="p-1.5 rounded hover:bg-muted transition-colors"
           title="Toggle sidebar"
         >
           <ChevronLeft 
             size={20} 
             className={`transition-transform duration-300 ${
               collapsed ? 'rotate-180' : ''
-            } text-[var(--bb-accent-strong)]`} 
+            } text-muted-foreground`} 
           />
         </button>
       </div>
@@ -74,7 +74,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                   href={item.href}
                   className={`flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 group ${
                     isActive
-                      ? 'bg-[rgba(0, 213, 255, 0.06)] text-[var(--bb-accent-strong)]'
+                      ? 'bg-blue-50 border border-blue-200 text-blue-600'
                       : 'text-secondary hover-light text-card-foreground'
                   }`}
                 >
@@ -83,7 +83,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                     className={`${
                       collapsed ? 'mr-0' : 'mr-3'
                     } transition-all duration-200 ${
-                      isActive ? 'text-primary-foreground' : 'text-muted-foreground group-hover:text-secondary'
+                      isActive ? 'text-blue-600' : 'text-muted-foreground group-hover:text-secondary'
                     }`} 
                   />
                   {!collapsed && (

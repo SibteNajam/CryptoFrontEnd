@@ -1,16 +1,19 @@
 "use client";
-import { setConnectionStatus } from '@/infrastructure/features/exchange/exchangeSlice';
 import { createExchangeService, ExchangeService } from '@/infrastructure/api/exchnages/ExchangeFactory';
-import { useMemo, useCallback, useEffect } from 'react';
-import { useAppSelector, useAppDispatch } from '@/infrastructure/store/hooks';
+import { useMemo, useCallback, useState } from 'react';
+import { useAppSelector } from '@/infrastructure/store/hooks';
+import { getCredentials } from '@/infrastructure/features/exchange/exchangeSlice';
 import { NormalizedAccountInfo } from '@/infrastructure/api/exchnages/BaseExchangeService';
 
-export const useExchange = () => {
-  const dispatch = useAppDispatch();
-  const { selectedExchange, exchanges, connectionStatus } = useAppSelector((state) => state.exchange);
+type ConnectionStatus = 'connected' | 'connecting' | 'disconnected' | 'error';
 
-  const currentExchangeConfig = exchanges[selectedExchange];
-  console.log('Current Exchange Config:', currentExchangeConfig);
+export const useExchange = () => {
+  const selectedExchange = useAppSelector((state) => state.exchange.selectedExchange);
+  const credentials = useAppSelector(getCredentials); // Gets credentials for selected exchange
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
+
+  // Credentials are already filtered for the selected exchange by the selector
+  const currentExchangeConfig = credentials;
 
   // Create exchange service with memoization
   const exchangeService: ExchangeService | null = useMemo(() => {
@@ -22,8 +25,7 @@ export const useExchange = () => {
       return createExchangeService(
         selectedExchange,
         currentExchangeConfig.apiKey,
-        currentExchangeConfig.secretKey,
-        currentExchangeConfig.passphrase
+        currentExchangeConfig.secretKey
       );
     } catch (error) {
       console.error('Failed to create exchange service:', error);
@@ -31,41 +33,33 @@ export const useExchange = () => {
     }
   }, [selectedExchange, currentExchangeConfig]);
 
-  // Connection management
-  const updateConnectionStatus = useCallback((status: 'connected' | 'connecting' | 'disconnected' | 'error') => {
-    dispatch(setConnectionStatus({
-      exchange: selectedExchange,
-      status,
-    }));
-  }, [dispatch, selectedExchange]);
-
   // Connect to exchange
   const connectToExchange = useCallback(async (): Promise<boolean> => {
     if (!exchangeService) {
       console.error('No exchange service available');
-      updateConnectionStatus('error');
+      setConnectionStatus('error');
       return false;
     }
 
     try {
-      updateConnectionStatus('connecting');
+      setConnectionStatus('connecting');
       await exchangeService.connect();
-      updateConnectionStatus('connected');
+      setConnectionStatus('connected');
       return true;
     } catch (error) {
       console.error('Failed to connect to exchange:', error);
-      updateConnectionStatus('error');
+      setConnectionStatus('error');
       return false;
     }
-  }, [exchangeService, updateConnectionStatus]);
+  }, [exchangeService]);
 
   // Disconnect from exchange
   const disconnectFromExchange = useCallback((): void => {
     if (exchangeService) {
       exchangeService.disconnect();
-      updateConnectionStatus('disconnected');
+      setConnectionStatus('disconnected');
     }
-  }, [exchangeService, updateConnectionStatus]);
+  }, [exchangeService]);
 
   // Get account info with error handling
   const getAccountInfo = useCallback(async (): Promise<NormalizedAccountInfo | null> => {
@@ -73,30 +67,24 @@ export const useExchange = () => {
       console.error('No exchange service available');
       return null;
     }
-     if (connectionStatus[selectedExchange] !== 'connected') {
+    
+    if (connectionStatus !== 'connected') {
       console.warn('Exchange not connected, attempting to connect...');
       const connected = await connectToExchange();
       if (!connected) {
         return null;
       }
     }
+    
     try {
       return await exchangeService.getAccountInfo();
     } catch (error) {
       console.error('Failed to get account info:', error);
-      updateConnectionStatus('error');
+      setConnectionStatus('error');
       return null;
     }
-  }, [exchangeService, updateConnectionStatus, connectionStatus, selectedExchange, connectToExchange]);
+  }, [exchangeService, connectionStatus, connectToExchange]);
 
-
-  // Auto-disconnect when credentials are removed
-
-    useEffect(() => {
-    if (!currentExchangeConfig?.apiKey && connectionStatus[selectedExchange] !== 'disconnected') {
-      updateConnectionStatus('disconnected');
-    }
-  }, [currentExchangeConfig?.apiKey, connectionStatus, selectedExchange, updateConnectionStatus]);
   return {
     // Current state
     selectedExchange,
@@ -104,15 +92,14 @@ export const useExchange = () => {
     currentExchangeConfig,
     
     // Status checks
-    isConnected: connectionStatus[selectedExchange] === 'connected',
-    isConnecting: connectionStatus[selectedExchange] === 'connecting',
-    hasError: connectionStatus[selectedExchange] === 'error',
+    isConnected: connectionStatus === 'connected',
+    isConnecting: connectionStatus === 'connecting',
+    hasError: connectionStatus === 'error',
     hasCredentials: !!(currentExchangeConfig?.apiKey && currentExchangeConfig?.secretKey),
     
     // Actions
     connectToExchange,
     disconnectFromExchange,
     getAccountInfo,
-    updateConnectionStatus,
   };
 };

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { RefreshCw } from 'lucide-react';
-import { io, Socket } from 'socket.io-client';
+import useMarketTicker from '@/hooks/useMarketTicker';
 import SymbolCards from '../../../components/dashboard/SymbolCards';
 import TradingPanel from '../../../components/charts/TradingPanel';
 import BinanceOrderBook from '../../../components/dashboard/OrderBook';
@@ -10,25 +10,12 @@ import TradingViewChart from '../../../components/charts/TradingViewChart';
 import { BinanceApiService } from '../../../infrastructure/api/BinanceOrder';
 import TradesComponent from '@/components/dashboard/trades';
 import TickerBar from '../../../components/dashboard/tickerBar';
-import BitgetTickerBar from '../../../components/dashboard/BitgetTickerBar';
 import { useTheme } from '@/infrastructure/theme/ThemeContext';
-import { useAppSelector } from '@/infrastructure/store/hooks';
+import { useAppSelector, useAppDispatch } from '@/infrastructure/store/hooks';
 
 interface SymbolPrice {
     symbol: string;
     price: string;
-}
-
-interface OrderBookEntry {
-    price: string;
-    qty: string;
-}
-
-interface OrderBookData {
-    lastUpdateId: number;
-    bids: OrderBookEntry[];
-    asks: OrderBookEntry[];
-    timestamp?: string;
 }
 
 interface RestPriceData {
@@ -92,18 +79,15 @@ interface BinanceTickerData {
 const API_BASE_URL = 'http://localhost:3000';
 
 export default function Dashboard() {
-      const { selectedExchange, exchanges, connectionStatus } = useAppSelector((state) => state.exchange);
-        const currentExchangeConfig = exchanges[selectedExchange];
-
+    const { selectedExchange, credentials } = useAppSelector((state) => state.exchange);
+    const currentExchangeConfig = credentials?.exchange === selectedExchange ? credentials : null;
 
     console.log('Selected Exchange in Dashboard:', selectedExchange);
     console.log('Current Exchange Config in Dashboard:', currentExchangeConfig);
-    console.log('Connection Status in Dashboard:', connectionStatus);
     const { theme } = useTheme();
     const [symbols, setSymbols] = useState<SymbolPrice[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [allSymbols, setAllSymbols] = useState<string[]>([]);
     const [selectedSymbol, setSelectedSymbol] = useState<string>('BTCUSDT');
     const [selectedInterval, setSelectedInterval] = useState<string>('1m');
     const [wsConnected, setWsConnected] = useState(false);
@@ -118,135 +102,33 @@ export default function Dashboard() {
     const [priceComparison, setPriceComparison] = useState<PriceComparison | null>(null);
     const [lastWebSocketUpdateTime, setLastWebSocketUpdateTime] = useState<number>(0);
     const [webSocketUpdateHistory, setWebSocketUpdateHistory] = useState<WebSocketTimingData[]>([]);
-    const socketRef = useRef<Socket | null>(null);
-    const [orderBookData, setOrderBookData] = useState<OrderBookData | null>(null);
-    const [orderBookLoading, setOrderBookLoading] = useState(false);
-    const [orderBookDepth, setOrderBookDepth] = useState(200);
-    const [orderBookRefreshRate, setOrderBookRefreshRate] = useState<number>(3000);
+    // socketRef removed — useMarketTicker hook manages connections
     const [apiService] = useState(() => new BinanceApiService());
     const [recentOrders, setRecentOrders] = useState<any[]>([]);
 
 // Replace the useEffect that initializes WebSocket with this:
 
-useEffect(() => {
-    // Only initialize the dashboard (Binance) socket when Binance is selected
-    if (selectedExchange !== 'binance') {
-        // If there's an existing socket, clean it up
-        if (socketRef.current) {
-            try {
-                socketRef.current.offAny();
-                socketRef.current.disconnect();
-            } catch (e) {
-                console.error('Error cleaning up previous socket', e);
-            }
-            socketRef.current = null;
+    // Use centralized market ticker hook which manages Binance socket.io or Bitget SSE
+    const dispatch = useAppDispatch();
+    const { tickerData: marketTickerData, wsConnected: marketWsConnected, connectionStatus: marketConnectionStatus, subscribeSymbol } = useMarketTicker(selectedExchange as any, selectedSymbol, selectedInterval);
+
+    // mirror hook state into local state
+    useEffect(() => {
+        setTickerData(marketTickerData as any);
+    }, [marketTickerData]);
+
+    useEffect(() => {
+        setWsConnected(marketWsConnected);
+    }, [marketWsConnected]);
+
+    // When symbol or interval changes locally, inform hook
+    useEffect(() => {
+        if (selectedSymbol) {
+            // subscribeSymbol(selectedSymbol, selectedInterval);
         }
-        return;
-    }
+    }, [selectedSymbol, selectedInterval, subscribeSymbol]);
 
-    console.log('🔌 Initializing WebSocket connection for Binance...');
-    const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:3000';
-    console.log('🌐 Connecting to WebSocket URL:', WS_URL);
-
-    const socket = io(WS_URL, {
-        transports: ['websocket', 'polling'],
-        reconnection: true,
-        reconnectionDelay: 1000,
-        reconnectionAttempts: 5,
-        timeout: 10000,
-        autoConnect: true,
-        upgrade: true,
-        rememberUpgrade: true,
-        forceNew: true,
-    });
-
-    socketRef.current = socket;
-
-    // Connection event handlers
-    socket.on('connect', () => {
-        console.log('✅ Connected to server - Socket ID:', socket.id);
-        console.log('🔗 Transport type:', socket.io.engine.transport.name);
-        setError(null);
-        setWsConnected(true);
-
-        // Subscribe to the selected symbol
-        socket.emit('subscribe_symbol_with_indicators', {
-            symbol: selectedSymbol,
-            interval: selectedInterval,
-            limit: 1000,
-        });
-    });
-
-    socket.on('connect_error', (error) => {
-        console.error('❌ Connection error:', error);
-        setWsConnected(false);
-        const errMsg = error.message || String(error);
-        setError(`Connection error: ${errMsg}. Make sure backend is running on ${WS_URL}`);
-    });
-
-    socket.on('disconnect', (reason) => {
-        console.log('🔌 Disconnected from server. Reason:', reason);
-        setWsConnected(false);
-    });
-
-    socket.on('reconnect_attempt', (attemptNumber) => {
-        console.log(`🔄 Reconnection attempt ${attemptNumber}...`);
-    });
-
-    socket.on('reconnect_failed', () => {
-        console.error('❌ Reconnection failed after all attempts');
-        setError('Failed to reconnect to server. Please refresh the page.');
-    });
-
-    socket.on('binance_connection_status', (data) => {
-        console.log('📊 Binance connection status:', data);
-        if (data.status === 'connected') {
-            console.log('✅ Binance WebSocket connected');
-        } else if (data.status === 'error') {
-            console.error('❌ Binance connection error:', data.error);
-        }
-    });
-
-    socket.on('ticker_data', (data: any) => {
-        console.log('📈 Received ticker data:', {
-            symbol: data.symbol,
-            lastPrice: data.ticker?.lastPrice,
-            priceChange: data.ticker?.priceChange,
-            priceChangePercent: data.ticker?.priceChangePercent,
-        });
-        setTickerData(data);
-    });
-
-    socket.on('subscription_status', (data) => {
-        console.log('✅ Subscription status:', data);
-    });
-
-    socket.on('subscription_error', (data) => {
-        console.error('❌ Subscription error:', data);
-        setError(`Error loading ${data.symbol}: ${data.error}`);
-    });
-
-    // Cleanup function for this Binance socket
-    return () => {
-        console.log('🔌 Cleaning up Binance WebSocket connection');
-        try {
-            socket.off('connect');
-            socket.off('disconnect');
-            socket.off('connect_error');
-            socket.off('reconnect_attempt');
-            socket.off('reconnect_failed');
-            socket.off('binance_connection_status');
-            socket.off('subscription_status');
-            socket.off('subscription_error');
-            socket.off('ticker_data');
-            socket.offAny();
-            socket.disconnect();
-        } catch (e) {
-            console.error('Error during Binance socket cleanup', e);
-        }
-        if (socketRef.current === socket) socketRef.current = null;
-    };
-}, [selectedInterval, selectedSymbol, selectedExchange]);
+    // Connection status is now managed locally in useExchange hook, no need to sync to Redux
 
     
 
@@ -390,51 +272,9 @@ useEffect(() => {
         }
     };
 
-    const fetchOrderBook = async (symbol: string, limit: number = orderBookDepth) => {
-        setOrderBookLoading(true);
-        try {
-            console.log(`🔄 Fetching order book for ${symbol} with depth ${limit}`);
-
-            const response = await fetch(
-                `${API_BASE_URL}/binance/orderBook?symbol=${symbol}&limit=${limit}`
-            );
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
-
-            const orderBookWithTimestamp: OrderBookData = {
-                ...data,
-                timestamp: new Date().toISOString()
-            };
-
-            setOrderBookData(orderBookWithTimestamp);
-            console.log('📊 Order Book Data loaded:', {
-                symbol: symbol,
-                bids: orderBookWithTimestamp.bids.length,
-                asks: orderBookWithTimestamp.asks.length,
-                timestamp: new Date().toLocaleTimeString()
-            });
-
-        } catch (error) {
-            console.error('❌ Error fetching order book:', error);
-        } finally {
-            setOrderBookLoading(false);
-        }
-    };
-
     useEffect(() => {
         fetchSymbols();
     }, []);
-    
-
-    useEffect(() => {
-        if (selectedSymbol) {
-            fetchOrderBook(selectedSymbol, orderBookDepth);
-        }
-    }, [selectedSymbol]);
 
     const handleSymbolClick = (symbol: string) => {
         if (symbol === selectedSymbol) return;
@@ -445,13 +285,8 @@ useEffect(() => {
         setWebSocketUpdateHistory([]);
         setWebSocketTiming(null);
         setTickerData(null);
-        if (socketRef.current && wsConnected) {
-            socketRef.current.emit('subscribe_symbol_with_indicators', {
-                symbol: symbol,
-                interval: selectedInterval,
-                limit: 1000,
-            });
-        }
+        // Inform market hook to subscribe
+        // subscribeSymbol(symbol, selectedInterval);
     };
 
     const handleIntervalChange = (interval: string) => {
@@ -463,13 +298,8 @@ useEffect(() => {
         setWebSocketUpdateHistory([]);
         setWebSocketTiming(null);
         setTickerData(null);
-        if (socketRef.current && wsConnected) {
-            socketRef.current.emit('subscribe_symbol_with_indicators', {
-                symbol: selectedSymbol,
-                interval: interval,
-                limit: 1000,
-            });
-        }
+        // Inform market hook to change interval
+        // subscribeSymbol(selectedSymbol, interval);
     };
 
     const averageWebSocketInterval = webSocketUpdateHistory.length > 0
@@ -502,13 +332,7 @@ useEffect(() => {
                 </div>
             )}
 
-            {selectedExchange === 'bitget' ? (
-                <BitgetTickerBar
-                    selectedSymbol={selectedSymbol}
-                    availableSymbols={symbols}
-                    onSymbolChange={handleSymbolClick}
-                />
-            ) : tickerData && (
+            {tickerData && (
                 <TickerBar
                     selectedSymbol={selectedSymbol}
                     tickerData={tickerData}
@@ -539,28 +363,7 @@ useEffect(() => {
                         </div>
 
                         <div className="lg:col-span-1">
-                            {orderBookData ? (
-                                <div className="h-full">
-                                    <BinanceOrderBook
-                                        symbol={selectedSymbol}
-                                        bids={orderBookData.bids}
-                                        asks={orderBookData.asks}
-                                        precision={selectedSymbol.includes('BTC') ? 2 : selectedSymbol.includes('ETH') ? 2 : 4}
-                                        depth={20}
-                                        isLoading={orderBookLoading}
-                                        lastUpdateTime={orderBookData.timestamp}
-                                        onRefresh={() => fetchOrderBook(selectedSymbol, orderBookDepth)}
-                                        refreshInterval={orderBookRefreshRate}
-                                    />
-                                </div>
-                            ) : (
-                                <div className="flex items-center justify-center h-full">
-                                    <div className="text-center py-8">
-                                        <div className="w-8 h-8 border-2 border-light border-t-primary rounded-full animate-spin mx-auto mb-4"></div>
-                                        <p className="text-muted-foreground">Loading order book...</p>
-                                    </div>
-                                </div>
-                            )}
+                            <BinanceOrderBook symbol={selectedSymbol} />
                         </div>
                     </div>
 

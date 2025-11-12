@@ -54,24 +54,18 @@ export default function useMarketTicker(
         });
       }
     } else if (selectedExchange === 'bitget') {
-      // Call backend POST to select symbol (backend will subscribe on its websocket)
-      // Backend expects base symbol without USDT suffix
-      const base = String(newSymbol).toUpperCase().replace(/USDT|BUSD|USDC/g, '');
+      // Bitget: emit directly to the Bitget socket namespace (no backend POST required)
       try {
-        setConnectionStatus('connecting');
-        const res = await fetch(`${DEFAULT_API}/market/select-symbol`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ symbol: base }),
-        });
-        if (!res.ok) {
-          console.error('Failed to select symbol on backend', await res.text());
-          setConnectionStatus('error');
-        } else {
+        if (socketRef.current && socketRef.current.connected) {
+          socketRef.current.emit('subscribe_symbol', { symbol: newSymbol });
           setConnectionStatus('connected');
+        } else {
+          // if socket not yet ready, set status to connecting and the socket's connect handler will subscribe
+          setConnectionStatus('connecting');
+          console.debug('subscribeSymbol: bitget socket not ready yet, will subscribe on connect');
         }
       } catch (err) {
-        console.error('Error selecting symbol on backend', err);
+        console.error('Error emitting subscribe_symbol to bitget socket', err);
         setConnectionStatus('error');
       }
     }
@@ -171,53 +165,60 @@ export default function useMarketTicker(
         cleanupSocket();
       };
     } else if (selectedExchange === 'bitget') {
-      // Connect to SSE endpoint
-      const esUrl = `${DEFAULT_API.replace(/\/+$/, '')}/market/ticker-stream`;
-      try {
-        const es = new EventSource(esUrl);
-        esRef.current = es;
-        setConnectionStatus('connecting');
+      // Connect directly to the Bitget socket.io namespace
+      const WS_URL = process.env.NEXT_PUBLIC_WS_URL || DEFAULT_API;
+      const bitgetUrl = `${WS_URL.replace(/\/+$/, '')}/bitget`;
+      const socket = io(bitgetUrl, {
+        transports: ['websocket'],
+        reconnection: true,
+        forceNew: true,
+      });
+      socketRef.current = socket;
+      setConnectionStatus('connecting');
 
-        console.log('useMarketTicker: opening SSE to', esUrl);
-
-        es.onopen = () => {
-          setWsConnected(true);
-          setConnectionStatus('connected');
-          console.log('useMarketTicker: SSE open (bitget)');
-        };
-
-        es.onmessage = (ev: MessageEvent) => {
-          try {
-            const payload = JSON.parse(ev.data);
-            // payload should be { data: TickerData }
-            const inner = payload?.data || payload;
-            const normalized = normalizeBitgetToBinanceShape(inner);
-            console.log('useMarketTicker: received SSE message (bitget) for', normalized?.symbol || normalized?.ticker?.symbol);
-            setTickerData(normalized);
-          } catch (err) {
-            console.error('Failed to parse SSE message', err, ev.data);
-          }
-        };
-
-        es.onerror = (err) => {
-          console.error('SSE error', err);
-          setWsConnected(false);
-          setConnectionStatus('error');
-          // try to close; EventSource will auto-retry depending on server
-        };
-
-        // Immediately ask backend to subscribe to current symbol if provided
+      socket.on('connect', () => {
+        setWsConnected(true);
+        setConnectionStatus('connected');
+        console.log('useMarketTicker: bitget socket connected', bitgetUrl);
+        // Subscribe to current symbol if provided
         if (symbol) {
-          subscribeSymbol(symbol, interval);
+          try {
+            socket.emit('subscribe_symbol', { symbol });
+          } catch (err) {
+            console.error('useMarketTicker: failed to emit subscribe_symbol on connect', err);
+          }
         }
+      });
 
-      } catch (err) {
-        console.error('Failed to create EventSource', err);
+      socket.on('disconnect', () => {
+        setWsConnected(false);
+        setConnectionStatus('disconnected');
+        console.log('useMarketTicker: bitget socket disconnected');
+      });
+
+      socket.on('connect_error', (err: any) => {
+        console.error('useMarketTicker: bitget connect_error', err);
+        setWsConnected(false);
         setConnectionStatus('error');
-      }
+      });
+
+      socket.on('bitget_connection_status', (d: any) => {
+        console.debug('bitget_connection_status', d);
+        setWsConnected(d?.status === 'connected');
+      });
+
+      socket.on('bitget_ticker_data', (data: any) => {
+        try {
+          const normalized = normalizeBitgetToBinanceShape(data?.ticker ? { ...data.ticker, instId: data.symbol || data.instId } : data);
+          console.log('useMarketTicker: received bitget_ticker_data for', normalized?.symbol || normalized?.ticker?.symbol);
+          setTickerData(normalized);
+        } catch (err) {
+          console.error('useMarketTicker: failed to handle bitget_ticker_data', err);
+        }
+      });
 
       return () => {
-        cleanupEs();
+        cleanupSocket();
       };
     }
 

@@ -38,7 +38,10 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({
     const isCreatingWidget = useRef(false);
 
     useEffect(() => {
-        setChartId(`tradingview_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+        // Only generate chart ID on client side to prevent hydration mismatch
+        if (typeof window !== 'undefined') {
+            setChartId(`tradingview_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+        }
         setIsMounted(true);
     }, [theme]);
 

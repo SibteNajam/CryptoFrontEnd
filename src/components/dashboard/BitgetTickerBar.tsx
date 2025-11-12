@@ -71,7 +71,7 @@ export default function BitgetTickerBar({ selectedSymbol, availableSymbols = [],
       try {
         setWsConnected(true);
         // Subscribe to currently selected symbol
-        socket.emit('subscribe_symbol', { symbol: selectedSymbol });
+        // socket.emit('subscribe_symbol', { symbol: selectedSymbol });
       } catch (err) {
         console.error('BitgetTickerBar connect handler error', err);
       }
@@ -126,7 +126,7 @@ export default function BitgetTickerBar({ selectedSymbol, availableSymbols = [],
   useEffect(() => {
     if (socketRef.current && wsConnected) {
       try {
-        socketRef.current.emit('subscribe_symbol', { symbol: selectedSymbol });
+        // socketRef.current.emit('subscribe_symbol', { symbol: selectedSymbol });
       } catch (err) {
         console.error('Failed to emit subscribe_symbol', err);
       }
@@ -195,7 +195,7 @@ export default function BitgetTickerBar({ selectedSymbol, availableSymbols = [],
   const spreadPercent = bidPrice ? (spread / bidPrice) * 100 : 0;
 
   return (
-    <div className="bg-card border-b border-default shadow-sm">
+    <div className="bg-card  shadow-sm">
       <div className="px-4 py-2">
         {/* Main Header Row */}
         <div className="flex items-center justify-between mb-3">
@@ -203,7 +203,7 @@ export default function BitgetTickerBar({ selectedSymbol, availableSymbols = [],
             <div className="relative">
               <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="flex items-center gap-2 px-3 py-1.5 bg-muted hover:bg-muted-dark rounded-lg border border-default transition-colors"
+                className="flex items-center gap-2 px-3 py-1.5 bg-muted hover:bg-muted-dark rounded-lg  transition-colors"
               >
                 <span className="font-bold text-primary">{selectedSymbol}</span>
                 <ChevronDown className={`h-4 w-4 text-secondary transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
@@ -211,7 +211,7 @@ export default function BitgetTickerBar({ selectedSymbol, availableSymbols = [],
 
               {/* Dropdown Menu */}
               {isDropdownOpen && (
-                <div className="absolute top-full left-0 mt-1 w-64 bg-card rounded-lg shadow-lg border border-default z-50">
+                <div className="absolute top-full left-0 mt-1 w-64 bg-card rounded-lg shadow-lg  z-50">
                   <div className="p-2 border-b border-gray-100 scrollbar-hide">
                     <div className="relative scrollbar-hide">
                       <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -220,7 +220,7 @@ export default function BitgetTickerBar({ selectedSymbol, availableSymbols = [],
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder="Search symbols..."
-                        className="w-full pl-8 pr-8 py-2 text-sm border border-default rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-input text-card-foreground"
+                        className="w-full pl-8 pr-8 py-2 text-sm  rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-input text-card-foreground"
                         autoFocus
                       />
                       {searchQuery && (
@@ -242,7 +242,7 @@ export default function BitgetTickerBar({ selectedSymbol, availableSymbols = [],
                           key={sym.symbol}
                           onClick={() => handleSymbolSelect(sym.symbol)}
                           className={`w-full flex items-center justify-between px-3 py-2 hover:bg-blue-50 dark:hover:bg-blue-50/10 transition-colors ${
-                            sym.symbol === selectedSymbol ? 'bg-blue-50 dark:bg-blue-50/10 border-l-2 border-blue-500' : ''
+                            sym.symbol === selectedSymbol ? 'bg-blue-50 dark:bg-blue-50/10 ' : ''
                           }`}
                         >
                           <span className="font-medium text-primary">{sym.symbol}</span>
@@ -266,7 +266,7 @@ export default function BitgetTickerBar({ selectedSymbol, availableSymbols = [],
 
             {/* Price Change */}
             <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm font-semibold ${
-              isPositive ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
+              isPositive ? 'bg-green-50 text-green-700 ' : 'bg-red-50 text-red-700 '
             }`}>
               {isPositive ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
               <span>{isPositive ? '+' : ''}{priceChangePercent.toFixed(2)}%</span>
@@ -276,12 +276,12 @@ export default function BitgetTickerBar({ selectedSymbol, availableSymbols = [],
           {/* Right Section - Status Indicators */}
           <div className="flex items-center gap-3">
             <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium ${
-              wsConnected ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
+              wsConnected ? 'bg-green-50 text-green-700 ' : 'bg-red-50 text-red-700 '
             }`}>
               {wsConnected ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
               <span>{wsConnected ? 'Live' : 'Offline'}</span>
             </div>
-            <div className="flex items-center gap-1.5 text-xs text-secondary bg-muted px-2.5 py-1 rounded-md border border-default">
+            <div className="flex items-center gap-1.5 text-xs text-secondary bg-muted px-2.5 py-1 rounded-md ">
               <Clock className="h-3 w-3" />
               <span className="font-mono">{new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
             </div>

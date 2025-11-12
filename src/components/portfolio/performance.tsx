@@ -3,6 +3,7 @@
 
 import React, { useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { TrendingUp } from 'lucide-react';
 import { AccountSnapshotResponse } from '../../infrastructure/api/PortfolioApi';
 
 interface PerformanceTabProps {
@@ -165,6 +166,23 @@ export default function PerformanceTab({ snapshotData }: PerformanceTabProps) {
               />
             </LineChart>
           </ResponsiveContainer>
+        ) : chartData.length === 1 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center space-y-3">
+            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+              <TrendingUp className="h-8 w-8 text-primary" />
+            </div>
+            <div>
+              <p className="text-muted-foreground mb-1">Current Portfolio Value</p>
+              <p className="text-3xl font-semibold text-primary">
+                ${metrics.currentValue.toFixed(2)}
+              </p>
+            </div>
+            <div className="bg-muted px-4 py-3 rounded-lg max-w-md">
+              <p className="text-xs text-muted-foreground">
+                Historical performance data is not available yet. The chart will populate as daily snapshots are collected over time.
+              </p>
+            </div>
+          </div>
         ) : (
           <div className="flex items-center justify-center py-8 text-muted">
             <p>Not enough data for chart (need 2+ days)</p>

@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { LoginCredentials, SignupCredentials, AuthResponse } from '@/types/auth';
 import TokenStorage from './tokenStorage';
-const API_BASE_URL = 'https://localhost:3000';
+const API_BASE_URL = 'http://localhost:3000';
 export async function login(credentials: LoginCredentials): Promise<any> {
-    const response = await fetch('http://localhost:3000/auth/login', {
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -27,7 +27,7 @@ export async function login(credentials: LoginCredentials): Promise<any> {
     if (data.status === 'Success' && data.data && data.data.data) {
         const { user, payload } = data.data.data;
 
-        TokenStorage.setTokens(payload.accessToken, payload.refreshToken);
+        TokenStorage.setTokens(payload.token, payload.refresh_token);
         // Map backend fields to frontend format
         const transformedResponse = {
             user: {
@@ -37,7 +37,10 @@ export async function login(credentials: LoginCredentials): Promise<any> {
                 createdAt: user.createdAt,
             },
             message: data.message,
-            payload: payload, // Include tokens for storage
+                      payload: {
+                accessToken: payload.token, // For frontend consistency
+                refreshToken: payload.refresh_token,
+            },// Include tokens for storage
         };
 
         console.log(' Transformed login response:', transformedResponse);
@@ -69,24 +72,58 @@ export async function signup(credentials: SignupCredentials): Promise<any> {
 }
 
 export async function logout(): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/auth/logout`, {
-        method: 'POST',
-        credentials: 'include',
-    });
+//     const response = await fetch(`${API_BASE_URL}/auth/logout`, {
+//         method: 'POST',
+//         credentials: 'include',
+//     });
 
-    if (!response.ok) {
-        throw new Error('Logout failed');
-    }
+//     if (!response.ok) {
+//         throw new Error('Logout failed');
+//     }
+
+    TokenStorage.clearTokens();
 }
 
+
 export async function fetchCurrentUser(): Promise<AuthResponse> {
-    const response = await fetch(`${API_BASE_URL}/auth/me`, {
+    const token = TokenStorage.getAccessToken();
+    
+    if (!token) {
+        throw new Error('No authentication token found');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/user/me`, {
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+        },
         credentials: 'include',
     });
 
     if (!response.ok) {
+        if (response.status === 401) {
+            TokenStorage.clearTokens();
+            throw new Error('Session expired. Please login again.');
+        }
         throw new Error('Failed to get current user');
     }
 
-    return response.json();
+    const data = await response.json();
+    
+    // Transform backend response to match frontend format
+    if (data.status === 'Success' && data.data) {
+        const userData = data.data;
+        return {
+            user: {
+                id: userData.id,
+                email: userData.email,
+                displayName: userData.name || userData.displayName,
+                createdAt: userData.createdAt,
+            },
+            message: data.message || 'User fetched successfully',
+        };
+    }
+    
+    // If response structure is different, try to adapt
+    return data;
 }

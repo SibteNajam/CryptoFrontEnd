@@ -1,18 +1,18 @@
 // app/(dashboard)/portfolio/page.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { RefreshCw, TrendingUp, Wallet, Clock, History, XCircle, Activity, DollarSign } from 'lucide-react';
 import { 
-  getAccountInfo, 
+  getAccountInfoByExchange,
+  getUserAssetsByExchange,
   getOpenOrders, 
   getOrderHistory,
-  getAccountSnapshot,  // This now returns AccountSnapshotResponse
-  getUserAssets,
-  AccountInfo, 
+  getAccountSnapshotByExchange,
+  NormalizedAccountInfo,
+  NormalizedUserAsset,
   Order,
-  UserAsset,
-  AccountSnapshotResponse  // Use this type
+  AccountSnapshotResponse
 } from '../../../infrastructure/api/PortfolioApi';
 import OverviewTab from '../../../components/portfolio/overview';
 import BalancesTab from '../../../components/portfolio/balances';
@@ -20,65 +20,199 @@ import OpenOrdersTab from '../../../components/portfolio/openOrders';
 import HistoryTab from '../../../components/portfolio/orderHistory';
 import PerformanceTab from '../../../components/portfolio/performance';
 import TransferHistoryTable from '@/components/portfolio/transferHistory';
+import { useAppSelector } from '@/infrastructure/store/hooks';
 
 type TabType = 'overview' | 'balances' | 'orders' | 'history' | 'performance' | 'transfers';
 
 export default function PortfolioPage() {
+  // Get selected exchange and credentials from Redux
+  const { selectedExchange, credentials } = useAppSelector(state => state.exchange);
+  
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('🔷 PORTFOLIO PAGE - Redux State');
+  console.log('   Selected Exchange:', selectedExchange);
+  console.log('   Credentials:', credentials ? {
+    exchange: credentials.exchange,
+    hasApiKey: !!credentials.apiKey,
+    hasSecretKey: !!credentials.secretKey,
+    hasPassphrase: !!credentials.passphrase,
+    label: credentials.label
+  } : 'NULL');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  
+  // Prepare credentials for API calls
+  const apiCredentials = credentials && credentials.exchange === selectedExchange ? {
+    apiKey: credentials.apiKey,
+    secretKey: credentials.secretKey,
+    passphrase: credentials.passphrase
+  } : undefined;
+  
+  // Cache utilities
+  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+  
+  const getCacheKey = (key: string) => `portfolio_${key}`;
+  
+  const getCachedData = (key: string) => {
+    try {
+      const cached = localStorage.getItem(getCacheKey(key));
+      if (!cached) return null;
+      
+      const { data, timestamp } = JSON.parse(cached);
+      if (Date.now() - timestamp > CACHE_DURATION) {
+        localStorage.removeItem(getCacheKey(key));
+        return null;
+      }
+      
+      return data;
+    } catch {
+      return null;
+    }
+  };
+  
+  const setCachedData = (key: string, data: any) => {
+    try {
+      localStorage.setItem(getCacheKey(key), JSON.stringify({
+        data,
+        timestamp: Date.now()
+      }));
+    } catch {
+      // Ignore storage errors
+    }
+  };
   const [activeTab, setActiveTab] = useState<TabType>('overview');
-  const [accountData, setAccountData] = useState<AccountInfo | null>(null);
+  const [accountData, setAccountData] = useState<NormalizedAccountInfo | null>(null);
   const [openOrders, setOpenOrders] = useState<Order[]>([]);
   const [orderHistory, setOrderHistory] = useState<Array<{ symbol: string; orders: Order[] }>>([]);
-  const [accountSnapshot, setAccountSnapshot] = useState<AccountSnapshotResponse | null>(null); // Fixed type
-  const [userAssets, setUserAssets] = useState<UserAsset[]>([]);
+  const [accountSnapshot, setAccountSnapshot] = useState<AccountSnapshotResponse | null>(null);
+  const [userAssets, setUserAssets] = useState<NormalizedUserAsset[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [snapshotLoading, setSnapshotLoading] = useState(false);
+  const [assetsLoading, setAssetsLoading] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
-  const fetchBasicData = async () => {
+  const fetchBasicData = useCallback(async (forceRefresh = false) => {
     setLoading(true);
     setError(null);
     
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('📊 FETCH BASIC DATA - Starting fetch...');
+    console.log('   Exchange:', selectedExchange);
+    console.log('   Force Refresh:', forceRefresh);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    
     try {
+      // Check cache first (unless force refresh)
+      if (!forceRefresh) {
+        const cachedAccount = getCachedData(`account_${selectedExchange}`);
+        const cachedOrders = getCachedData(`orders_${selectedExchange}`);
+        
+        if (cachedAccount && cachedOrders) {
+          console.log('✅ Using cached data for', selectedExchange);
+          setAccountData(cachedAccount);
+          setOpenOrders(cachedOrders);
+          setLastUpdate(new Date());
+          
+          // Load enhanced data in background
+          fetchEnhancedData();
+          setLoading(false);
+          return;
+        } else {
+          console.log('❌ No cached data found for', selectedExchange, ', fetching fresh data...');
+        }
+      } else {
+        console.log('🔄 Force refresh - bypassing cache');
+      }
+
+      console.log(`🌐 Calling API for exchange: ${selectedExchange}`);
+      console.log(`🔐 Passing credentials:`, apiCredentials ? 'YES' : 'NO');
+      
+      // Load critical data first (account info and open orders)
       const [accountInfo, openOrders] = await Promise.all([
-        getAccountInfo(),
+        getAccountInfoByExchange(selectedExchange as 'binance' | 'bitget', apiCredentials),
         getOpenOrders(),
       ]);
 
+      console.log('✅ API Response received:');
+      console.log('   Account Info:', {
+        exchange: accountInfo.exchange,
+        accountType: accountInfo.accountType,
+        balancesCount: accountInfo.balances.length,
+        balances: accountInfo.balances.slice(0, 3) // First 3 balances
+      });
+      console.log('   Open Orders:', openOrders.length);
+
       setAccountData(accountInfo);
       setOpenOrders(openOrders);
-     
+      
+      // Cache the data with exchange-specific keys
+      setCachedData(`account_${selectedExchange}`, accountInfo);
+      setCachedData(`orders_${selectedExchange}`, openOrders);
+      
       setLastUpdate(new Date());
+      
+      // Load enhanced data in background (non-blocking)
+      fetchEnhancedData();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch basic data');
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedExchange, apiCredentials]); // Added selectedExchange and apiCredentials to dependency array
 
-  const fetchEnhancedData = async () => {
+  const fetchEnhancedData = useCallback(async () => {
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('🔍 FETCH ENHANCED DATA - Starting...');
+    console.log('   Exchange:', selectedExchange);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    
     try {
-      let snapshot, assets;
-      
+      // Load snapshot data (for performance tab)
       try {
-        snapshot = await getAccountSnapshot(); // Now returns AccountSnapshotResponse
-        console.log('✅ Real snapshot data loaded:', snapshot);
+        setSnapshotLoading(true);
+        console.log(`🌐 Fetching account snapshot from ${selectedExchange}...`);
+        console.log(`🔐 Passing credentials:`, apiCredentials ? 'YES' : 'NO');
+        const snapshot = await getAccountSnapshotByExchange(
+          selectedExchange as 'binance' | 'bitget',
+          apiCredentials
+        );
+        console.log('✅ Snapshot loaded:', { 
+          exchange: selectedExchange,
+          totalSnapshots: snapshot.totalSnapshots,
+          currentValue: snapshot.currentValue
+        });
+        setAccountSnapshot(snapshot);
       } catch (error) {
-        console.warn('Failed to fetch real snapshot, using fallback');
-        snapshot = null; // Don't use fake data for real API
+        console.warn('⚠️ Failed to fetch account snapshot:', error);
+      } finally {
+        setSnapshotLoading(false);
       }
 
+      // Load user assets (for balances tab)
       try {
-        assets = await getUserAssets();
+        setAssetsLoading(true);
+        console.log(`🌐 Fetching user assets from ${selectedExchange}...`);
+        console.log(`🔐 Passing credentials:`, apiCredentials ? 'YES' : 'NO');
+        const assets = await getUserAssetsByExchange(
+          selectedExchange as 'binance' | 'bitget',
+          apiCredentials
+        );
+        console.log('✅ User Assets Response:', {
+          exchange: selectedExchange,
+          count: assets.length,
+          firstAsset: assets[0],
+          assets: assets.slice(0, 3) // First 3 assets
+        });
+        setUserAssets(assets);
       } catch (error) {
-        console.warn('Failed to fetch assets, using fake data');
+        console.error('❌ Failed to fetch user assets:', error);
+      } finally {
+        setAssetsLoading(false);
       }
-
-      setAccountSnapshot(snapshot);
-      setUserAssets(assets ?? []);
     } catch (err) {
-      console.error('Enhanced data fetch failed:', err);
+      console.error('❌ Enhanced data fetch failed:', err);
     }
-  };
+  }, [selectedExchange, apiCredentials]); // Added apiCredentials to dependency array
 
   // Remove the old fake snapshot generator since we're using real data
   // const generateFakeAccountSnapshot = (): AccountSnapshot => {
@@ -86,9 +220,17 @@ export default function PortfolioPage() {
   // };
 
   useEffect(() => {
+    // Start fetching immediately but don't block rendering
     fetchBasicData();
-    fetchEnhancedData();
-  }, []);
+  }, [fetchBasicData]);
+
+  // Refetch when exchange changes
+  useEffect(() => {
+    console.log('� EXCHANGE CHANGE DETECTED!');
+    console.log('   New Exchange:', selectedExchange);
+    console.log('   Triggering force refresh...');
+    fetchBasicData(true); // Force refresh on exchange change
+  }, [selectedExchange, fetchBasicData]);
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: TrendingUp },
@@ -100,12 +242,44 @@ export default function PortfolioPage() {
   ];
 
   const renderTabContent = () => {
+    // Show loading for overview and orders if no data yet
+    if (loading && !accountData && !openOrders.length) {
+      return (
+        <div className="flex items-center justify-center py-16">
+          <div className="text-center">
+            <div className="w-12 h-12 border-3 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-lg text-muted-foreground">Loading portfolio data...</p>
+          </div>
+        </div>
+      );
+    }
+
     switch (activeTab) {
       case 'overview':
         return <OverviewTab accountData={accountData} />;
       case 'performance':
-        return <PerformanceTab snapshotData={accountSnapshot} />; // Pass snapshotData
+        if (snapshotLoading && !accountSnapshot) {
+          return (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-center">
+                <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-muted-foreground">Loading performance data...</p>
+              </div>
+            </div>
+          );
+        }
+        return <PerformanceTab snapshotData={accountSnapshot} />;
       case 'balances':
+        if (assetsLoading && !userAssets.length) {
+          return (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-center">
+                <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-muted-foreground">Loading balances...</p>
+              </div>
+            </div>
+          );
+        }
         return <BalancesTab userAssets={userAssets} btcPrice={117300} />;
       case 'orders':
         return <OpenOrdersTab openOrders={openOrders} />;
@@ -126,18 +300,30 @@ export default function PortfolioPage() {
 
   return (
     <div className="bg-card max-w-7xl mx-auto p-6 space-y-6">
-      {/* Header */}
+      {/* Header - Always visible */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-card-foreground">Portfolio</h1>
+          <h1 className="text-2xl font-semibold text-card-foreground flex items-center gap-2">
+            Portfolio
+            <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 font-medium uppercase">
+              {selectedExchange}
+            </span>
+          </h1>
           <p className="text-sm text-muted mt-1">
-            {lastUpdate ? `Last updated: ${lastUpdate.toLocaleTimeString()}` : 'No data loaded'}
+            {loading && !lastUpdate ? (
+              <span className="inline-flex items-center gap-2">
+                <span className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></span>
+                Loading data...
+              </span>
+            ) : (
+              lastUpdate ? `Last updated: ${lastUpdate.toLocaleTimeString()}` : 'No data loaded'
+            )}
           </p>
         </div>
         
         <button 
           onClick={() => {
-            fetchBasicData();
+            fetchBasicData(true);
             fetchEnhancedData();
           }} 
           disabled={loading}

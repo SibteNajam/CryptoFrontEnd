@@ -212,122 +212,122 @@
   --color-orange-600: var(--orange-600);
 }
 
-/* Dark mode - Binance-inspired dark trading theme */
+/* Dark mode - Binance exact replica professional theme */
 .dark {
   --background: #0b0e11;
-  --foreground: #f0f0f0;
+  --foreground: #eaecef;
   
-  /* Primary colors - Gold accent like Binance */
-  --primary: #60a5fa;
+  /* Primary colors - Clean minimal */
+  --primary: #eaecef;
   --primary-foreground: #0b0e11;
-  --primary-light: #343331;
+  --primary-light: #2b3139;
   
   /* Card and surface colors */
-  --card: #151517;
-  --card-foreground: #f0f0f0;
+  --card: #181a20;
+  --card-foreground: #eaecef;
   
   /* Muted colors for backgrounds */
   --muted: #2b3139;
-  --muted-foreground: #000000;
-  --muted-dark: #181a20;
+  --muted-foreground: #5e6673;
+  --muted-dark: #0b0e11;
   
-  /* Border and input colors */
-  --border: #2b3139;
-  --border-light: #343a46;
+  /* Border and input colors - NO VISIBLE BORDERS */
+  --border: transparent;
+  --border-light: transparent;
   --input: #2b3139;
-  --input-border: #343a46;
-  --input-foreground: #f0f0f0;
+  --input-border: transparent;
+  --input-foreground: #eaecef;
   
-  /* Status colors - Crypto trading colors */
-  --success: #02c076;
-  --success-light: #0d2818;
-  --success-foreground: #02c076;
-  --success-border: #1a4c32;
+  /* Status colors - Binance exact colors */
+  --success: #0ecb81;
+  --success-light: rgba(14, 203, 129, 0.08);
+  --success-foreground: #0ecb81;
+  --success-border: transparent;
   
-  --danger: #f84960;
-  --danger-light: #2d1518;
-  --danger-foreground: #f84960;
-  --danger-border: #5c1f28;
+  --danger: #f6465d;
+  --danger-light: rgba(246, 70, 93, 0.08);
+  --danger-foreground: #f6465d;
+  --danger-border: transparent;
   
-  --warning: #f0b90b;
-  --warning-light: #2d2416;
-  --warning-foreground: #f0b90b;
-  --warning-border: #5c4b1b;
+  --warning: #eaecef;
+  --warning-light: #2b3139;
+  --warning-foreground: #eaecef;
+  --warning-border: transparent;
   
-  --info: #3b82f6;
-  --info-light: #1a2332;
-  --info-foreground: #60a5fa;
-  --info-border: #1e3a8a;
+  --info: #eaecef;
+  --info-light: #2b3139;
+  --info-foreground: #eaecef;
+  --info-border: transparent;
   
   /* Trading specific colors */
-  --buy-color: #02c076;
-  --sell-color: #f84960;
-  --neutral-color: #848e9c;
+  --buy-color: #0ecb81;
+  --sell-color: #f6465d;
+  --neutral-color: #5e6673;
   
-  /* Purple accent for special elements */
-  --purple: #8b5cf6;
-  --purple-light: #1e1b3a;
-  --purple-border: #3730a3;
+  /* Purple accent removed - use neutral */
+  --purple: #5e6673;
+  --purple-light: #2b3139;
+  --purple-border: transparent;
   
-  /* Text colors */
-  --text-primary: #f0f0f0;
-  --text-secondary: #b7bdc6;
-  --text-muted: #848e9c;
+  /* Text colors - Binance hierarchy */
+  --text-primary: #eaecef;
+  --text-secondary: #848e9c;
+  --text-muted: #5e6673;
   
-  /* Focus ring */
-  --ring: #f0b90b;
+  /* Focus ring - subtle */
+  --ring: #2b3139;
 
   /* Dark mode overrides for additional colors */
-  --gray-50: #2b3139;
-  --gray-100: #343a46;
-  --gray-200: #343a46;
-  --gray-300: #404854;
-  --gray-400: #4d5562;
+  --gray-50: #0b0e11;
+  --gray-100: #181a20;
+  --gray-200: #2b3139;
+  --gray-300: #474d57;
+  --gray-400: #5e6673;
   --gray-500: #848e9c;
   --gray-600: #b7bdc6;
-  --gray-700: #d1d5db;
-  --gray-800: #e5e7eb;
-  --gray-900: #f0f0f0;
-  --green-50: #0d2818;
-  --green-100: #1a4c32;
-  --green-200: #1a4c32;
-  --green-400: #02c076;
-  --green-500: #02c076;
-  --green-600: #02c076;
-  --green-700: #02c076;
-  --green-900: #02c076;
-  --red-50: #2d1518;
-  --red-100: #5c1f28;
-  --red-200: #5c1f28;
-  --red-400: #f84960;
-  --red-500: #f84960;
-  --red-600: #f84960;
-  --red-700: #f84960;
-  --red-900: #f84960;
-  --blue-50: #2b313b;
-  --blue-100: #242830;
-  --blue-200: #2d2416;
-  --blue-300: #60a5fa;
-  --blue-400: #60a5fa;
-  --blue-500: #3b82f6;
-  --blue-600: #0080b7;
-  --blue-700: #2f69a3;
-  --blue-900: #245280;
-  --indigo-50: #1a2332;
-  --indigo-100: #2d2416;
-  --indigo-200: #2d2416;
-  --indigo-600: #f0b90b;
-  --indigo-700: #f0b90b;
-  --indigo-900: #f0b90b;
-  --purple-50: #1e1b3a;
-  --purple-100: #1e1b3a;
-  --purple-200: #3730a3;
-  --purple-600: #8b5cf6;
-  --purple-700: #8b5cf6;
-  --purple-900: #8b5cf6;
-  --emerald-50: #0d2818;
-  --rose-50: #2d1518;
-  --orange-600: #f0b90b;
+  --gray-700: #b7bdc6;
+  --gray-800: #eaecef;
+  --gray-900: #eaecef;
+  --green-50: rgba(14, 203, 129, 0.05);
+  --green-100: rgba(14, 203, 129, 0.1);
+  --green-200: rgba(14, 203, 129, 0.15);
+  --green-400: #0ecb81;
+  --green-500: #0ecb81;
+  --green-600: #0ecb81;
+  --green-700: #0ecb81;
+  --green-900: #0ecb81;
+  --red-50: rgba(246, 70, 93, 0.05);
+  --red-100: rgba(246, 70, 93, 0.1);
+  --red-200: rgba(246, 70, 93, 0.15);
+  --red-400: #f6465d;
+  --red-500: #f6465d;
+  --red-600: #f6465d;
+  --red-700: #f6465d;
+  --red-900: #f6465d;
+  --blue-50: #0b0e11;
+  --blue-100: #181a20;
+  --blue-200: #2b3139;
+  --blue-300: #eaecef;
+  --blue-400: #eaecef;
+  --blue-500: #eaecef;
+  --blue-600: #eaecef;
+  --blue-700: #eaecef;
+  --blue-900: #eaecef;
+  --indigo-50: #0b0e11;
+  --indigo-100: #181a20;
+  --indigo-200: #2b3139;
+  --indigo-600: #eaecef;
+  --indigo-700: #eaecef;
+  --indigo-900: #eaecef;
+  --purple-50: #0b0e11;
+  --purple-100: #181a20;
+  --purple-200: #2b3139;
+  --purple-600: #5e6673;
+  --purple-700: #5e6673;
+  --purple-900: #5e6673;
+  --emerald-50: rgba(14, 203, 129, 0.05);
+  --rose-50: rgba(246, 70, 93, 0.05);
+  --orange-600: #eaecef;
 }
 
 /* Universal smooth transitions */

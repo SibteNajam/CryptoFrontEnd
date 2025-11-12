@@ -458,7 +458,7 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                                         }
                                         className="w-full px-3 py-2.5  rounded-md
                            focus:outline-none focus:ring-2
-                           focus:border-transparent transition-all"
+                            transition-all"
                                     />
                                     <button className="absolute right-2 top-1/2 -translate-y-1/2 
                          text-xs text-blue-600 hover:text-blue-700 font-medium">
@@ -480,9 +480,9 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                                     onChange={(e) =>
                                         setOrderForm((prev) => ({ ...prev, quantity: e.target.value }))
                                     }
-                                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg 
-                     focus:outline-none focus:ring-2 focus:ring-blue-500 
-                     focus:border-transparent transition-all"
+                                    className="w-full px-3 py-2.5 bg-muted rounded-lg 
+                     focus:outline-none focus:ring-2 focus:ring-0 
+                      transition-all"
                                 />
                             </div>
                         </div>
@@ -507,7 +507,7 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                                     type="checkbox"
                                     checked={enableTPSL}
                                     onChange={(e) => setEnableTPSL(e.target.checked)}
-                                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                    className="w-4 h-4 text-blue-600 rounded focus:ring-0"
                                 />
                                 <span className="text-sm font-medium text-gray-700">Enable TP/SL</span>
                                 <Info className="w-3.5 h-3.5 text-gray-400" />
@@ -547,7 +547,7 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                             <select
                                 value={orderForm.timeInForce}
                                 onChange={(e) => setOrderForm(prev => ({ ...prev, timeInForce: e.target.value as 'GTC' | 'IOC' | 'FOK' }))}
-                                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                className="w-full px-3 py-2.5 bg-muted rounded-lg focus:outline-none focus:ring-2 focus:ring-0 "
                             >
                                 <option value="GTC">GTC (Good Till Cancel)</option>
                                 <option value="IOC">IOC (Immediate or Cancel)</option>
@@ -574,7 +574,7 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                                 placeholder="0.00"
                                 value={marketForm.quantity}
                                 onChange={(e) => setMarketForm(prev => ({ ...prev, quantity: e.target.value }))}
-                                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                className="w-full px-3 py-2.5 bg-muted rounded-lg focus:outline-none focus:ring-2 focus:ring-0 "
                             />
                             <div className="flex gap-1 mt-2">
                                 {['25%', '50%', '75%', '100%'].map(pct => (

@@ -1,0 +1,208 @@
+import { Controller, Get, Post, Delete, Body, Query, Req } from '@nestjs/common';
+import express from 'express';
+import { MexcOrderService } from './mexc-order.service';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBody, ApiConsumes } from '@nestjs/swagger';
+import { CreateOrderDto } from './dto/create-order.dto';
+
+@ApiTags('Mexc Order')
+@Controller('mexc-order')
+export class MexcOrderController {
+	constructor(private readonly mexcOrderService: MexcOrderService) {}
+
+	/**
+	 * GET /mexc-order/kyc/status
+	 * Query KYC status
+	 */
+	@Get('kyc/status')
+	@ApiOperation({ summary: 'Query KYC status' })
+	@ApiResponse({ status: 200, description: 'KYC status', schema: { example: { status: '1' } } })
+	async getKycStatus() {
+		return this.mexcOrderService.getKycStatus();
+	}
+
+	/**
+	 * GET /mexc-order/uid
+	 * Query UID
+	 */
+	@Get('uid')
+	@ApiOperation({ summary: 'Query account UID' })
+	@ApiResponse({ status: 200, description: 'Account UID', schema: { example: { uid: '209302839' } } })
+	async getUid() {
+		return this.mexcOrderService.getUid();
+	}
+
+	/**
+	 * GET /mexc-order/self-symbols
+	 * User API default symbol
+	 */
+	@Get('self-symbols')
+	@ApiOperation({ summary: 'Get user API default symbols' })
+	@ApiResponse({ status: 200, description: 'Default symbols list', schema: { example: { code: 200, data: ['GENE1USDT','SNTUSDT'], msg: null } } })
+	async getSelfSymbols() {
+		return this.mexcOrderService.getSelfSymbols();
+	}
+
+	/**
+	 * POST /mexc-order/test
+	 * Test New Order - validates without executing
+	 */
+	@Post('test')
+	@ApiOperation({ summary: 'Test a new order (validation only)' })
+	@ApiBody({ type: CreateOrderDto })
+	@ApiResponse({ status: 200, description: 'Validation result (empty object on success)', schema: { example: {} } })
+	async testOrder(@Body() dto: CreateOrderDto) {
+		return this.mexcOrderService.testOrder(dto);
+	}
+
+	/**
+	 * POST /mexc-order/order
+	 * Create New Order
+	 */
+	@Post('order')
+@ApiOperation({ summary: 'Create a new order' })
+@ApiBody({ type: CreateOrderDto })
+async createOrder(@Body() dto: CreateOrderDto) {
+  return this.mexcOrderService.createOrder(dto); // dto is object
+}
+	/**
+	 * POST /mexc-order/batch
+	 * Create Batch Orders (max 20 orders)
+	 */
+	@Post('batch')
+	@ApiOperation({ summary: 'Create batch orders (max 20)' })
+	@ApiBody({ schema: { example: { orders: [{ symbol: 'BTCUSDT', side: 'BUY', type: 'LIMIT', quantity: '0.0002', price: '40000' }] } } })
+	@ApiResponse({ status: 200, description: 'Batch result', schema: { example: [] } })
+	async batchOrders(
+		@Body() body: {
+			orders: Array<{
+				symbol: string;
+				side: 'BUY' | 'SELL';
+				type: 'LIMIT' | 'MARKET';
+				quantity?: string;
+				quoteOrderQty?: string;
+				price?: string;
+				newClientOrderId?: string;
+				stpMode?: '' | 'cancel_maker' | 'cancel_taker' | 'cancel_both';
+			}>;
+		}
+	) {
+		return this.mexcOrderService.batchOrders(body.orders);
+	}
+
+	/**
+	 * DELETE /mexc-order/order
+	 * Cancel an active order
+	 */
+	@Delete('order')
+	async cancelOrder(
+		@Query('symbol') symbol: string,
+		@Query('orderId') orderId?: string,
+		@Query('origClientOrderId') origClientOrderId?: string,
+		@Query('newClientOrderId') newClientOrderId?: string,
+		@Query('recvWindow') recvWindow?: number
+	) {
+		return this.mexcOrderService.cancelOrder({
+			symbol,
+			orderId,
+			origClientOrderId,
+			newClientOrderId,
+			recvWindow
+		});
+	}
+
+	/**
+	 * DELETE /mexc-order/open-orders
+	 * Cancel all open orders for symbol(s)
+	 */
+	@Delete('open-orders')
+	async cancelAllOpenOrders(
+		@Query('symbol') symbol: string,
+		@Query('recvWindow') recvWindow?: number
+	) {
+		return this.mexcOrderService.cancelAllOpenOrders({ symbol, recvWindow });
+	}
+
+	/**
+	 * GET /mexc-order/order
+	 * Query an order's status
+	 */
+	@Get('order')
+	async getOrder(
+		@Query('symbol') symbol: string,
+		@Query('orderId') orderId?: string,
+		@Query('origClientOrderId') origClientOrderId?: string,
+		@Query('recvWindow') recvWindow?: number
+	) {
+		return this.mexcOrderService.getOrder({
+			symbol,
+			orderId,
+			origClientOrderId,
+			recvWindow
+		});
+	}
+
+	/**
+	 * GET /mexc-order/open-orders
+	 * Get all open orders (optionally filtered by symbol)
+	 */
+	@Get('open-orders')
+	async getOpenOrders(
+		@Query('symbol') symbol?: string,
+		@Query('recvWindow') recvWindow?: number
+	) {
+		return this.mexcOrderService.getOpenOrders({ symbol, recvWindow });
+	}
+
+	/**
+	 * GET /mexc-order/all-orders
+	 * Get all orders (active, cancelled, completed) - max 7 days
+	 */
+	@Get('all-orders')
+	async getAllOrders(
+		@Query('symbol') symbol: string,
+		@Query('startTime') startTime?: number,
+		@Query('endTime') endTime?: number,
+		@Query('limit') limit?: number,
+		@Query('recvWindow') recvWindow?: number
+	) {
+		return this.mexcOrderService.getAllOrders({
+			symbol,
+			startTime,
+			endTime,
+			limit,
+			recvWindow
+		});
+	}
+
+	/**
+	 * GET /mexc-order/account
+	 * Get account information and balances
+	 */
+	@Get('account')
+	async getAccountInfo(@Query('recvWindow') recvWindow?: number) {
+		return this.mexcOrderService.getAccountInfo({ recvWindow });
+	}
+
+	/**
+	 * GET /mexc-order/trades
+	 * Get account trade history for a symbol
+	 */
+	@Get('trades')
+	async getMyTrades(
+		@Query('symbol') symbol: string,
+		@Query('orderId') orderId?: string,
+		@Query('startTime') startTime?: number,
+		@Query('endTime') endTime?: number,
+		@Query('limit') limit?: number,
+		@Query('recvWindow') recvWindow?: number
+	) {
+		return this.mexcOrderService.getMyTrades({
+			symbol,
+			orderId,
+			startTime,
+			endTime,
+			limit,
+			recvWindow
+		});
+	}
+}

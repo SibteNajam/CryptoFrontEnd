@@ -1,0 +1,505 @@
+import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
+import axios from 'axios';
+import * as crypto from 'crypto';
+import { CreateOrderDto } from './dto/create-order.dto';
+
+@Injectable()
+export class MexcOrderService {
+	private readonly logger = new Logger(MexcOrderService.name);
+	private readonly baseUrl = 'https://api.mexc.com';
+	private readonly apiKey = process.env.MEXC_API_KEY || '';
+	private readonly apiSecret = process.env.MEXC_SECRET_KEY || '';
+
+	/**
+	 * Creates HMAC SHA256 signature
+	 * Per MEXC documentation:
+	 * - Use secretKey as the HMAC key
+	 * - Use totalParams (query string concatenated with request body) as the value
+	 * - Signature MUST be lowercase only
+	 * @param queryString - the parameter string to sign (already URL encoded)
+	 * @returns lowercase hex signature
+	 */
+	private createSignature(queryString: string): string {
+		return crypto
+			.createHmac('sha256', this.apiSecret)
+			.update(queryString)
+			.digest('hex')
+			.toLowerCase(); // CRITICAL: Must be lowercase per MEXC docs
+	}
+
+	/**
+	 * Builds query string from parameters
+	 * Per MEXC documentation: special symbols (like comma) need to be URL encoded
+	 * and encoding must be uppercase for signing
+	 */
+	private buildQueryString(params: Record<string, any>): string {
+		return Object.keys(params)
+			.filter(key => params[key] !== undefined && params[key] !== null)
+			.map(key => {
+				const value = params[key];
+				// Convert value to string and encode it
+				// encodeURIComponent uses uppercase hex for encoding
+				const encodedValue = encodeURIComponent(String(value));
+				return `${key}=${encodedValue}`;
+			})
+			.join('&');
+	}
+
+	private ensureApiCredentials() {
+		if (!this.apiKey || !this.apiSecret) {
+			throw new HttpException(
+				'MEXC API credentials not configured (MEXC_API_KEY / MEXC_SECRET_KEY)',
+				HttpStatus.INTERNAL_SERVER_ERROR
+			);
+		}
+	}
+
+	/**
+	 * Makes a signed GET request
+	 * Per MEXC documentation:
+	 * - timestamp is required (milliseconds)
+	 * - recvWindow defaults to 5000ms, max 60000ms
+	 * - signature is appended to query string
+	 */
+	private async signedGet(path: string, params: Record<string, any> = {}) {
+		this.ensureApiCredentials();
+
+		const allParams: Record<string, any> = {
+			...params,
+			timestamp: params.timestamp || Date.now(),
+			recvWindow: params.recvWindow || 5000
+		};
+
+		// Build query string for signature (without signature parameter)
+		const queryString = this.buildQueryString(allParams);
+		const signature = this.createSignature(queryString);
+
+		// Build final URL with signature appended
+		// Note: signature is already lowercase hex, no need to encode
+		const url = `${this.baseUrl}${path}?${queryString}&signature=${signature}`;
+		this.logger.debug(`GET ${url}`);
+
+		try {
+			const { data } = await axios.get(url, {
+				headers: {
+					'X-MEXC-APIKEY': this.apiKey,
+					'Accept': 'application/json'
+				}
+			});
+			return data;
+		} catch (error: any) {
+			this.logger.error('GET request failed', error?.response?.data || error?.message);
+			throw new HttpException(
+				error?.response?.data || 'Request failed',
+				error?.response?.status || HttpStatus.INTERNAL_SERVER_ERROR
+			);
+		}
+	}
+
+	/**
+	 * Makes a signed POST request
+	 * Per MEXC documentation:
+	 * - Can send params as request body, query string, or mixed
+	 * - For mixed: no '&' between queryString and bodyString when signing
+	 * - Signature must be lowercase only
+	 * - timestamp and recvWindow are required
+	 */
+private async signedPost(
+  path: string,
+  params: Record<string, any> = {},
+  sendAsBody: boolean = true
+) {
+  this.ensureApiCredentials();
+
+  const allParams: Record<string, any> = {
+    ...params,
+    timestamp: params.timestamp || Date.now(),
+    recvWindow: params.recvWindow || 5000,
+  };
+
+  // Build totalParams for signature: query + body concatenated without &
+  let totalParams = '';
+  let queryString = '';
+  let bodyString = '';
+
+  if (sendAsBody) {
+    bodyString = this.buildQueryString(allParams);
+    totalParams = bodyString;
+  } else {
+    queryString = this.buildQueryString(allParams);
+    totalParams = queryString;
+  }
+
+  const signature = this.createSignature(totalParams);
+
+  let url = `${this.baseUrl}${path}`;
+  let requestBody: any = null;
+  const headers: Record<string, string> = {
+    'X-MEXC-APIKEY': this.apiKey,
+  };
+
+  if (sendAsBody) {
+    requestBody = `${bodyString}&signature=${signature}`;
+    headers['Content-Type'] = 'application/x-www-form-urlencoded';
+  } else {
+    url += `?${queryString}&signature=${signature}`;
+  }
+
+  this.logger.debug(`POST ${url}`);
+  this.logger.debug(`Body: ${requestBody}`);
+
+  try {
+    const { data } = await axios.post(url, requestBody, { headers });
+    return data;
+  } catch (error: any) {
+    this.logger.error('MEXC API Error', error.response?.data);
+    throw new HttpException(
+      error.response?.data || 'Failed to create order',
+      error.response?.status || HttpStatus.INTERNAL_SERVER_ERROR
+    );
+  }
+}
+
+	/**
+	 * Makes a signed DELETE request
+	 * Per MEXC documentation:
+	 * - DELETE endpoints use query string parameters
+	 * - timestamp and recvWindow are required
+	 * - signature is appended to query string
+	 */
+	private async signedDelete(path: string, params: Record<string, any> = {}) {
+		this.ensureApiCredentials();
+
+		const allParams: Record<string, any> = {
+			...params,
+			timestamp: params.timestamp || Date.now(),
+			recvWindow: params.recvWindow || 5000
+		};
+
+		// Build query string for signature (without signature parameter)
+		const queryString = this.buildQueryString(allParams);
+		const signature = this.createSignature(queryString);
+
+		// Build final URL with signature appended
+		// Note: signature is already lowercase hex, no need to encode
+		const url = `${this.baseUrl}${path}?${queryString}&signature=${signature}`;
+		this.logger.debug(`DELETE ${url}`);
+
+		try {
+			const { data } = await axios.delete(url, {
+				headers: {
+					'X-MEXC-APIKEY': this.apiKey,
+					'Accept': 'application/json'
+				}
+			});
+			return data;
+		} catch (error: any) {
+			this.logger.error('DELETE request failed', error?.response?.data || error?.message);
+			throw new HttpException(
+				error?.response?.data || 'Request failed',
+				error?.response?.status || HttpStatus.INTERNAL_SERVER_ERROR
+			);
+		}
+	}
+
+	/**
+	 * GET /api/v3/kyc/status
+	 * Query KYC status
+	 * Permission: SPOT_ACCOUNT_READ
+	 * Weight(IP): 1
+	 */
+	async getKycStatus() {
+		try {
+			return await this.signedGet('/api/v3/kyc/status');
+		} catch (error: any) {
+			this.logger.error('Error fetching KYC status', error?.response?.data || error?.stack);
+			throw new HttpException(
+				error?.response?.data || 'Failed to fetch KYC status',
+				error?.response?.status || HttpStatus.INTERNAL_SERVER_ERROR
+			);
+		}
+	}
+
+	/**
+	 * GET /api/v3/uid
+	 * Query UID
+	 * Permission: SPOT_ACCOUNT_READ
+	 * Weight(IP): 1
+	 */
+	async getUid() {
+		try {
+			return await this.signedGet('/api/v3/uid');
+		} catch (error: any) {
+			this.logger.error('Error fetching UID', error?.response?.data || error?.stack);
+			throw new HttpException(
+				error?.response?.data || 'Failed to fetch UID',
+				error?.response?.status || HttpStatus.INTERNAL_SERVER_ERROR
+			);
+		}
+	}
+
+	/**
+	 * GET /api/v3/selfSymbols
+	 * User API default symbol
+	 * Permission: SPOT_ACCOUNT_R
+	 * Weight(IP): 1
+	 */
+	async getSelfSymbols() {
+		try {
+			return await this.signedGet('/api/v3/selfSymbols');
+		} catch (error: any) {
+			this.logger.error('Error fetching self symbols', error?.response?.data || error?.stack);
+			throw new HttpException(
+				error?.response?.data || 'Failed to fetch self symbols',
+				error?.response?.status || HttpStatus.INTERNAL_SERVER_ERROR
+			);
+		}
+	}
+
+	/**
+	 * POST /api/v3/order/test
+	 * Test New Order - validates order without sending to matching engine
+	 * Permission: SPOT_DEAL_WRITE
+	 * Weight(IP): 1
+	 */
+	async testOrder(params: {
+		symbol: string;
+		side: 'BUY' | 'SELL';
+		type: 'LIMIT' | 'MARKET';
+		quantity?: string;
+		quoteOrderQty?: string;
+		price?: string;
+		newClientOrderId?: string;
+		stpMode?: '' | 'cancel_maker' | 'cancel_taker' | 'cancel_both';
+		recvWindow?: number;
+	}) {
+		try {
+			// Send params as request body (MEXC uses -d flag in curl examples)
+			return await this.signedPost('/api/v3/order/test', params, true);
+		} catch (error: any) {
+			this.logger.error('Error testing order', error?.response?.data || error?.stack);
+			throw new HttpException(
+				error?.response?.data || 'Failed to test order',
+				error?.response?.status || HttpStatus.INTERNAL_SERVER_ERROR
+			);
+		}
+	}
+
+	/**
+	 * POST /api/v3/order
+	 * Create New Order
+	 * Permission: SPOT_DEAL_WRITE
+	 * Weight(IP): 1, Weight(UID): 1
+	 * 
+	 * Per MEXC docs: curl -H "X-MEXC-APIKEY: xxx" -X POST 'https://api.mexc.com/api/v3/order' -d 'symbol=BTCUSDT&side=BUY&type=LIMIT&quantity=1&price=11&recvWindow=5000&timestamp=xxx&signature=xxx'
+	 */
+	async createOrder(params: CreateOrderDto) {
+  try {
+    return await this.signedPost('/api/v3/order', params, true);
+  } catch (error: any) {
+    this.logger.error('Error creating order', error?.response?.data);
+    throw new HttpException(
+      error.response?.data || 'Failed to create order',
+      error.response?.status || HttpStatus.INTERNAL_SERVER_ERROR
+    );
+  }
+}
+
+	/**
+	 * POST /api/v3/batchOrders
+	 * Batch Orders - supports 20 orders with same symbol
+	 * Permission: SPOT_DEAL_WRITE
+	 * Weight(IP): 1, Weight(UID): 1
+	 * Rate limit: 2 times/s
+	 * Note: Special characters (like commas) in parameter values need to be URL encoded when signing
+	 */
+	async batchOrders(orders: Array<{
+		symbol: string;
+		side: 'BUY' | 'SELL';
+		type: 'LIMIT' | 'MARKET';
+		quantity?: string;
+		quoteOrderQty?: string;
+		price?: string;
+		newClientOrderId?: string;
+		stpMode?: '' | 'cancel_maker' | 'cancel_taker' | 'cancel_both';
+	}>) {
+		try {
+			// Send as request body param 'batchOrders' with JSON string
+			// URL encoding will be handled by buildQueryString
+			const params = {
+				batchOrders: JSON.stringify(orders)
+			};
+			return await this.signedPost('/api/v3/batchOrders', params, true);
+		} catch (error: any) {
+			this.logger.error('Error creating batch orders', error?.response?.data || error?.stack);
+			throw new HttpException(
+				error?.response?.data || 'Failed to create batch orders',
+				error?.response?.status || HttpStatus.INTERNAL_SERVER_ERROR
+			);
+		}
+	}
+
+	/**
+	 * DELETE /api/v3/order
+	 * Cancel an active order
+	 * Permission: SPOT_DEAL_WRITE
+	 * Weight(IP): 1
+	 * Either orderId or origClientOrderId must be sent
+	 */
+	async cancelOrder(params: {
+		symbol: string;
+		orderId?: string;
+		origClientOrderId?: string;
+		newClientOrderId?: string;
+		recvWindow?: number;
+	}) {
+		try {
+			return await this.signedDelete('/api/v3/order', params);
+		} catch (error: any) {
+			this.logger.error('Error canceling order', error?.response?.data || error?.stack);
+			throw new HttpException(
+				error?.response?.data || 'Failed to cancel order',
+				error?.response?.status || HttpStatus.INTERNAL_SERVER_ERROR
+			);
+		}
+	}
+
+	/**
+	 * DELETE /api/v3/openOrders
+	 * Cancel all pending orders for a single symbol (or multiple symbols separated by comma)
+	 * Permission: SPOT_DEAL_WRITE
+	 * Weight(IP): 1
+	 * Maximum 5 symbols, separated by ","
+	 */
+	async cancelAllOpenOrders(params: {
+		symbol: string; // e.g. "BTCUSDT,MXUSDT,ADAUSDT"
+		recvWindow?: number;
+	}) {
+		try {
+			return await this.signedDelete('/api/v3/openOrders', params);
+		} catch (error: any) {
+			this.logger.error('Error canceling all open orders', error?.response?.data || error?.stack);
+			throw new HttpException(
+				error?.response?.data || 'Failed to cancel all open orders',
+				error?.response?.status || HttpStatus.INTERNAL_SERVER_ERROR
+			);
+		}
+	}
+
+	/**
+	 * GET /api/v3/order
+	 * Query an order's status
+	 * Permission: SPOT_DEAL_READ
+	 * Weight(IP): 2
+	 * Either orderId or origClientOrderId must be sent
+	 */
+	async getOrder(params: {
+		symbol: string;
+		orderId?: string;
+		origClientOrderId?: string;
+		recvWindow?: number;
+	}) {
+		try {
+			return await this.signedGet('/api/v3/order', params);
+		} catch (error: any) {
+			this.logger.error('Error querying order', error?.response?.data || error?.stack);
+			throw new HttpException(
+				error?.response?.data || 'Failed to query order',
+				error?.response?.status || HttpStatus.INTERNAL_SERVER_ERROR
+			);
+		}
+	}
+
+	/**
+	 * GET /api/v3/openOrders
+	 * Get all open orders on a symbol (or all symbols if not specified)
+	 * Permission: SPOT_DEAL_READ
+	 * Weight(IP): 3
+	 */
+	async getOpenOrders(params: {
+		symbol?: string;
+		recvWindow?: number;
+	} = {}) {
+		try {
+			return await this.signedGet('/api/v3/openOrders', params);
+		} catch (error: any) {
+			this.logger.error('Error querying open orders', error?.response?.data || error?.stack);
+			throw new HttpException(
+				error?.response?.data || 'Failed to query open orders',
+				error?.response?.status || HttpStatus.INTERNAL_SERVER_ERROR
+			);
+		}
+	}
+
+	/**
+	 * GET /api/v3/allOrders
+	 * Get all account orders (active, cancelled, completed)
+	 * Query period: latest 24 hours by default, max 7 days
+	 * Permission: SPOT_DEAL_READ
+	 * Weight(IP): 10
+	 */
+	async getAllOrders(params: {
+		symbol: string;
+		startTime?: number;
+		endTime?: number;
+		limit?: number; // Default 500; max 1000
+		recvWindow?: number;
+	}) {
+		try {
+			return await this.signedGet('/api/v3/allOrders', params);
+		} catch (error: any) {
+			this.logger.error('Error querying all orders', error?.response?.data || error?.stack);
+			throw new HttpException(
+				error?.response?.data || 'Failed to query all orders',
+				error?.response?.status || HttpStatus.INTERNAL_SERVER_ERROR
+			);
+		}
+	}
+
+	/**
+	 * GET /api/v3/account
+	 * Get current account information
+	 * Permission: SPOT_ACCOUNT_READ
+	 * Weight(IP): 10
+	 * Rate limit: 2 times/s
+	 */
+	async getAccountInfo(params: {
+		recvWindow?: number;
+	} = {}) {
+		try {
+			return await this.signedGet('/api/v3/account', params);
+		} catch (error: any) {
+			this.logger.error('Error fetching account info', error?.response?.data || error?.stack);
+			throw new HttpException(
+				error?.response?.data || 'Failed to fetch account info',
+				error?.response?.status || HttpStatus.INTERNAL_SERVER_ERROR
+			);
+		}
+	}
+
+	/**
+	 * GET /api/v3/myTrades
+	 * Get trades for a specific account and symbol
+	 * Only past 1 month can be queried
+	 * Permission: SPOT_ACCOUNT_READ
+	 * Weight(IP): 10
+	 */
+	async getMyTrades(params: {
+		symbol: string;
+		orderId?: string;
+		startTime?: number;
+		endTime?: number;
+		limit?: number; // Default 100; max 100
+		recvWindow?: number;
+	}) {
+		try {
+			return await this.signedGet('/api/v3/myTrades', params);
+		} catch (error: any) {
+			this.logger.error('Error fetching trades', error?.response?.data || error?.stack);
+			throw new HttpException(
+				error?.response?.data || 'Failed to fetch trades',
+				error?.response?.status || HttpStatus.INTERNAL_SERVER_ERROR
+			);
+		}
+	}
+}

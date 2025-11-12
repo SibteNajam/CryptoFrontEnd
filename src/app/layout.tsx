@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
-import "./bloomberg-dark.css";
+// import "./bloomberg-dark.css";
 import ClientProvider from "@/components/providers/clientProvider";
 import { ThemeProvider } from "@/infrastructure/theme/ThemeContext";
+import AuthGuard from "@/components/providers/AuthGuard";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,10 +36,13 @@ export default function RootLayout({
     <html lang="en">
       <body
         className={`${jakarta.variable} ${geistSans.variable} ${geistMono.variable} antialiased`}
+        suppressHydrationWarning
       >
         <ThemeProvider>
           <ClientProvider>
-            {children}
+            <AuthGuard>
+              {children}
+            </AuthGuard>
           </ClientProvider>
         </ThemeProvider>
       </body>
