@@ -3,14 +3,26 @@
 import React from 'react';
 import { Clock } from 'lucide-react';
 import { Order } from '../../infrastructure/api/PortfolioApi';
+import { BitgetOrder } from '../../infrastructure/api/PortfolioApi';
+
+// Union type for orders from different exchanges
+type AnyOrder = Order | BitgetOrder;
+
+// Type guard to check if order is Bitget order
+function isBitgetOrder(order: AnyOrder): order is BitgetOrder {
+  return 'userId' in order && 'cTime' in order;
+}
 
 interface OpenOrdersTabProps {
-  openOrders: Order[];
+  openOrders: AnyOrder[];
 }
 
 export default function OpenOrdersTab({ openOrders }: OpenOrdersTabProps) {
   const formatCurrency = (value: string | number, decimals = 2) => {
     const num = typeof value === 'string' ? parseFloat(value) : value;
+    if (isNaN(num)) {
+      return '0.00';
+    }
     return num.toLocaleString('en-US', {
       minimumFractionDigits: decimals,
       maximumFractionDigits: decimals,
@@ -60,39 +72,53 @@ export default function OpenOrdersTab({ openOrders }: OpenOrdersTabProps) {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {openOrders.map((order) => (
-                <tr key={order.orderId} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
-                    {order.symbol}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                      order.side === 'BUY' 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {order.side}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {order.type}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
-                    {formatCurrency(order.origQty, 8)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
-                    ${formatCurrency(order.price, 2)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
-                      {order.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(order.time).toLocaleString()}
-                  </td>
-                </tr>
-              ))}
+              {openOrders.map((order) => {
+                const isBitget = isBitgetOrder(order);
+                
+                // Extract common fields based on exchange type
+                const symbol = order.symbol;
+                const side = isBitget ? order.side.toUpperCase() : order.side;
+                const type = isBitget ? order.orderType : order.type;
+                const amount = isBitget ? order.size : order.origQty;
+                const price = isBitget ? order.priceAvg : order.price;
+                const status = isBitget ? order.status : order.status;
+                const time = isBitget ? parseInt(order.cTime) : order.time;
+                const orderId = isBitget ? order.orderId : order.orderId.toString();
+                
+                return (
+                  <tr key={orderId} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
+                      {symbol}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                        side === 'BUY' || side === 'buy'
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {side}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {type}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
+                      {formatCurrency(amount, 8)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
+                      ${formatCurrency(price, 2)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                        {status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(time).toLocaleString()}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

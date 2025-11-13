@@ -11,6 +11,9 @@ interface HistoryTabProps {
 export default function HistoryTab({ orderHistory }: HistoryTabProps) {
   const formatCurrency = (value: string | number, decimals = 2) => {
     const num = typeof value === 'string' ? parseFloat(value) : value;
+    if (isNaN(num)) {
+      return '0.00';
+    }
     return num.toLocaleString('en-US', {
       minimumFractionDigits: decimals,
       maximumFractionDigits: decimals,

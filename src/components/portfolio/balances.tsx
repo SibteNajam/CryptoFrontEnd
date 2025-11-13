@@ -46,23 +46,27 @@ export default function BalancesTab({ userAssets, btcPrice = 117200 }: BalancesT
   };
 
   const getValueInUsd = (asset: NormalizedUserAsset) => {
-    const total = parseFloat(asset.free) + parseFloat(asset.locked) + parseFloat(asset.freeze) + 
+    // If usdValue is already calculated (from Bitget with prices), use it
+    if (asset.usdValue !== undefined && asset.usdValue !== null) {
+      return asset.usdValue;
+    }
+    
+    // Legacy calculation for Binance or when usdValue not available
+    const total = parseFloat(asset.free) + parseFloat(asset.locked) + parseFloat(asset.freeze) +
                   parseFloat(asset.withdrawing) + parseFloat(asset.ipoable);
 
-    // Use btcValuation if available
+    // Use btcValuation if available (Binance provides this)
     if (asset.btcValuation && parseFloat(asset.btcValuation) > 0) {
       return parseFloat(asset.btcValuation) * btcPrice;
     }
 
     // Fallback: assume stablecoins are $1
-    if (['USDT', 'BUSD', 'USDC'].includes(asset.asset)) {
+    if (['USDT', 'BUSD', 'USDC', 'DAI', 'TUSD', 'USDP'].includes(asset.asset)) {
       return total;
     }
 
     return 0;
-  };
-
-  const getTotalAmount = (asset: NormalizedUserAsset) => {
+  };  const getTotalAmount = (asset: NormalizedUserAsset) => {
     return parseFloat(asset.free) + parseFloat(asset.locked) + parseFloat(asset.freeze) + 
            parseFloat(asset.withdrawing) + parseFloat(asset.ipoable);
   };
@@ -323,6 +327,9 @@ export default function BalancesTab({ userAssets, btcPrice = 117200 }: BalancesT
                             <div className="font-medium text-primary">{balance.asset}</div>
                             <div className="text-xs text-muted-foreground">
                               {portfolioPercent.toFixed(1)}% of portfolio
+                              {balance.pricePerUnit !== undefined && balance.pricePerUnit > 0 && (
+                                <span className="ml-2">• ${balance.pricePerUnit.toFixed(balance.pricePerUnit < 1 ? 4 : 2)}</span>
+                              )}
                             </div>
                           </div>
                         </div>

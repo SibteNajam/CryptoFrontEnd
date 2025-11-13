@@ -6,12 +6,13 @@ import { RefreshCw, TrendingUp, Wallet, Clock, History, XCircle, Activity, Dolla
 import { 
   getAccountInfoByExchange,
   getUserAssetsByExchange,
-  getOpenOrders, 
+  getOpenOrdersByExchange, 
   getOrderHistory,
   getAccountSnapshotByExchange,
   NormalizedAccountInfo,
   NormalizedUserAsset,
   Order,
+  BitgetOrder,
   AccountSnapshotResponse
 } from '../../../infrastructure/api/PortfolioApi';
 import OverviewTab from '../../../components/portfolio/overview';
@@ -26,9 +27,9 @@ type TabType = 'overview' | 'balances' | 'orders' | 'history' | 'performance' | 
 
 export default function PortfolioPage() {
   // Get selected exchange and credentials from Redux
-  const { selectedExchange, credentials } = useAppSelector(state => state.exchange);
-  
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    const { selectedExchange, credentials } = useAppSelector((state: any) => state.exchange);
+    
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('🔷 PORTFOLIO PAGE - Redux State');
   console.log('   Selected Exchange:', selectedExchange);
   console.log('   Credentials:', credentials ? {
@@ -128,9 +129,9 @@ export default function PortfolioPage() {
       console.log(`🔐 Passing credentials:`, apiCredentials ? 'YES' : 'NO');
       
       // Load critical data first (account info and open orders)
-      const [accountInfo, openOrders] = await Promise.all([
+      const [accountInfo, openOrdersData] = await Promise.all([
         getAccountInfoByExchange(selectedExchange as 'binance' | 'bitget', apiCredentials),
-        getOpenOrders(),
+        getOpenOrdersByExchange(selectedExchange as 'binance' | 'bitget', undefined, apiCredentials),
       ]);
 
       console.log('✅ API Response received:');
@@ -140,14 +141,14 @@ export default function PortfolioPage() {
         balancesCount: accountInfo.balances.length,
         balances: accountInfo.balances.slice(0, 3) // First 3 balances
       });
-      console.log('   Open Orders:', openOrders.length);
+      console.log('   Open Orders:', openOrdersData.length);
 
       setAccountData(accountInfo);
-      setOpenOrders(openOrders);
+      setOpenOrders(openOrdersData as Order[]);
       
       // Cache the data with exchange-specific keys
       setCachedData(`account_${selectedExchange}`, accountInfo);
-      setCachedData(`orders_${selectedExchange}`, openOrders);
+      setCachedData(`orders_${selectedExchange}`, openOrdersData);
       
       setLastUpdate(new Date());
       
