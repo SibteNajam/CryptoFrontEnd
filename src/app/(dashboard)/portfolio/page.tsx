@@ -18,12 +18,13 @@ import {
 import OverviewTab from '../../../components/portfolio/overview';
 import BalancesTab from '../../../components/portfolio/balances';
 import OpenOrdersTab from '../../../components/portfolio/openOrders';
+import FilledOrdersTab from '../../../components/portfolio/filledOrders';
 import HistoryTab from '../../../components/portfolio/orderHistory';
 import PerformanceTab from '../../../components/portfolio/performance';
 import TransferHistoryTable from '@/components/portfolio/transferHistory';
 import { useAppSelector } from '@/infrastructure/store/hooks';
 
-type TabType = 'overview' | 'balances' | 'orders' | 'history' | 'performance' | 'transfers';
+type TabType = 'overview' | 'balances' | 'orders' | 'filled' | 'history' | 'performance' | 'transfers';
 
 export default function PortfolioPage() {
   // Get selected exchange and credentials from Redux
@@ -238,6 +239,7 @@ export default function PortfolioPage() {
     { id: 'performance', label: 'Performance', icon: Activity },
     { id: 'balances', label: 'Balances', icon: Wallet },
     { id: 'orders', label: 'Open Orders', icon: Clock },
+    { id: 'filled', label: 'Filled Orders', icon: DollarSign },
     { id: 'history', label: 'History', icon: History },
     { id: 'transfers', label: 'Transfers', icon: History },
   ];
@@ -284,6 +286,8 @@ export default function PortfolioPage() {
         return <BalancesTab userAssets={userAssets} btcPrice={117300} />;
       case 'orders':
         return <OpenOrdersTab openOrders={openOrders} />;
+      case 'filled':
+        return <FilledOrdersTab />;
       case 'history':
         return <HistoryTab orderHistory={orderHistory} />;
       case 'transfers':

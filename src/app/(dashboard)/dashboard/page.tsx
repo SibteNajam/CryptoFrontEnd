@@ -9,7 +9,8 @@ import BinanceOrderBook from '../../../components/dashboard/OrderBook';
 import TradingViewChart from '../../../components/charts/TradingViewChart';
 import { BinanceApiService } from '../../../infrastructure/api/BinanceOrder';
 import TradesComponent from '@/components/dashboard/trades';
-import TickerBar from '../../../components/dashboard/tickerBar';
+// import TickerBar from '../../../components/dashboard/tickerBar';
+import ExchangeTickerBar from '../../../components/dashboard/ExchangeTickerBar';
 import { useTheme } from '@/infrastructure/theme/ThemeContext';
 import { useAppSelector, useAppDispatch } from '@/infrastructure/store/hooks';
 
@@ -79,11 +80,9 @@ interface BinanceTickerData {
 const API_BASE_URL = 'http://localhost:3000';
 
 export default function Dashboard() {
-    const { selectedExchange, credentials } = useAppSelector((state) => state.exchange);
-    const currentExchangeConfig = credentials?.exchange === selectedExchange ? credentials : null;
+    const { selectedExchange } = useAppSelector((state) => state.exchange);
 
     console.log('Selected Exchange in Dashboard:', selectedExchange);
-    console.log('Current Exchange Config in Dashboard:', currentExchangeConfig);
     const { theme } = useTheme();
     const [symbols, setSymbols] = useState<SymbolPrice[]>([]);
     const [loading, setLoading] = useState(true);
@@ -332,7 +331,7 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {tickerData && (
+            {/* {tickerData && (
                 <TickerBar
                     selectedSymbol={selectedSymbol}
                     tickerData={tickerData}
@@ -341,7 +340,13 @@ export default function Dashboard() {
                     availableSymbols={symbols}
                     onSymbolChange={handleSymbolClick}
                 />
-            )}
+            )} */}
+
+            {/* New Exchange-Agnostic Ticker Bar */}
+            <ExchangeTickerBar
+                symbol={selectedSymbol}
+                onSymbolClick={handleSymbolClick}
+            />
 
             {/* Main Trading Layout */}
             <div className="bg-muted min-h-screen">

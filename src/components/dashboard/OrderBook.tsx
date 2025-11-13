@@ -349,9 +349,9 @@ export default function BinanceOrderBook({ symbol }: OrderBookProps) {
           {/* Bids (Buy Orders) - Left Side */}
           <div className="bids-container">
             <div className="grid grid-cols-3 text-xs font-medium px-3 py-2 bg-success-light border-b border-success-bg">
-              <div className="text-gray-200">Price</div>
-              <div className="text-right text-gray-200">Amount</div>
-              <div className="text-right text-gray-200">Total</div>
+              <div className="text-gray-700">Price</div>
+              <div className="text-right text-gray-700">Amount</div>
+              <div className="text-right text-gray-700">Total</div>
             </div>
             {processedData.bids.map((bid, index) => (
               <div key={`bid-${index}-${bid.price}`} className="relative grid grid-cols-3 text-xs py-2 px-3 hover-success transition-colors duration-200">
@@ -376,9 +376,9 @@ export default function BinanceOrderBook({ symbol }: OrderBookProps) {
           {/* Asks (Sell Orders) - Right Side */}
           <div className="asks-container">
             <div className="grid grid-cols-3 text-xs font-medium px-3 py-2 bg-danger-light border-b border-danger-bg">
-              <div className="text-gray-200">Price</div>
-              <div className="text-right text-gray-200">Amount</div>
-              <div className="text-right text-gray-200">Total</div>
+              <div className="text-gray-700">Price</div>
+              <div className="text-right text-gray-700">Amount</div>
+              <div className="text-right text-gray-700">Total</div>
             </div>
             {processedData.asks.map((ask, index) => (
               <div key={`ask-${index}-${ask.price}`} className="relative grid grid-cols-3 text-xs py-2 px-3 hover-danger transition-colors duration-200">

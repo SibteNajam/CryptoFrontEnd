@@ -16,11 +16,41 @@ interface ExchangeState {
   isSetupModalOpen: boolean;
 }
 
-const initialState: ExchangeState = {
-  selectedExchange: 'binance',
-  credentialsArray: [],
-  isSetupModalOpen: false,
+// Load initial state from localStorage
+const loadInitialState = (): ExchangeState => {
+  if (typeof window === 'undefined') {
+    return {
+      selectedExchange: 'binance',
+      credentialsArray: [],
+      isSetupModalOpen: false,
+    };
+  }
+
+  try {
+    const savedState = localStorage.getItem('reduxState');
+    if (savedState) {
+      const parsedState = JSON.parse(savedState);
+      if (parsedState.exchange) {
+        console.log('🔄 Restoring exchange state from localStorage');
+        return {
+          selectedExchange: parsedState.exchange.selectedExchange || 'binance',
+          credentialsArray: parsedState.exchange.credentialsArray || [],
+          isSetupModalOpen: false, // Always start with modal closed
+        };
+      }
+    }
+  } catch (error) {
+    console.error('Error loading initial exchange state:', error);
+  }
+
+  return {
+    selectedExchange: 'binance',
+    credentialsArray: [],
+    isSetupModalOpen: false,
+  };
 };
+
+const initialState: ExchangeState = loadInitialState();
 
 const exchangeSlice = createSlice({
   name: 'exchange',

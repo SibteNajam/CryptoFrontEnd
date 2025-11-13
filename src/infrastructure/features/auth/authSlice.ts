@@ -2,13 +2,48 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { AuthState, LoginCredentials, SignupCredentials, User } from '@/types/auth';
 import { login, signup, logout, fetchCurrentUser } from '@/lib/auth';
+import TokenStorage from '@/lib/tokenStorage';
 
-const initialState: AuthState = {
-    user: null,
-    isLoading: false,
-    error: null,
-    isAuthenticated: false,
+// Load initial state from localStorage
+const loadInitialState = (): AuthState => {
+    if (typeof window === 'undefined') {
+        return {
+            user: null,
+            isLoading: false,
+            error: null,
+            isAuthenticated: false,
+        };
+    }
+
+    try {
+        const token = TokenStorage.getAccessToken();
+        const savedState = localStorage.getItem('reduxState');
+        
+        if (token && savedState) {
+            const parsedState = JSON.parse(savedState);
+            if (parsedState.auth?.user) {
+                console.log('🔄 Restoring auth state from localStorage');
+                return {
+                    user: parsedState.auth.user,
+                    isLoading: false,
+                    error: null,
+                    isAuthenticated: true,
+                };
+            }
+        }
+    } catch (error) {
+        console.error('Error loading initial auth state:', error);
+    }
+
+    return {
+        user: null,
+        isLoading: false,
+        error: null,
+        isAuthenticated: false,
+    };
 };
+
+const initialState: AuthState = loadInitialState();
 
 // Async thunks
 export const loginUser = createAsyncThunk(
@@ -16,11 +51,11 @@ export const loginUser = createAsyncThunk(
     async (credentials: LoginCredentials, { rejectWithValue }) => {
         try {
             const response = await login(credentials);
-            console.log(' Login response in slice:', response);
+            console.log('✅ Login response in slice:', response);
 
-            // Swill store token later dont need now
-            if (response.payload && response.payload.token) {
-                console.log(' Received token:', response.payload.token);
+            // Tokens are already stored in TokenStorage by the login function
+            if (response.payload && response.payload.accessToken) {
+                console.log('🔑 Token stored successfully');
             }
 
             return response.user; // Return the user object for state
@@ -52,7 +87,11 @@ export const logoutUser = createAsyncThunk(
     'auth/logout',
     async (_, { rejectWithValue }) => {
         try {
-            logout();
+            await logout(); // This clears tokens from TokenStorage
+            // Clear Redux persisted state
+            if (typeof window !== 'undefined') {
+                localStorage.removeItem('reduxState');
+            }
         } catch (error) {
             return rejectWithValue(error instanceof Error ? error.message : 'Logout failed');
         }
