@@ -3,14 +3,34 @@
 
 import React from 'react';
 import { Download, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
-import { DepositHistoryResponse, Deposit } from '../../infrastructure/api/WalletApi';
+import { 
+  DepositHistoryResponse, 
+  Deposit, 
+  NormalizedDeposit,
+  NormalizedTransactionResponse 
+} from '../../infrastructure/api/WalletApi';
 import { format } from 'date-fns';
 
 interface DepositsTabProps {
-  depositHistory: DepositHistoryResponse | null;
+  depositHistory: DepositHistoryResponse | NormalizedTransactionResponse | null;
+  exchange?: 'binance' | 'bitget';
 }
 
-const getStatusColor = (status: number): { bg: string; text: string; icon: React.ReactNode } => {
+const getStatusColor = (status: number | string): { bg: string; text: string; icon: React.ReactNode } => {
+  // Handle string status (from normalized data)
+  if (typeof status === 'string') {
+    const normalizedStatus = status.toLowerCase();
+    if (normalizedStatus === 'success') {
+      return { bg: 'bg-success-light', text: 'text-success-foreground', icon: <CheckCircle className="h-4 w-4" /> };
+    } else if (normalizedStatus === 'pending') {
+      return { bg: 'bg-warning-light', text: 'text-warning-foreground', icon: <Clock className="h-4 w-4" /> };
+    } else if (normalizedStatus === 'failed') {
+      return { bg: 'bg-danger-light', text: 'text-danger-foreground', icon: <XCircle className="h-4 w-4" /> };
+    }
+    return { bg: 'bg-muted', text: 'text-muted-foreground', icon: <Clock className="h-4 w-4" /> };
+  }
+
+  // Handle numeric status (from Binance)
   switch (status) {
     case 1: // Success
       return { bg: 'bg-success-light', text: 'text-success-foreground', icon: <CheckCircle className="h-4 w-4" /> };
@@ -26,7 +46,11 @@ const getStatusColor = (status: number): { bg: string; text: string; icon: React
   }
 };
 
-const getStatusText = (status: number): string => {
+const getStatusText = (status: number | string): string => {
+  if (typeof status === 'string') {
+    return status.charAt(0).toUpperCase() + status.slice(1);
+  }
+
   switch (status) {
     case 0: return 'Pending';
     case 1: return 'Success';
@@ -38,22 +62,91 @@ const getStatusText = (status: number): string => {
   }
 };
 
-export default function DepositsTab({ depositHistory }: DepositsTabProps) {
+// Check if data is normalized (multi-exchange) or raw Binance
+function isNormalizedResponse(data: any): data is NormalizedTransactionResponse {
+  return 'transactions' in data && Array.isArray(data.transactions);
+}
+
+// Extract deposits from either format
+function getDepositsArray(data: DepositHistoryResponse | NormalizedTransactionResponse | null): Array<Deposit | NormalizedDeposit> {
+  if (!data) return [];
+  if (isNormalizedResponse(data)) {
+    return data.transactions as NormalizedDeposit[];
+  }
+  return (data as DepositHistoryResponse).deposits || [];
+}
+
+// Get total count
+function getTotal(data: DepositHistoryResponse | NormalizedTransactionResponse | null): number {
+  if (!data) return 0;
+  return data.total || 0;
+}
+
+// Get success count for summary
+function getSuccessCount(data: DepositHistoryResponse | NormalizedTransactionResponse | null): number {
+  if (!data) return 0;
+  if (isNormalizedResponse(data)) {
+    return (data.transactions as NormalizedDeposit[]).filter(t => t.status === 'success').length;
+  }
+  return (data as DepositHistoryResponse).summary?.success || 0;
+}
+
+// Get pending count
+function getPendingCount(data: DepositHistoryResponse | NormalizedTransactionResponse | null): number {
+  if (!data) return 0;
+  if (isNormalizedResponse(data)) {
+    return (data.transactions as NormalizedDeposit[]).filter(t => t.status === 'pending').length;
+  }
+  return (data as DepositHistoryResponse).summary?.pending || 0;
+}
+
+// Get failed count
+function getFailedCount(data: DepositHistoryResponse | NormalizedTransactionResponse | null): number {
+  if (!data) return 0;
+  if (isNormalizedResponse(data)) {
+    return (data.transactions as NormalizedDeposit[]).filter(t => t.status === 'failed').length;
+  }
+  const binanceData = data as DepositHistoryResponse;
+  return (binanceData.summary?.rejected || 0) + (binanceData.summary?.wrongDeposit || 0);
+}
+
+// Get total amount
+function getTotalAmount(data: DepositHistoryResponse | NormalizedTransactionResponse | null): string {
+  if (!data) return '0';
+  if (isNormalizedResponse(data)) {
+    const total = (data.transactions as NormalizedDeposit[]).reduce((sum, t) => sum + parseFloat(t.amount), 0);
+    return total.toFixed(2);
+  }
+  return (data as DepositHistoryResponse).summary?.totalAmount || '0';
+}
+
+export default function DepositsTab({ depositHistory, exchange = 'binance' }: DepositsTabProps) {
   // Debug log - remove in production
-  console.log('🔄 DepositsTab received data:', depositHistory);
+  console.log('🔄 DepositsTab received data:', {
+    exchange,
+    depositHistory,
+    isNormalized: depositHistory ? isNormalizedResponse(depositHistory) : false
+  });
   
+  const deposits = getDepositsArray(depositHistory);
+  const total = getTotal(depositHistory);
+  const successCount = getSuccessCount(depositHistory);
+  const pendingCount = getPendingCount(depositHistory);
+  const failedCount = getFailedCount(depositHistory);
+  const totalAmount = getTotalAmount(depositHistory);
+
   if (!depositHistory) {
     console.log('❌ DepositsTab: No deposit history data'); // Debug log
     return (
       <div className="bg-card border border-default rounded-lg p-8 text-center">
         <Clock className="h-12 w-12 text-muted mx-auto mb-4" />
         <h3 className="text-lg font-medium text-card-foreground mb-2">Loading Deposits...</h3>
-        <p className="text-muted">Fetching your deposit history.</p>
+        <p className="text-muted">Fetching your deposit history from {exchange.toUpperCase()}.</p>
       </div>
     );
   }
 
-  console.log('✅ DepositsTab: Rendering with', depositHistory.deposits.length, 'deposits'); // Debug log
+  console.log('✅ DepositsTab: Rendering with', deposits.length, 'deposits'); // Debug log
 
   return (
     <div className="space-y-6">
@@ -63,7 +156,7 @@ export default function DepositsTab({ depositHistory }: DepositsTabProps) {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-muted">Total Deposits</p>
-              <p className="text-2xl font-semibold text-card-foreground">{depositHistory.summary.success}</p>
+              <p className="text-2xl font-semibold text-card-foreground">{successCount}</p>
             </div>
             <CheckCircle className="h-8 w-8 text-success" />
           </div>
@@ -73,7 +166,7 @@ export default function DepositsTab({ depositHistory }: DepositsTabProps) {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-muted">Pending</p>
-              <p className="text-2xl font-semibold text-card-foreground">{depositHistory.summary.pending}</p>
+              <p className="text-2xl font-semibold text-card-foreground">{pendingCount}</p>
             </div>
             <Clock className="h-8 w-8 text-warning" />
           </div>
@@ -84,7 +177,7 @@ export default function DepositsTab({ depositHistory }: DepositsTabProps) {
             <div>
               <p className="text-sm font-medium text-muted">Total Amount</p>
               <p className="text-2xl font-semibold text-card-foreground">
-                ${parseFloat(depositHistory.summary.totalAmount).toFixed(2)}
+                ${parseFloat(totalAmount).toFixed(2)}
               </p>
             </div>
             <Download className="h-8 w-8 text-primary" />
@@ -96,7 +189,7 @@ export default function DepositsTab({ depositHistory }: DepositsTabProps) {
             <div>
               <p className="text-sm font-medium text-muted">Failed</p>
               <p className="text-2xl font-semibold text-card-foreground text-danger">
-                {depositHistory.summary.rejected + depositHistory.summary.wrongDeposit}
+                {failedCount}
               </p>
             </div>
             <XCircle className="h-8 w-8 text-danger" />
@@ -107,17 +200,19 @@ export default function DepositsTab({ depositHistory }: DepositsTabProps) {
       {/* Deposits Table */}
       <div className="bg-card border border-default rounded-lg">
         <div className="px-6 py-4 border-b border-default flex justify-between items-center">
-          <h3 className="text-lg font-medium text-card-foreground">Deposit History ({depositHistory.total})</h3>
+          <h3 className="text-lg font-medium text-card-foreground">
+            Deposit History ({total}) - {exchange.toUpperCase()}
+          </h3>
           <button className="text-sm text-primary hover:underline flex items-center gap-1">
             Export CSV <Download className="h-4 w-4" />
           </button>
         </div>
         
-        {depositHistory.deposits.length === 0 ? (
+        {deposits.length === 0 ? (
           <div className="p-8 text-center">
             <Download className="h-12 w-12 text-muted mx-auto mb-4" />
             <h4 className="text-lg font-medium text-card-foreground mb-2">No Deposits Found</h4>
-            <p className="text-muted">Your deposits will appear here once you make them.</p>
+            <p className="text-muted">Your deposits will appear here once you make them on {exchange.toUpperCase()}.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -133,10 +228,19 @@ export default function DepositsTab({ depositHistory }: DepositsTabProps) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-default">
-                {depositHistory.deposits.map((deposit: Deposit) => {
+                {deposits.map((deposit: Deposit | NormalizedDeposit) => {
                   console.log('🔄 Rendering deposit:', deposit); // Debug log
-                  const statusInfo = getStatusColor(deposit.status);
-                  const formattedDate = format(new Date(deposit.insertTime), 'MMM dd, yyyy HH:mm');
+                  
+                  // Get status info based on deposit type
+                  const status = 'status' in deposit && typeof deposit.status === 'string' 
+                    ? deposit.status 
+                    : (deposit as Deposit).status;
+                  
+                  const statusInfo = getStatusColor(status);
+                  const timestamp = 'timestamp' in deposit 
+                    ? (deposit as NormalizedDeposit).timestamp 
+                    : (deposit as Deposit).insertTime;
+                  const formattedDate = format(new Date(timestamp), 'MMM dd, yyyy HH:mm');
 
                   return (
                     <tr key={deposit.id} className="hover:bg-muted">
@@ -163,7 +267,7 @@ export default function DepositsTab({ depositHistory }: DepositsTabProps) {
                       <td className="px-6 py-4">
                         <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${statusInfo.bg} ${statusInfo.text}`}>
                           {statusInfo.icon}
-                          {getStatusText(deposit.status)}
+                          {getStatusText(status)}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-card-foreground">
