@@ -20,11 +20,15 @@ interface FilledOrdersTabProps {
   onSymbolClick?: (symbol: string) => void;
 }
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000';
+const CACHE_KEY = 'filled_orders_cache';
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+
 export default function FilledOrdersTab({ onSymbolClick }: FilledOrdersTabProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tradeHistory, setTradeHistory] = useState<TradeHistory[]>([]);
   const [historyDays, setHistoryDays] = useState(20);
+  const [lastFetchTime, setLastFetchTime] = useState<number | null>(null);
 
   // Format helpers (matching the original code)
   const formatAmount = (v: any, maxDecimals = 8) => {
@@ -63,7 +67,49 @@ export default function FilledOrdersTab({ onSymbolClick }: FilledOrdersTabProps)
     return Number(n).toFixed(9).replace(/\.?0+$/, '');
   };
 
-  const fetchTradeHistory = async () => {
+  // Load cached data from localStorage
+  const loadCachedData = () => {
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const { data, timestamp, days } = JSON.parse(cached);
+        const now = Date.now();
+        
+        // Check if cache is still valid (within 5 minutes) and same historyDays
+        if (now - timestamp < CACHE_DURATION && days === historyDays) {
+          setTradeHistory(data);
+          setLastFetchTime(timestamp);
+          return true;
+        }
+      }
+    } catch (err) {
+      console.error('Error loading cached data:', err);
+    }
+    return false;
+  };
+
+  // Save data to localStorage
+  const saveCachedData = (data: TradeHistory[]) => {
+    try {
+      const cacheData = {
+        data,
+        timestamp: Date.now(),
+        days: historyDays
+      };
+      localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+      setLastFetchTime(Date.now());
+    } catch (err) {
+      console.error('Error saving cached data:', err);
+    }
+  };
+
+  const fetchTradeHistory = async (forceRefresh = false) => {
+    // If not forcing refresh, try to load from cache first
+    if (!forceRefresh && loadCachedData()) {
+      console.log('✅ Loaded filled orders from cache');
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
@@ -134,6 +180,7 @@ export default function FilledOrdersTab({ onSymbolClick }: FilledOrdersTabProps)
       });
       
       setTradeHistory(normalized as TradeHistory[]);
+      saveCachedData(normalized as TradeHistory[]); // Save to cache
     } catch (err) {
       setError('Network error. Please try again.');
       console.error('Error fetching trade history:', err);
@@ -143,9 +190,19 @@ export default function FilledOrdersTab({ onSymbolClick }: FilledOrdersTabProps)
   };
 
   useEffect(() => {
+    // Only fetch on mount, will use cache if available
     fetchTradeHistory();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Refetch when historyDays changes
+  useEffect(() => {
+    // Skip first render (already fetched in mount effect)
+    if (lastFetchTime !== null) {
+      fetchTradeHistory(true); // Force refresh when days change
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [historyDays]);
 
   const handleSymbolClick = (symbol: string) => {
     if (onSymbolClick) {
@@ -176,9 +233,14 @@ export default function FilledOrdersTab({ onSymbolClick }: FilledOrdersTabProps)
             />
             <span className="text-sm text-muted-foreground">days</span>
           </div>
+          {lastFetchTime && (
+            <span className="text-xs text-muted-foreground">
+              Last updated: {new Date(lastFetchTime).toLocaleTimeString()}
+            </span>
+          )}
         </div>
         <button
-          onClick={() => fetchTradeHistory()}
+          onClick={() => fetchTradeHistory(true)}
           className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           disabled={loading}
         >
@@ -522,10 +584,10 @@ export default function FilledOrdersTab({ onSymbolClick }: FilledOrdersTabProps)
               return (
                 <div
                   key={symbol}
-                  className="border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden"
+                  className="border border-gray-200 dark:border-gray-800 rounded-md overflow-hidden p-0"
                 >
                   {/* Symbol Header */}
-                  <div className="bg-gray-50 dark:bg-gray-800 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                  <div className="bg-gray-50 dark:bg-gray-800 px-1 py-3 border-b border-gray-200 dark:border-gray-700">
                     <div className="flex items-center justify-between">
                       <div>
                         <h3 
@@ -545,182 +607,130 @@ export default function FilledOrdersTab({ onSymbolClick }: FilledOrdersTabProps)
                   </div>
 
                   {/* Paired Orders List */}
-                  <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                  <div className="space-y-0 border-b-4 border-gray-300 dark:border-gray-600">
                     {pairs.map((pair, pairIndex) => (
-                      <div key={pairIndex} className="p-2 dark:hover:bg-gray-800 transition-colors">
-                        {/* Sell Orders Group (if exists) */}
+                      <div key={pairIndex} className="bg-white dark:bg-gray-900 border-0 border-b-4 border-gray-300 dark:border-gray-600 shadow-none hover:shadow-none transition-all">
+                        
+                        {/* Sell Section */}
                         {pair.sells.length > 0 && (
-                          <div className="mb-3">
-                            {/* Combined Sell Summary */}
-                            <div className="px-4 py-2 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg mb-2">
+                          <>
+                            {/* Sell Header */}
+                            <div className="px-4 py-2 border-gray-600 border-gray-700 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
-                                  <span className="text-xs px-2 py-1 rounded font-bold bg-red-600 text-white">
+                                  <span className="text-xs px-2.5 py-1 rounded font-semibold bg-red-600/90 text-white">
                                     SELL {pair.sells.length > 1 ? `(${pair.sells.length})` : ''}
                                   </span>
                                 </div>
-
-                                <div className="flex items-center gap-6 text-sm">
+                                <div className="flex items-center gap-8 text-sm">
                                   <div className="text-right">
-                                    <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">Avg Price</div>
-                                    <div className="font-semibold text-gray-900 dark:text-white">
-                                      ${formatPrice(pair.avgSellPrice)}
-                                    </div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">Avg Price</div>
+                                    <div className="font-semibold text-gray-800 dark:text-white">${formatPrice(pair.avgSellPrice)}</div>
                                   </div>
                                   <div className="text-right">
-                                    <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">Total Size</div>
-                                    <div className="font-semibold text-gray-900 dark:text-white">
-                                      {formatAmount(pair.totalSellSize)}
-                                    </div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">Size</div>
+                                    <div className="font-semibold text-gray-800 dark:text-white">{formatAmount(pair.totalSellSize)}</div>
                                   </div>
-                                  <div className="text-right min-w-[100px]">
-                                    <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">Total Revenue</div>
-                                    <div title={String(pair.totalSellRevenue)} className="font-semibold text-gray-900 dark:text-white truncate">
-                                      ${formatAmount(pair.totalSellRevenue, 8)}
-                                    </div>
+                                  <div className="text-right min-w-[110px]">
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">Revenue</div>
+                                    <div className="font-semibold text-gray-800 dark:text-white">${formatAmount(pair.totalSellRevenue, 2)}</div>
                                   </div>
                                 </div>
                               </div>
                             </div>
 
-                            {/* Individual Sell Orders */}
-                            <div className="space-y-1">
+                            {/* Sell Orders */}
+                            <div className="divide-y divide-gray-100 bg-gray-50 dark:divide-gray-800">
                               {pair.sells.sort((a, b) => Number(b.cTime) - Number(a.cTime)).map((sell, sellIndex) => (
-                                <div key={`sell-${sellIndex}`} className="px-4 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                                <div key={`sell-${sellIndex}`} className="px-4 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                                   <div className="flex items-center justify-between text-xs">
                                     <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                                      <span className="text-red-600 dark:text-red-400">└</span>
-                                      <div className="font-medium">
-                                        {new Date(Number(sell.cTime)).toLocaleString(undefined, {
-                                          year: 'numeric',
-                                          month: 'short',
-                                          day: 'numeric',
-                                          hour: '2-digit',
-                                          minute: '2-digit',
-                                          second: '2-digit'
-                                        })}
-                                      </div>
-                                      <span className="text-gray-500 dark:text-gray-500">
-                                        #{String(sell.tradeId).slice(-6)}
-                                      </span>
+                                      <span className="text-red-500 dark:text-red-500">→</span>
+                                      <div className="font-medium text-gray-700 dark:text-gray-300">{new Date(Number(sell.cTime)).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+                                      <span className="text-gray-400 dark:text-gray-500">#{String(sell.tradeId).slice(-4)}</span>
                                     </div>
-
-                                    <div className="flex items-center gap-6">
-                                      <div className="text-right text-gray-900 dark:text-white font-medium">
-                                        ${formatPrice(sell.price)}
-                                      </div>
-                                      <div className="text-right text-gray-900 dark:text-white font-medium">
-                                        {formatAmount(sell.size)}
-                                      </div>
-                                      <div className="text-right min-w-[100px] text-gray-900 dark:text-white font-medium">
-                                        ${formatAmount(sell.amount, 8)}
-                                      </div>
+                                    <div className="flex items-center gap-6 text-gray-700 dark:text-gray-300">
+                                      <span className="text-right min-w-fit text-gray-700 dark:text-gray-300">${formatPrice(sell.price)}</span>
+                                      <span className="text-right min-w-fit text-gray-700 dark:text-gray-300">{formatAmount(sell.size)}</span>
+                                      <span className="text-right min-w-[80px] font-semibold text-red-600 dark:text-red-400">${formatAmount(sell.amount, 2)}</span>
                                     </div>
                                   </div>
                                 </div>
                               ))}
                             </div>
-                          </div>
+                          </>
                         )}
 
-                        {/* Buy Orders Group (if exists) */}
+                        {/* Separator Line */}
+                        {pair.sells.length > 0 && pair.buys.length > 0 && (
+                          <div className="border-t border-gray-300" />
+                        )}
+
+                        {/* Buy Section */}
                         {pair.buys.length > 0 && (
-                          <div className="mb-3">
-                            {/* Combined Buy Summary */}
-                            <div className="px-4 py-2 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg mb-2">
+                          <>
+                            {/* Buy Header */}
+                            <div className="px-4 py-2 border-b border-gray-200  bg-gray-50 dark:border-gray-700 dark:bg-gray-900">
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
-                                  <span className="text-xs px-2 py-1 rounded font-bold bg-green-600 text-white">
+                                  <span className="text-xs px-2.5 py-1 rounded font-semibold bg-green-600/90 text-white">
                                     BUY {pair.buys.length > 1 ? `(${pair.buys.length})` : ''}
                                   </span>
                                   {pair.sells.length === 0 && (
-                                    <span className="text-xs px-2 py-1 rounded font-bold bg-orange-600 text-white">
+                                    <span className="text-xs px-2.5 py-1 rounded font-semibold bg-amber-600/90 text-white">
                                       PENDING
                                     </span>
                                   )}
                                 </div>
-
-                                <div className="flex items-center gap-6 text-sm">
+                                <div className="flex items-center gap-8 text-sm">
                                   <div className="text-right">
-                                    <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">Avg Price</div>
-                                    <div className="font-semibold text-gray-900 dark:text-white">
-                                      ${formatPrice(pair.avgBuyPrice)}
-                                    </div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">Avg Price</div>
+                                    <div className="font-semibold text-gray-800 dark:text-white">${formatPrice(pair.avgBuyPrice)}</div>
                                   </div>
                                   <div className="text-right">
-                                    <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">Total Size</div>
-                                    <div className="font-semibold text-gray-900 dark:text-white">
-                                      {formatAmount(pair.totalBuySize)}
-                                    </div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">Size</div>
+                                    <div className="font-semibold text-gray-800 dark:text-white">{formatAmount(pair.totalBuySize)}</div>
                                   </div>
-                                  <div className="text-right min-w-[100px]">
-                                    <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">Total Cost</div>
-                                    <div title={String(pair.totalBuyCost)} className="font-semibold text-gray-900 dark:text-white truncate">
-                                      ${formatAmount(pair.totalBuyCost, 8)}
-                                    </div>
+                                  <div className="text-right min-w-[110px]">
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">Cost</div>
+                                    <div className="font-semibold text-gray-800 dark:text-white">${formatAmount(pair.totalBuyCost, 2)}</div>
                                   </div>
                                 </div>
                               </div>
                             </div>
 
-                            {/* Individual Buy Orders */}
-                            <div className="space-y-1">
+                            {/* Buy Orders */}
+                            <div className="divide-y divide-gray-100 bg-gray-50 dark:divide-gray-800">
                               {pair.buys.sort((a, b) => Number(b.cTime) - Number(a.cTime)).map((buy, buyIndex) => (
-                                <div key={`buy-${buyIndex}`} className="px-4 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                                <div key={`buy-${buyIndex}`} className="px-4 py-1.5  hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                                   <div className="flex items-center justify-between text-xs">
                                     <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                                      <span className="text-green-600 dark:text-green-400">└</span>
-                                      <div className="font-medium">
-                                        {new Date(Number(buy.cTime)).toLocaleString(undefined, {
-                                          year: 'numeric',
-                                          month: 'short',
-                                          day: 'numeric',
-                                          hour: '2-digit',
-                                          minute: '2-digit',
-                                          second: '2-digit'
-                                        })}
-                                      </div>
-                                      <span className="text-gray-500 dark:text-gray-500">
-                                        #{String(buy.tradeId).slice(-6)}
-                                      </span>
+                                      <span className="text-green-500 dark:text-green-500">→</span>
+                                      <div className="font-medium text-gray-700 dark:text-gray-300">{new Date(Number(buy.cTime)).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+                                      <span className="text-gray-400 dark:text-gray-500">#{String(buy.tradeId).slice(-4)}</span>
                                     </div>
-
-                                    <div className="flex items-center gap-6">
-                                      <div className="text-right text-gray-900 dark:text-white font-medium">
-                                        ${formatPrice(buy.price)}
-                                      </div>
-                                      <div className="text-right text-gray-900 dark:text-white font-medium">
-                                        {formatAmount(buy.size)}
-                                      </div>
-                                      <div className="text-right min-w-[100px] text-gray-900 dark:text-white font-medium">
-                                        ${formatAmount(buy.amount, 8)}
-                                      </div>
+                                    <div className="flex items-center gap-6 text-gray-700 dark:text-gray-300">
+                                      <span className="text-right min-w-fit text-gray-700 dark:text-gray-300">${formatPrice(buy.price)}</span>
+                                      <span className="text-right min-w-fit text-gray-700 dark:text-gray-300">{formatAmount(buy.size)}</span>
+                                      <span className="text-right min-w-[80px] font-semibold text-green-600 dark:text-green-400">${formatAmount(buy.amount, 2)}</span>
                                     </div>
                                   </div>
                                 </div>
                               ))}
                             </div>
-                          </div>
+                          </>
                         )}
 
-                        {/* PNL Display (if pair is complete) */}
+                        {/* PNL Section */}
                         {pair.pnl !== null && (
-                          <div className="px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
+                          <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
                             <div className="flex items-center justify-between">
-                              <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">Pair PNL:</span>
-                              <div className="flex items-center gap-4">
-                                <span className={`text-sm font-semibold ${
-                                  pair.pnl >= 0
-                                    ? 'text-green-600 dark:text-green-400'
-                                    : 'text-red-600 dark:text-red-400'
-                                }`}>
-                                  {pair.pnl >= 0 ? '+' : ''}${formatAmount(pair.pnl, 8)}
+                              <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">PNL</span>
+                              <div className="flex items-center gap-3">
+                                <span className={`font-semibold ${pair.pnl >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                  {pair.pnl >= 0 ? '+' : ''}${formatAmount(pair.pnl, 2)}
                                 </span>
-                                <span className={`text-xs font-bold px-2 py-0.5 rounded ${
-                                  pair.pnl >= 0
-                                    ? 'bg-green-600 text-white'
-                                    : 'bg-red-600 text-white'
-                                }`}>
+                                <span className={`text-xs font-semibold px-2 py-0.5 rounded ${pair.pnl >= 0 ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
                                   {pair.pnlPercent !== null ? `${pair.pnlPercent >= 0 ? '+' : ''}${pair.pnlPercent.toFixed(2)}%` : '-'}
                                 </span>
                               </div>
@@ -728,10 +738,10 @@ export default function FilledOrdersTab({ onSymbolClick }: FilledOrdersTabProps)
                           </div>
                         )}
 
-                        {/* Unmatched Sell Indicator */}
+                        {/* Unmatched Indicator */}
                         {pair.sells.length > 0 && pair.buys.length === 0 && (
-                          <div className="px-4 py-2 bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800 rounded-lg">
-                            <span className="text-xs font-semibold text-purple-700 dark:text-purple-300">⚠️ Unmatched Sell Group (no corresponding buys)</span>
+                          <div className="px-4 py-1.5 border-t border-gray-200 dark:border-gray-700 bg-purple-50 dark:bg-purple-900/20">
+                            <span className="text-xs font-semibold text-purple-700 dark:text-purple-300">⚠️ unmatched sell</span>
                           </div>
                         )}
                       </div>

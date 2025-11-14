@@ -2,11 +2,13 @@
 import { configureStore } from '@reduxjs/toolkit';
 import exchangeSlice from '../features/exchange/exchangeSlice';
 import authReducer from '../features/auth/authSlice';
+import tradeReducer from '../features/trades/tradeSlice';
 
 export const store = configureStore({
   reducer: {
     auth: authReducer,
     exchange: exchangeSlice,
+    trades: tradeReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

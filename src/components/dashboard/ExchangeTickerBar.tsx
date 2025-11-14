@@ -156,9 +156,9 @@ export default function ExchangeTickerBar({ symbol, onSymbolClick }: ExchangeTic
 
   return (
     <div className="bg-card border-b border-default">
-      <div className="px-4 py-2">
+      <div className="px-4 py-1">
         {/* Header */}
-        <div className="bg-muted px-4 py-2 border-b border-default flex items-center justify-between mb-3">
+        <div className="bg-muted px-4 py-1 border-b border-default flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <h3 className="font-bold text-card-foreground">{symbol}</h3>
             <span className="text-xs px-2 py-0.5 rounded bg-primary/10 text-primary font-medium">
@@ -174,51 +174,51 @@ export default function ExchangeTickerBar({ symbol, onSymbolClick }: ExchangeTic
         </div>
 
         {/* Ticker Stats */}
-        <div className="grid grid-cols-6 gap-4 text-xs">
+        <div className="grid grid-cols-6 gap-2 text-xs">
           {/* 24h High/Low */}
           <div className="flex flex-col gap-0.5">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">24h High</span>
+            <div className="flex items-center justify-start gap-2">
+              <span className="text-muted-foreground">24h High:</span>
               <span className="font-semibold text-card-foreground">${high24h.toFixed(2)}</span>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">24h Low</span>
+            <div className="flex items-center justify-start gap-2">
+              <span className="text-muted-foreground">24h Low:</span>
               <span className="font-semibold text-card-foreground">${low24h.toFixed(2)}</span>
             </div>
           </div>
 
           {/* Volume */}
           <div className="flex flex-col gap-0.5">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Vol({symbol.replace('USDT', '')})</span>
+            <div className="flex items-center justify-start gap-2">
+              <span className="text-muted-foreground">Vol:({symbol.replace('USDT', '')})</span>
               <span className="font-semibold text-card-foreground">{volume.toFixed(2)}</span>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Vol(USDT)</span>
+            <div className="flex items-center justify-start gap-2">
+              <span className="text-muted-foreground">Vol(USDT):</span>
               <span className="font-semibold text-card-foreground">${quoteVolume.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
             </div>
           </div>
 
           {/* Bid/Ask */}
           <div className="flex flex-col gap-0.5">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Bid</span>
+            <div className="flex items-center justify-start gap-2">
+              <span className="text-muted-foreground">Bid:</span>
               <span className="font-semibold text-green-600 dark:text-green-400">${bidPrice.toFixed(2)}</span>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Ask</span>
+            <div className="flex items-center justify-start gap-2">
+              <span className="text-muted-foreground">Ask:</span>
               <span className="font-semibold text-red-600 dark:text-red-400">${askPrice.toFixed(2)}</span>
             </div>
           </div>
 
           {/* Open Price & Change */}
           <div className="flex flex-col gap-0.5">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Open</span>
+            <div className="flex items-center justify-start gap-2">
+              <span className="text-muted-foreground">Open:</span>
               <span className="font-semibold text-card-foreground">${openPrice.toFixed(2)}</span>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Change</span>
+            <div className="flex items-center justify-start gap-2">
+              <span className="text-muted-foreground">Change:</span>
               <span className={`font-semibold ${isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                 {isPositive ? '+' : ''}{priceChange.toFixed(2)}
               </span>
@@ -227,8 +227,8 @@ export default function ExchangeTickerBar({ symbol, onSymbolClick }: ExchangeTic
 
           {/* Last Price & Change % */}
           <div className="flex flex-col gap-0.5">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Last Price</span>
+            <div className="flex items-center justify-start gap-2">
+              <span className="text-muted-foreground">Last Price:</span>
               <span className="font-bold text-card-foreground text-lg">${lastPrice.toFixed(2)}</span>
             </div>
             <div className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold ${
@@ -241,12 +241,12 @@ export default function ExchangeTickerBar({ symbol, onSymbolClick }: ExchangeTic
 
           {/* Spread */}
           <div className="flex flex-col gap-0.5">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Spread</span>
+            <div className="flex items-center justify-start gap-2">
+              <span className="text-muted-foreground">Spread:</span>
               <span className="font-semibold text-card-foreground">{((askPrice - bidPrice) / bidPrice * 100).toFixed(3)}%</span>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Trades</span>
+            <div className="flex items-center justify-start gap-2">
+              <span className="text-muted-foreground">Trades:</span>
               <span className="font-semibold text-card-foreground">-</span>
             </div>
           </div>

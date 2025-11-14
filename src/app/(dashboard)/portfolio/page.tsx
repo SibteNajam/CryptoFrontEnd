@@ -22,9 +22,11 @@ import FilledOrdersTab from '../../../components/portfolio/filledOrders';
 import HistoryTab from '../../../components/portfolio/orderHistory';
 import PerformanceTab from '../../../components/portfolio/performance';
 import TransferHistoryTable from '@/components/portfolio/transferHistory';
+// import TradeAnalysisTab from '../../../components/portfolio/tradeAnalysis';
 import { useAppSelector } from '@/infrastructure/store/hooks';
+// import TradeAnalysisTab from '@/components/portfolio/tradeAnalysis';
 
-type TabType = 'overview' | 'balances' | 'orders' | 'filled' | 'history' | 'performance' | 'transfers';
+type TabType = 'overview' | 'balances' | 'orders' | 'filled' | 'history' | 'performance' | 'transfers' | 'trade-analysis';
 
 export default function PortfolioPage() {
   // Get selected exchange and credentials from Redux
@@ -240,6 +242,7 @@ export default function PortfolioPage() {
     { id: 'balances', label: 'Balances', icon: Wallet },
     { id: 'orders', label: 'Open Orders', icon: Clock },
     { id: 'filled', label: 'Filled Orders', icon: DollarSign },
+    { id: 'trade-analysis', label: 'Trade Analysis', icon: TrendingUp },
     { id: 'history', label: 'History', icon: History },
     { id: 'transfers', label: 'Transfers', icon: History },
   ];
@@ -288,6 +291,8 @@ export default function PortfolioPage() {
         return <OpenOrdersTab openOrders={openOrders} />;
       case 'filled':
         return <FilledOrdersTab />;
+      // case 'trade-analysis':
+      //   return <TradeAnalysisTab />;
       case 'history':
         return <HistoryTab orderHistory={orderHistory} />;
       case 'transfers':
