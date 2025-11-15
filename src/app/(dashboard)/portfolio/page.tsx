@@ -24,6 +24,7 @@ import PerformanceTab from '../../../components/portfolio/performance';
 import TransferHistoryTable from '@/components/portfolio/transferHistory';
 // import TradeAnalysisTab from '../../../components/portfolio/tradeAnalysis';
 import { useAppSelector } from '@/infrastructure/store/hooks';
+import PerformanceAnalysis from '@/components/portfolio/performanceAnalysis';
 // import TradeAnalysisTab from '@/components/portfolio/tradeAnalysis';
 
 type TabType = 'overview' | 'balances' | 'orders' | 'filled' | 'history' | 'performance' | 'transfers' | 'trade-analysis';
@@ -291,8 +292,8 @@ export default function PortfolioPage() {
         return <OpenOrdersTab openOrders={openOrders} />;
       case 'filled':
         return <FilledOrdersTab />;
-      // case 'trade-analysis':
-      //   return <TradeAnalysisTab />;
+      case 'trade-analysis':
+        return <PerformanceAnalysis />;
       case 'history':
         return <HistoryTab orderHistory={orderHistory} />;
       case 'transfers':

@@ -2,19 +2,17 @@
 
 import React, { useState, useEffect } from 'react';
 import { FileText, RefreshCw } from 'lucide-react';
-
-interface TradeHistory {
-  tradeId: string;
-  orderId: string;
-  symbol: string;
-  side: string;
-  price?: string;
-  priceAvg?: string;
-  amount?: string; // USDT value provided by API (amount)
-  size: string;
-  feeDetail: any;
-  cTime: string;
-}
+import { useAppDispatch, useAppSelector } from '@/infrastructure/store/hooks';
+import { 
+  setTradeHistory,
+  setSymbolGroups, 
+  setLoading, 
+  setError, 
+  setLastFetchTime,
+  type TradeHistory,
+  type TradePair,
+  type SymbolGroupData
+} from '@/infrastructure/features/trades/tradeSlice';
 
 interface FilledOrdersTabProps {
   onSymbolClick?: (symbol: string) => void;
@@ -24,11 +22,9 @@ const CACHE_KEY = 'filled_orders_cache';
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
 
 export default function FilledOrdersTab({ onSymbolClick }: FilledOrdersTabProps) {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [tradeHistory, setTradeHistory] = useState<TradeHistory[]>([]);
+  const dispatch = useAppDispatch();
+  const { tradeHistory, symbolGroups, loading, error, lastFetchTime } = useAppSelector(state => state.trades);
   const [historyDays, setHistoryDays] = useState(20);
-  const [lastFetchTime, setLastFetchTime] = useState<number | null>(null);
 
   // Format helpers (matching the original code)
   const formatAmount = (v: any, maxDecimals = 8) => {
@@ -77,8 +73,8 @@ export default function FilledOrdersTab({ onSymbolClick }: FilledOrdersTabProps)
         
         // Check if cache is still valid (within 5 minutes) and same historyDays
         if (now - timestamp < CACHE_DURATION && days === historyDays) {
-          setTradeHistory(data);
-          setLastFetchTime(timestamp);
+          dispatch(setTradeHistory(data));
+          dispatch(setLastFetchTime(timestamp));
           return true;
         }
       }
@@ -97,7 +93,7 @@ export default function FilledOrdersTab({ onSymbolClick }: FilledOrdersTabProps)
         days: historyDays
       };
       localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
-      setLastFetchTime(Date.now());
+      dispatch(setLastFetchTime(Date.now()));
     } catch (err) {
       console.error('Error saving cached data:', err);
     }
@@ -110,8 +106,8 @@ export default function FilledOrdersTab({ onSymbolClick }: FilledOrdersTabProps)
       return;
     }
 
-    setLoading(true);
-    setError(null);
+    dispatch(setLoading(true));
+    dispatch(setError(null));
     try {
       const now = Date.now();
       const cutoffTime = now - (historyDays * 24 * 60 * 60 * 1000);
@@ -135,7 +131,7 @@ export default function FilledOrdersTab({ onSymbolClick }: FilledOrdersTabProps)
         
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          setError(errorData.message || 'Failed to fetch trade history');
+          dispatch(setError(errorData.message || 'Failed to fetch trade history'));
           return;
         }
         
@@ -179,13 +175,13 @@ export default function FilledOrdersTab({ onSymbolClick }: FilledOrdersTabProps)
         };
       });
       
-      setTradeHistory(normalized as TradeHistory[]);
+      dispatch(setTradeHistory(normalized as TradeHistory[]));
       saveCachedData(normalized as TradeHistory[]); // Save to cache
     } catch (err) {
-      setError('Network error. Please try again.');
+      dispatch(setError('Network error. Please try again.'));
       console.error('Error fetching trade history:', err);
     } finally {
-      setLoading(false);
+      dispatch(setLoading(false));
     }
   };
 

@@ -42,6 +42,7 @@ export interface SymbolGroupData {
 }
 
 export interface TradesState {
+  tradeHistory: TradeHistory[];     // All sorted trades (most recent first)
   symbolGroups: SymbolGroupData[];  // Array sorted by most recent first (index 0 = latest)
   historyDays: number;
   lastFetchTime: number | null;
@@ -50,7 +51,8 @@ export interface TradesState {
 }
 
 const initialState: TradesState = {
-  symbolGroups: [],
+  tradeHistory: [],     // All sorted trades
+  symbolGroups: [],     // Processed symbol groups
   historyDays: 20,
   lastFetchTime: null,
   loading: false,
@@ -61,6 +63,11 @@ const tradeSlice = createSlice({
   name: 'trades',
   initialState,
   reducers: {
+    // Set all trade history (raw sorted trades)
+    setTradeHistory: (state, action: PayloadAction<TradeHistory[]>) => {
+      state.tradeHistory = action.payload;
+    },
+    
     // Set all symbol groups (complete data as shown in UI)
     setSymbolGroups: (state, action: PayloadAction<SymbolGroupData[]>) => {
       state.symbolGroups = action.payload;
@@ -88,6 +95,7 @@ const tradeSlice = createSlice({
     
     // Clear all data
     clearTrades: (state) => {
+      state.tradeHistory = [];
       state.symbolGroups = [];
       state.lastFetchTime = null;
       state.error = null;
@@ -96,6 +104,7 @@ const tradeSlice = createSlice({
 });
 
 export const {
+  setTradeHistory,
   setSymbolGroups,
   setHistoryDays,
   setLoading,
