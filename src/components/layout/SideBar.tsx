@@ -12,7 +12,8 @@ import {
   Home,
   Wallet,
   PieChart,
-  Bell
+  Bell,
+  Zap
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -26,6 +27,7 @@ const navigation = [
   // { name: 'Trading', href: '/trading', icon: BarChart3 },
   { name: 'Portfolio', href: '/portfolio', icon: PieChart },
   { name: 'Wallet', href: '/wallet', icon: Wallet },
+  { name: 'Auto Trade', href: '/auto-trade', icon: Zap },
   // { name: 'Wallet', href: '/wallet', icon: Wallet },
   // { name: 'Analytics', href: '/analytics', icon: Activity },
   // { name: 'Alerts', href: '/alerts', icon: Bell },
