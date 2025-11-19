@@ -27,6 +27,8 @@ export async function login(credentials: LoginCredentials): Promise<any> {
     if (data.status === 'Success' && data.data && data.data.data) {
         const { user, payload } = data.data.data;
 
+        console.log('🔑 Login response - configured exchanges:', user.configured_exchanges);
+        
         TokenStorage.setTokens(payload.token, payload.refresh_token);
         // Map backend fields to frontend format
         const transformedResponse = {
@@ -35,6 +37,7 @@ export async function login(credentials: LoginCredentials): Promise<any> {
                 email: user.email,
                 displayName: user.name, // ← Map 'name' to 'displayName'
                 createdAt: user.createdAt,
+                configuredExchanges: user.configured_exchanges || [], // ← Add configured exchanges
             },
             message: data.message,
                       payload: {
@@ -43,7 +46,7 @@ export async function login(credentials: LoginCredentials): Promise<any> {
             },// Include tokens for storage
         };
 
-        console.log(' Transformed login response:', transformedResponse);
+        console.log('✅ Final transformed user configuredExchanges:', transformedResponse.user.configuredExchanges);
         return transformedResponse;
     }
 
@@ -88,10 +91,25 @@ export async function logout(): Promise<void> {
 export async function fetchCurrentUser(): Promise<AuthResponse> {
     const token = TokenStorage.getAccessToken();
     
-    if (!token) {
-        throw new Error('No authentication token found');
+    console.log('🔐 JWT Token Debug:');
+    console.log('🔐 Token exists:', !!token);
+    console.log('🔐 Token length:', token?.length);
+    
+    // Decode and show JWT payload
+    if (token) {
+        try {
+            const payload = token.split('.')[1];
+            const decodedPayload = JSON.parse(atob(payload));
+            console.log('🔐 Decoded JWT payload:', decodedPayload);
+            console.log('🔐 User ID (sub):', decodedPayload.sub);
+            console.log('🔐 Token expires:', new Date(decodedPayload.exp * 1000));
+        } catch (e) {
+            console.log('🔐 Error decoding JWT:', e);
+        }
     }
-
+    
+    console.log('📡 Authorization header will be:', `Bearer ${token?.substring(0, 50)}...`);
+    
     const response = await fetch(`${API_BASE_URL}/user/me`, {
         headers: {
             'Authorization': `Bearer ${token}`,

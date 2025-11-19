@@ -138,6 +138,7 @@ const authSlice = createSlice({
                 state.user = action.payload;
                 state.isAuthenticated = true;
                 state.error = null;
+                // Note: Credentials will be loaded by the store middleware or component
             })
             .addCase(loginUser.rejected, (state, action) => {
                 state.isLoading = false;

@@ -7,6 +7,9 @@ export interface ApiCredentials {
   passphrase?: string;
 }
 
+// Import TokenStorage for JWT authentication
+import TokenStorage from '../../lib/tokenStorage';
+
 
 
 // ------- performace snapshot api types
@@ -280,6 +283,15 @@ export async function getAccountInfo(credentials?: ApiCredentials): Promise<Acco
       'Content-Type': 'application/json',
     };
     
+    // Add JWT token for authentication
+    const token = TokenStorage.getAccessToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+      console.log('🔑 JWT token added to headers');
+    } else {
+      console.warn('⚠️ No JWT token found in storage');
+    }
+    
     // Add credentials to headers if available
     if (credentials) {
       headers['x-api-key'] = credentials.apiKey;
@@ -322,6 +334,15 @@ export async function getOpenOrders(symbol?: string, credentials?: ApiCredential
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
     };
+    
+    // Add JWT token for authentication
+    const token = TokenStorage.getAccessToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+      console.log('🔑 JWT token added to headers');
+    } else {
+      console.warn('⚠️ No JWT token found in storage');
+    }
     
     // Add credentials to headers if available
     if (credentials) {
@@ -371,6 +392,15 @@ export async function getBitgetOpenOrders(symbol?: string, credentials?: ApiCred
       'Accept': '*/*',
     };
     
+    // Add JWT token for authentication
+    const token = TokenStorage.getAccessToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+      console.log('🔑 JWT token added to headers');
+    } else {
+      console.warn('⚠️ No JWT token found in storage');
+    }
+    
     // Add credentials to headers if available
     if (credentials) {
       headers['x-api-key'] = credentials.apiKey;
@@ -419,6 +449,7 @@ export async function getOrderHistory(): Promise<Array<{ symbol: string; orders:
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${TokenStorage.getAccessToken()}`,
       },
     });
 
@@ -448,6 +479,15 @@ export async function getUserAssets(credentials?: ApiCredentials): Promise<UserA
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
     };
+    
+    // Add JWT token for authentication
+    const token = TokenStorage.getAccessToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+      console.log('🔑 JWT token added to headers');
+    } else {
+      console.warn('⚠️ No JWT token found in storage');
+    }
     
     // Add credentials to headers if available
     if (credentials) {
@@ -498,6 +538,7 @@ export async function getTransferHistory(
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          'Authorization': `Bearer ${TokenStorage.getAccessToken()}`,
         },
       }
     );
@@ -529,7 +570,10 @@ export async function getDepositHistory(coin?: string, status?: number, limit = 
     
     const response = await fetch(url, {
       method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${TokenStorage.getAccessToken()}`,
+      },
     });
 
     if (!response.ok) {
@@ -555,7 +599,10 @@ export async function getWithdrawHistory(coin?: string, status?: number, limit =
     
     const response = await fetch(url, {
       method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${TokenStorage.getAccessToken()}`,
+      },
     });
 
     if (!response.ok) {
@@ -585,6 +632,15 @@ export async function getAccountSnapshot(credentials?: ApiCredentials): Promise<
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     };
+    
+    // Add JWT token for authentication
+    const token = TokenStorage.getAccessToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+      console.log('🔑 JWT token added to headers');
+    } else {
+      console.warn('⚠️ No JWT token found in storage');
+    }
     
     // Add credentials to headers if available
     if (credentials) {
@@ -630,7 +686,10 @@ export async function getAssetDetail(asset?: string): Promise<AssetDetail> {
     
     const response = await fetch(url, {
       method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${TokenStorage.getAccessToken()}`,
+      },
     });
 
     if (!response.ok) {
@@ -655,7 +714,10 @@ export async function getTradeFee(symbol?: string): Promise<TradeFee[]> {
     
     const response = await fetch(url, {
       method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${TokenStorage.getAccessToken()}`,
+      },
     });
 
     if (!response.ok) {
@@ -756,6 +818,15 @@ export async function getBitgetSpotAssets(credentials?: ApiCredentials): Promise
       'Accept': '*/*',
     };
     
+    // Add JWT token for authentication
+    const token = TokenStorage.getAccessToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+      console.log('🔑 JWT token added to headers');
+    } else {
+      console.warn('⚠️ No JWT token found in storage');
+    }
+    
     // Add credentials to headers if available
     if (credentials) {
       headers['x-api-key'] = credentials.apiKey;
@@ -831,10 +902,10 @@ export async function normalizeBinanceUserAsset(binanceAssets: UserAsset[]): Pro
   // Fetch BTC price to convert btcValuation to USD
   let btcPrice = 113200; // Fallback price
   try {
-    const btcPriceResponse = await fetch(`${API_BASE_URL}/binance/ticker?symbol=BTCUSDT`);
+    const btcPriceResponse = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT`);
     if (btcPriceResponse.ok) {
       const btcData = await btcPriceResponse.json();
-      btcPrice = parseFloat(btcData.price);
+      btcPrice = parseFloat(btcData.lastPrice);
       console.log('💱 BTC Price fetched:', btcPrice);
     }
   } catch (error) {
@@ -858,10 +929,10 @@ export async function normalizeBinanceUserAsset(binanceAssets: UserAsset[]): Pro
   const pricePromises = nonStableAssets.map(async (asset) => {
     try {
       const symbol = `${asset}USDT`;
-      const response = await fetch(`${API_BASE_URL}/binance/ticker?symbol=${symbol}`);
+      const response = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${symbol}`);
       if (response.ok) {
         const data = await response.json();
-        return { asset, price: parseFloat(data.price) };
+        return { asset, price: parseFloat(data.lastPrice) };
       }
     } catch (error) {
       console.warn(`⚠️ Failed to fetch price for ${asset}`);

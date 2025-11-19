@@ -48,7 +48,7 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({
         if (!isMounted || !chartId) return;
 
         const existingScript = document.querySelector('script[src="https://s3.tradingview.com/tv.js"]');
-        
+
         if (existingScript && window.TradingView) {
             createWidget();
         } else {
@@ -61,7 +61,7 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({
 
         function createWidget() {
             const TradingView = (window as any).TradingView;
-            
+
             if (containerRef.current && TradingView && chartId) {
                 new TradingView.widget({
                     autosize: true,
@@ -96,11 +96,11 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({
     if (!isMounted) {
         return (
             <div className="tradingview-widget-container">
-                <div style={{ 
-                    height, 
-                    width, 
-                    display: 'flex', 
-                    alignItems: 'center', 
+                <div style={{
+                    height,
+                    width,
+                    display: 'flex',
+                    alignItems: 'center',
                     justifyContent: 'center',
                     backgroundColor: '#1a1a1a',
                     color: '#4CAF50',
@@ -114,7 +114,7 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({
 
     return (
         <div className="tradingview-widget-container">
-            <div 
+            <div
                 ref={containerRef}
                 id={chartId} // ✅ Now uses stable client-side generated ID
                 style={{ height, width }}
@@ -123,4 +123,13 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({
     );
 };
 
-export default TradingViewChart;
+export default function TVPage() {
+    return (
+        <div className="min-h-screen bg-gray-900 p-4">
+            <div className="max-w-7xl mx-auto">
+                <h1 className="text-2xl font-bold text-white mb-6">TradingView Chart</h1>
+                <TradingViewChart />
+            </div>
+        </div>
+    );
+}

@@ -3,6 +3,7 @@ export interface User {
     email: string;
     displayName: string;
     createdAt: string;
+    configuredExchanges?: string[]; // Array of exchange names user has configured
 }
 export interface AuthState {
     user: User | null;

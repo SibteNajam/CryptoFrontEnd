@@ -26,9 +26,11 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
   const { logout, user } = useAuth();
   const selectedExchange = useAppSelector((state) => state.exchange.selectedExchange);
   
-  // Get credentials for each exchange
-  const binanceCredentials = useAppSelector(getCredentialsForExchange('binance'));
-  const bitgetCredentials = useAppSelector(getCredentialsForExchange('bitget'));
+  // Get configured exchanges from user auth state instead of Redux credentials
+  const configuredExchanges = user?.configuredExchanges || [];
+  
+  console.log('🔄 Header - configured exchanges:', configuredExchanges);
+  console.log('🔄 Header - user object:', user);
 
   const [showExchangeDropdown, setShowExchangeDropdown] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
@@ -57,9 +59,11 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
 
   // Handle clicking on exchange name - switches exchange if credentials exist
   const handleExchangeClick = (exchangeId: ExchangeType) => {
-    const credentials = exchangeId === 'binance' ? binanceCredentials : bitgetCredentials;
+    const hasCredentials = configuredExchanges.some(
+      exchange => exchange.toLowerCase() === exchangeId.toLowerCase()
+    );
     
-    if (credentials) {
+    if (hasCredentials) {
       // Has credentials, switch to this exchange
       dispatch(setSelectedExchange(exchangeId));
       setShowExchangeDropdown(false);
@@ -126,7 +130,9 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
             <div className="absolute right-0 mt-1 bg-card border border-default rounded-lg shadow-lg w-60 z-50">
               {Object.entries(exchangeNames).map(([id, name]) => {
                 const exchangeId = id as ExchangeType;
-                const hasCredentials = exchangeId === 'binance' ? !!binanceCredentials : !!bitgetCredentials;
+                const hasCredentials = configuredExchanges.some(
+                  exchange => exchange.toLowerCase() === id.toLowerCase()
+                );
                 const isActive = selectedExchange === exchangeId;
                 
                 return (

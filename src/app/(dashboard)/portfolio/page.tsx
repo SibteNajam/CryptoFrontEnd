@@ -264,18 +264,18 @@ export default function PortfolioPage() {
     switch (activeTab) {
       case 'overview':
         return <OverviewTab accountData={accountData} />;
-      case 'performance':
-        if (snapshotLoading && !accountSnapshot) {
-          return (
-            <div className="flex items-center justify-center py-8">
-              <div className="text-center">
-                <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                <p className="text-muted-foreground">Loading performance data...</p>
-              </div>
-            </div>
-          );
-        }
-        return <PerformanceTab snapshotData={accountSnapshot} />;
+      // case 'performance':
+      //   if (snapshotLoading && !accountSnapshot) {
+      //     return (
+      //       <div className="flex items-center justify-center py-8">
+      //         <div className="text-center">
+      //           <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+      //           <p className="text-muted-foreground">Loading performance data...</p>
+      //         </div>
+      //       </div>
+      //     );
+      //   }
+      //   return <PerformanceTab snapshotData={accountSnapshot} />;
       case 'balances':
         if (assetsLoading && !userAssets.length) {
           return (

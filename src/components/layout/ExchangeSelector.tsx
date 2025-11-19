@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useAppSelector, useAppDispatch } from '@/infrastructure/store/hooks';
 import { 
   setCredentials,
+  saveCredentials,
   ExchangeType,
   getCredentialsForExchange
 } from '@/infrastructure/features/exchange/exchangeSlice';
@@ -20,8 +21,8 @@ export default function ExchangeSelector({ isOpen, onClose, exchangeToSetup }: E
   const dispatch = useAppDispatch();
   const selectedExchange = useAppSelector(state => state.exchange.selectedExchange);
   
-  // Get credentials for the exchange being set up
-  const credentials = useAppSelector(getCredentialsForExchange(exchangeToSetup));
+  // Remove credentials checking - we don't store them locally anymore
+  // Backend will handle credential validation and updates
   
   const [formData, setFormData] = useState({
     apiKey: '',
@@ -40,31 +41,22 @@ export default function ExchangeSelector({ isOpen, onClose, exchangeToSetup }: E
   const [successMessage, setSuccessMessage] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   
-  const isUpdating = !!credentials; // Check if we're updating existing credentials
+  // Always start with empty form since we don't store credentials locally
+  const isUpdating = false; // We don't know if updating or creating new
 
-  // Reset form when modal opens or exchange changes
+  // Reset form when modal opens
   useEffect(() => {
     if (isOpen) {
-      // Load existing credentials if available
-      if (credentials && credentials.exchange === exchangeToSetup) {
-        setFormData({
-          apiKey: credentials.apiKey,
-          secretKey: credentials.secretKey,
-          passphrase: credentials.passphrase || '',
-          label: credentials.label,
-        });
-      } else {
-        setFormData({
-          apiKey: '',
-          secretKey: '',
-          passphrase: '',
-          label: '',
-        });
-      }
+      setFormData({
+        apiKey: '',
+        secretKey: '',
+        passphrase: '',
+        label: '',
+      });
       setErrors({});
       setSuccessMessage('');
     }
-  }, [isOpen, exchangeToSetup, credentials]);
+  }, [isOpen, exchangeToSetup]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -109,34 +101,43 @@ export default function ExchangeSelector({ isOpen, onClose, exchangeToSetup }: E
   };
 
   const handleSave = async () => {
+    console.log('🔄 Starting credential save process...');
     if (!validateForm()) return;
-    
+
     setIsSaving(true);
-    
+
     try {
       const token = TokenStorage.getAccessToken();
-      
+      console.log('🔑 Token from TokenStorage:', token ? 'Found' : 'NOT FOUND');
+
       if (!token) {
         throw new Error('Please login first');
       }
 
-      // Save to Redux - this replaces any previous credentials for this exchange
-      dispatch(setCredentials({
+      const credentialData = {
         exchange: exchangeToSetup,
         apiKey: formData.apiKey.trim(),
         secretKey: formData.secretKey.trim(),
         passphrase: formData.passphrase.trim() || undefined,
         label: formData.label.trim(),
-      }));
+      };
 
-      console.log(`✅ Credentials ${isUpdating ? 'updated' : 'saved'} for ${exchangeToSetup}`);
+      // Only save to database - no local Redux storage
+      console.log('📡 Saving credentials to backend...');
+      const result = await dispatch(saveCredentials(credentialData)).unwrap();
+      console.log('✅ Credentials saved to database:', result);
+
+      console.log(`✅ Credentials saved for ${exchangeToSetup}`);
 
       // Show success message
-      setSuccessMessage(`Credentials ${isUpdating ? 'updated' : 'saved'} successfully!`);
+      setSuccessMessage(`Credentials saved successfully!`);
       
       // Close modal after 1.5 seconds
       setTimeout(() => {
         onClose();
+        // Optionally refresh the page or trigger a re-fetch of user data
+        // to update the configured exchanges list
+        window.location.reload(); // Simple refresh to update configured exchanges
       }, 1500);
       
     } catch (error) {
@@ -168,7 +169,7 @@ export default function ExchangeSelector({ isOpen, onClose, exchangeToSetup }: E
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-default">
           <h2 className="text-lg font-semibold">
-            {isUpdating ? 'Update' : 'Setup'} {exchangeNames[exchangeToSetup]} API
+            Setup {exchangeNames[exchangeToSetup]} API
           </h2>
           <button
             onClick={onClose}
@@ -323,7 +324,7 @@ export default function ExchangeSelector({ isOpen, onClose, exchangeToSetup }: E
           >
             {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
             {successMessage && <Check className="w-4 h-4" />}
-            <span>{isSaving ? 'Saving...' : successMessage ? 'Saved!' : isUpdating ? 'Update Credentials' : 'Save Credentials'}</span>
+            <span>{isSaving ? 'Saving...' : successMessage ? 'Saved!' : 'Save Credentials'}</span>
           </button>
         </div>
       </div>

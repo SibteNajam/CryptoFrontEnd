@@ -32,13 +32,13 @@ export default function AutoTradePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [signalHistory, setSignalHistory] = useState<{ time: string; count: number }[]>([]);
 
-  // Initialize exchange on mount
+  // Always initialize exchange when selectedExchange changes
   useEffect(() => {
     const currentCreds = credentialsArray.find(c => c.exchange === selectedExchange);
-    if (currentCreds && (tradingBot.needsSync || !tradingBot.isConfigured)) {
+    if (currentCreds) {
       dispatch(initializeExchange({ exchange: selectedExchange, credentials: currentCreds }));
     }
-  }, [selectedExchange, credentialsArray, tradingBot.needsSync, dispatch]);
+  }, [selectedExchange, credentialsArray, dispatch]);
 
   // Fetch initial config
   useEffect(() => {
@@ -59,7 +59,7 @@ export default function AutoTradePage() {
     if (!tradingBot.isConfigured) return;
     const statsInterval = setInterval(() => {
       dispatch(fetchStats());
-    }, 5000);
+    }, 10000); // 10 seconds
     dispatch(fetchStats());
     return () => clearInterval(statsInterval);
   }, [tradingBot.isConfigured, dispatch]);
@@ -69,7 +69,7 @@ export default function AutoTradePage() {
     if (!tradingBot.isConfigured) return;
     const statusInterval = setInterval(() => {
       dispatch(fetchProcessingStatus());
-    }, 2000);
+    }, 10000); // 10 seconds
     return () => clearInterval(statusInterval);
   }, [tradingBot.isConfigured, dispatch]);
 
@@ -188,35 +188,19 @@ export default function AutoTradePage() {
         {/* Left Column - Controls */}
         <div className="lg:col-span-2 space-y-4">
           {/* Balance Cards - Compact */}
-          <div className="grid grid-cols-3 gap-2">
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/10 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-              <p className="text-[10px] font-semibold text-blue-700 dark:text-blue-400">START BALANCE</p>
-              <p className="text-base font-bold text-blue-600 dark:text-blue-400 mt-1">
-                ${tradingBot.stats?.start_balance.toFixed(0) || '0'}
-              </p>
+          <div className="grid grid-cols-3 gap-1">
+            <div className="rounded border border-default bg-white dark:bg-card px-2 py-1 flex flex-col items-center justify-center min-h-[36px]">
+              <span className="text-[10px] font-medium text-muted">Start</span>
+              <span className="text-base font-bold text-card-foreground">${tradingBot.stats?.start_balance.toFixed(0) || '0'}</span>
             </div>
-
-            <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/10 border border-purple-200 dark:border-purple-800 rounded-lg p-3">
-              <p className="text-[10px] font-semibold text-purple-700 dark:text-purple-400">CURRENT BALANCE</p>
-              <p className="text-base font-bold text-purple-600 dark:text-purple-400 mt-1">
-                ${tradingBot.stats?.current_balance.toFixed(0) || '0'}
-              </p>
+            <div className="rounded border border-default bg-white dark:bg-card px-2 py-1 flex flex-col items-center justify-center min-h-[36px]">
+              <span className="text-[10px] font-medium text-muted">Current</span>
+              <span className="text-base font-bold text-card-foreground">${tradingBot.stats?.current_balance.toFixed(0) || '0'}</span>
             </div>
-
-            <div className={`bg-gradient-to-br ${
-              pnl >= 0 
-                ? 'from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/10 border-green-200 dark:border-green-800' 
-                : 'from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/10 border-red-200 dark:border-red-800'
-            } border rounded-lg p-3`}>
-              <p className={`text-[10px] font-semibold uppercase ${pnl >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
-                P&L
-              </p>
-              <p className={`text-base font-bold mt-1 ${pnl >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                {pnl >= 0 ? '+' : ''}${Math.abs(pnl).toFixed(0)}
-              </p>
-              <p className={`text-[9px] ${pnl >= 0 ? 'text-green-600/70 dark:text-green-400/70' : 'text-red-600/70 dark:text-red-400/70'}`}>
-                {pnlPercent >= 0 ? '+' : ''}{pnlPercent.toFixed(1)}%
-              </p>
+            <div className={`rounded border border-default bg-white dark:bg-card px-2 py-1 flex flex-col items-center justify-center min-h-[36px] ${pnl >= 0 ? '' : ''}`}> 
+              <span className={`text-[10px] font-medium ${pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>P&L</span>
+              <span className={`text-base font-bold ${pnl >= 0 ? 'text-green-700' : 'text-red-700'}`}>{pnl >= 0 ? '+' : '-'}${Math.abs(pnl).toFixed(0)}</span>
+              <span className={`text-[9px] ${pnl >= 0 ? 'text-green-600/80' : 'text-red-600/80'}`}>{pnlPercent >= 0 ? '+' : '-'}{Math.abs(pnlPercent).toFixed(1)}%</span>
             </div>
           </div>
 
@@ -378,56 +362,22 @@ export default function AutoTradePage() {
 
         {/* Right Column - Charts */}
         <div className="space-y-4">
-          {/* Success/Failed Pie Chart */}
-          {tradingBot.stats && (
+          {/* Buy Signals History Chart */}
+          {signalHistory.length > 0 && (
             <div className="bg-card border border-default rounded-lg p-3">
               <h3 className="text-xs font-semibold text-card-foreground mb-2 flex items-center gap-1.5">
-                <span className="text-sm">📊</span> Success Rate
+                <span className="text-sm">�</span> Buy Signals (Last 10)
               </h3>
               <div className="h-32">
                 <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={pieData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={22}
-                      outerRadius={45}
-                      paddingAngle={3}
-                      dataKey="value"
-                      label={({ name, value }) => `${name}: ${value}`}
-                      labelLine={false}
-                    >
-                      <Cell fill="#10b981" />
-                      <Cell fill="#ef4444" />
-                    </Pie>
-                  </PieChart>
+                  <LineChart data={signalHistory} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="time" fontSize={10} tick={{ fill: '#888' }} />
+                    <YAxis fontSize={10} tick={{ fill: '#888' }} />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="count" stroke="#6366f1" strokeWidth={2} dot={false} />
+                  </LineChart>
                 </ResponsiveContainer>
-              </div>
-              <div className="mt-3 space-y-1.5 text-xs">
-                <div className="flex items-center justify-between px-2 py-1.5 bg-success/10 rounded-lg border border-success/20">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2.5 h-2.5 rounded-full bg-success"></div>
-                    <span className="text-muted">Success</span>
-                  </div>
-                  <span className="text-success font-semibold">{tradingBot.stats.stats.pipeline_successes}</span>
-                </div>
-                <div className="flex items-center justify-between px-2 py-1.5 bg-danger/10 rounded-lg border border-danger/20">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2.5 h-2.5 rounded-full bg-danger"></div>
-                    <span className="text-muted">Failed</span>
-                  </div>
-                  <span className="text-danger font-semibold">{tradingBot.stats.stats.pipeline_failures}</span>
-                </div>
-              </div>
-              <div className="mt-2 pt-2 border-t border-default text-center">
-                <p className="text-[10px] text-muted">
-                  Success Rate: <span className="text-card-foreground font-semibold">
-                    {tradingBot.stats.stats.pipeline_successes + tradingBot.stats.stats.pipeline_failures > 0 
-                      ? ((tradingBot.stats.stats.pipeline_successes / (tradingBot.stats.stats.pipeline_successes + tradingBot.stats.stats.pipeline_failures)) * 100).toFixed(1)
-                      : 0}%
-                  </span>
-                </p>
               </div>
             </div>
           )}

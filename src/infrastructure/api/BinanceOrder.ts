@@ -1,4 +1,5 @@
 // Create this file: services/BinanceApiService.ts
+import TokenStorage from '../../lib/tokenStorage';
 export interface OrderRequest {
     symbol: string;
     side: string;
@@ -173,6 +174,7 @@ async getAllSymbols(): Promise<string[]> {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${TokenStorage.getAccessToken()}`,
                 }
             });
             const duration = Date.now() - start;
@@ -210,6 +212,7 @@ async placeOrder(order: OrderRequest): Promise<OrderResult> {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'Authorization': `Bearer ${TokenStorage.getAccessToken()}`,
             },
             body: JSON.stringify(orderPayload)
         });
@@ -246,6 +249,7 @@ async placeOrder(order: OrderRequest): Promise<OrderResult> {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${TokenStorage.getAccessToken()}`,
                 }
             });
 
@@ -280,6 +284,7 @@ async placeOrder(order: OrderRequest): Promise<OrderResult> {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${TokenStorage.getAccessToken()}`,
         },
       }
     );
