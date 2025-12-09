@@ -4,6 +4,7 @@ import exchangeSlice from '../features/exchange/exchangeSlice';
 import authReducer from '../features/auth/authSlice';
 import tradeReducer from '../features/trades/tradeSlice';
 import tradingBotReducer from '../features/trading/tradingBotSlice';
+import chatReducer from '../features/chat/chatSlice';
 
 export const store = configureStore({
   reducer: {
@@ -11,6 +12,7 @@ export const store = configureStore({
     exchange: exchangeSlice,
     trades: tradeReducer,
     tradingBot: tradingBotReducer,
+    chat: chatReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
