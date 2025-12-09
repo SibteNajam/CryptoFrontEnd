@@ -1,23 +1,19 @@
+version: '3.8'
+
 services:
-  frontend:
+  nextjs-app:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: crypto-frontend
     restart: unless-stopped
     ports:
-      - "3002:3002"
+      - "3002:3000"
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_BACKEND_URL=http://146.59.93.94:3000
+      - NEXT_PUBLIC_TRADING_BOT_API=${NEXT_PUBLIC_TRADING_BOT_API}
     networks:
       - crypto-network
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3002"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
 
 networks:
   crypto-network:
