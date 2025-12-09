@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import TokenStorage from "@/lib/tokenStorage";
 
 interface Balance {
   asset: string;
@@ -51,7 +52,13 @@ export default function BalanceViewer({
       setError(null);
       
       try {
-        const res = await fetch("http://146.59.93.94:3000/binance/account-info");
+        const token = TokenStorage.getAccessToken();
+        const res = await fetch("http://146.59.93.94:3000/binance/account-info", {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            }
+        });
         
         if (!res.ok) {
           throw new Error('Failed to fetch account info');

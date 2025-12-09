@@ -269,36 +269,23 @@ export interface TransferHistoryResponse {
 }
 
 // Account Info API
-export async function getAccountInfo(credentials?: ApiCredentials): Promise<AccountInfo> {
-  console.log('🏦 Fetching Account Info...');
+// Backend fetches exchange credentials from database using JWT token
+export async function getAccountInfo(): Promise<AccountInfo> {
+  console.log('🏦 Fetching Account Info from backend (using JWT + DB credentials)...');
   
   try {
-    console.log('🔐 Binance Credentials:', credentials ? {
-      hasApiKey: !!credentials.apiKey,
-      hasSecretKey: !!credentials.secretKey,
-      apiKeyPreview: credentials.apiKey?.substring(0, 8) + '...'
-    } : 'NO CREDENTIALS PROVIDED');
-    
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
     };
     
-    // Add JWT token for authentication
+    // Add JWT token for authentication - backend will fetch credentials from database
     const token = TokenStorage.getAccessToken();
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
-      console.log('🔑 JWT token added to headers');
+      console.log('🔑 JWT token added - backend will retrieve exchange credentials from database');
     } else {
       console.warn('⚠️ No JWT token found in storage');
-    }
-    
-    // Add credentials to headers if available
-    if (credentials) {
-      headers['x-api-key'] = credentials.apiKey;
-      headers['x-secret-key'] = credentials.secretKey;
-      if (credentials.passphrase) {
-        headers['x-passphrase'] = credentials.passphrase;
-      }
+      throw new Error('Not authenticated. Please login.');
     }
     
     console.log('📤 Request Headers:', Object.keys(headers));
@@ -323,8 +310,9 @@ export async function getAccountInfo(credentials?: ApiCredentials): Promise<Acco
 }
 
 // Open Orders API--working-binance-mainnet
-export async function getOpenOrders(symbol?: string, credentials?: ApiCredentials): Promise<Order[]> {
-  console.log('📋 Fetching Binance Open Orders...');
+// Backend fetches exchange credentials from database using JWT token
+export async function getOpenOrders(symbol?: string): Promise<Order[]> {
+  console.log('📋 Fetching Binance Open Orders from backend (using JWT + DB credentials)...');
   
   try {
     const url = symbol 
@@ -335,19 +323,15 @@ export async function getOpenOrders(symbol?: string, credentials?: ApiCredential
       'Content-Type': 'application/json',
     };
     
-    // Add JWT token for authentication
+    // Add JWT token for authentication - backend will fetch credentials from database
     const token = TokenStorage.getAccessToken();
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
-      console.log('🔑 JWT token added to headers');
+      console.log('🔑 JWT token added - backend will retrieve exchange credentials from database');
     } else {
       console.warn('⚠️ No JWT token found in storage');
+      throw new Error('Not authenticated. Please login.');
     }
-    
-    // Add credentials to headers if available
-    if (credentials) {
-      headers['x-api-key'] = credentials.apiKey;
-      headers['x-secret-key'] = credentials.secretKey;
       if (credentials.passphrase) {
         headers['x-passphrase'] = credentials.passphrase;
       }
@@ -466,41 +450,22 @@ export async function getOrderHistory(): Promise<Array<{ symbol: string; orders:
   }
 }
 
-export async function getUserAssets(credentials?: ApiCredentials): Promise<UserAsset[]> {
-  console.log('💰 Fetching Enhanced User Assets...');
+export async function getUserAssets(): Promise<UserAsset[]> {
+  console.log('💰 Fetching Enhanced User Assets from backend (using JWT + DB credentials)...');
   
   try {
-    console.log('🔐 Binance Credentials:', credentials ? {
-      hasApiKey: !!credentials.apiKey,
-      hasSecretKey: !!credentials.secretKey,
-      apiKeyPreview: credentials.apiKey?.substring(0, 8) + '...'
-    } : 'NO CREDENTIALS PROVIDED');
-    
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
     };
     
-    // Add JWT token for authentication
+    // Add JWT token for authentication - backend will fetch credentials from database
     const token = TokenStorage.getAccessToken();
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
-      console.log('🔑 JWT token added to headers');
+      console.log('🔑 JWT token added - backend will retrieve exchange credentials from database');
     } else {
       console.warn('⚠️ No JWT token found in storage');
-    }
-    
-    // Add credentials to headers if available
-    if (credentials) {
-      headers['x-api-key'] = credentials.apiKey;
-      headers['x-secret-key'] = credentials.secretKey;
-      if (credentials.passphrase) {
-        headers['x-passphrase'] = credentials.passphrase;
-      }
-      console.log('🔐 Credentials added to headers:', {
-        'x-api-key': credentials.apiKey.substring(0, 10) + '...',
-        'x-secret-key': credentials.secretKey.substring(0, 10) + '...',
-        'x-passphrase': credentials.passphrase ? '***' : 'N/A'
-      });
+      throw new Error('Not authenticated. Please login.');
     }
     
     console.log('📤 Request Headers:', Object.keys(headers));
@@ -1092,19 +1057,19 @@ export async function normalizeBitgetToAccountSnapshot(bitgetAssets: BitgetAsset
 // ============================================
 
 // Get account info based on selected exchange
+// Backend fetches exchange credentials from database using JWT token
 export async function getAccountInfoByExchange(
-  exchange: 'binance' | 'bitget',
-  credentials?: ApiCredentials
+  exchange: 'binance' | 'bitget'
 ): Promise<NormalizedAccountInfo> {
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('🌐 getAccountInfoByExchange CALLED');
   console.log('   Exchange:', exchange);
-  console.log('   Has Credentials:', !!credentials);
+  console.log('   Using JWT + backend database credentials');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   
   if (exchange === 'binance') {
     console.log('📞 Calling Binance API: getAccountInfo()');
-    const binanceData = await getAccountInfo(credentials);
+    const binanceData = await getAccountInfo();
     console.log('✅ Binance Response:', {
       accountType: binanceData.accountType,
       balancesCount: binanceData.balances.length,
@@ -1116,7 +1081,7 @@ export async function getAccountInfoByExchange(
     };
   } else {
     console.log('📞 Calling Bitget API: getBitgetSpotAssets()');
-    const bitgetAssets = await getBitgetSpotAssets(credentials);
+    const bitgetAssets = await getBitgetSpotAssets();
     console.log('✅ Bitget Response:', {
       assetsCount: bitgetAssets.length,
       firstAsset: bitgetAssets[0],
@@ -1156,7 +1121,7 @@ export async function getUserAssetsByExchange(
     return normalized;
   } else {
     console.log('📞 Calling Bitget API: getBitgetSpotAssets()');
-    const bitgetAssets = await getBitgetSpotAssets(credentials);
+    const bitgetAssets = await getBitgetSpotAssets();
     console.log('✅ Bitget Assets Response:', {
       count: bitgetAssets.length,
       firstAsset: bitgetAssets[0],

@@ -42,10 +42,12 @@ export default function LoginForm() {
             const result = await login(formData);
             console.log('Login result: user expected', result);
             if (result) {
-                console.log('Login successful:', result);
+                console.log('✅ Login successful, redirecting to dashboard...');
+                // Navigate to dashboard after successful login
+                router.push('/dashboard');
             }
         } catch (error) {
-            console.error('Login failed:', error);
+            console.error('❌ Login failed:', error);
         }
     };
 

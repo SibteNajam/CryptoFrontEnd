@@ -31,28 +31,17 @@ import DbTradesTab from '@/components/portfolio/dbTrades';
 type TabType = 'overview' | 'balances' | 'orders' | 'filled' | 'db-trades' | 'history' | 'performance' | 'transfers' | 'trade-analysis';
 
 export default function PortfolioPage() {
-  // Get selected exchange and credentials from Redux
-  const { selectedExchange, credentials } = useAppSelector((state: any) => state.exchange);
+  // Get selected exchange from Redux - credentials are stored in backend database
+  const { selectedExchange } = useAppSelector((state: any) => state.exchange);
 
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('🔷 PORTFOLIO PAGE - Redux State');
+  console.log('🔷 PORTFOLIO PAGE - Using JWT Token');
   console.log('   Selected Exchange:', selectedExchange);
-  console.log('   Credentials:', credentials ? {
-    exchange: credentials.exchange,
-    hasApiKey: !!credentials.apiKey,
-    hasSecretKey: !!credentials.secretKey,
-    hasPassphrase: !!credentials.passphrase,
-    label: credentials.label
-  } : 'NULL');
+  console.log('   Backend will fetch credentials from database using JWT');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-  // Prepare credentials for API calls
-  const apiCredentials = credentials && credentials.exchange === selectedExchange ? {
-    apiKey: credentials.apiKey,
-    secretKey: credentials.secretKey,
-    passphrase: credentials.passphrase
-  } : undefined;
-
+  // Backend fetches credentials from database using JWT token - no need to pass credentials
+  
   // Cache utilities
   const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
@@ -131,12 +120,12 @@ export default function PortfolioPage() {
       }
 
       console.log(`🌐 Calling API for exchange: ${selectedExchange}`);
-      console.log(`🔐 Passing credentials:`, apiCredentials ? 'YES' : 'NO');
+      console.log(`🔐 Using JWT token - backend will fetch credentials from database`);
 
       // Load critical data first (account info and open orders)
       const [accountInfo, openOrdersData] = await Promise.all([
-        getAccountInfoByExchange(selectedExchange as 'binance' | 'bitget', apiCredentials),
-        getOpenOrdersByExchange(selectedExchange as 'binance' | 'bitget', undefined, apiCredentials),
+        getAccountInfoByExchange(selectedExchange as 'binance' | 'bitget'),
+        getOpenOrdersByExchange(selectedExchange as 'binance' | 'bitget'),
       ]);
 
       console.log('✅ API Response received:');
@@ -164,7 +153,7 @@ export default function PortfolioPage() {
     } finally {
       setLoading(false);
     }
-  }, [selectedExchange, apiCredentials]); // Added selectedExchange and apiCredentials to dependency array
+  }, [selectedExchange]); // Backend handles credentials from database
 
   const fetchEnhancedData = useCallback(async () => {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -177,10 +166,9 @@ export default function PortfolioPage() {
       try {
         setSnapshotLoading(true);
         console.log(`🌐 Fetching account snapshot from ${selectedExchange}...`);
-        console.log(`🔐 Passing credentials:`, apiCredentials ? 'YES' : 'NO');
+        console.log(`🔐 Using JWT - backend will fetch credentials from database`);
         const snapshot = await getAccountSnapshotByExchange(
-          selectedExchange as 'binance' | 'bitget',
-          apiCredentials
+          selectedExchange as 'binance' | 'bitget'
         );
         console.log('✅ Snapshot loaded:', {
           exchange: selectedExchange,
@@ -198,10 +186,9 @@ export default function PortfolioPage() {
       try {
         setAssetsLoading(true);
         console.log(`🌐 Fetching user assets from ${selectedExchange}...`);
-        console.log(`🔐 Passing credentials:`, apiCredentials ? 'YES' : 'NO');
+        console.log(`🔐 Using JWT - backend will fetch credentials from database`);
         const assets = await getUserAssetsByExchange(
-          selectedExchange as 'binance' | 'bitget',
-          apiCredentials
+          selectedExchange as 'binance' | 'bitget'
         );
         console.log('✅ User Assets Response:', {
           exchange: selectedExchange,
@@ -218,7 +205,7 @@ export default function PortfolioPage() {
     } catch (err) {
       console.error('❌ Enhanced data fetch failed:', err);
     }
-  }, [selectedExchange, apiCredentials]); // Added apiCredentials to dependency array
+  }, [selectedExchange]); // Backend handles credentials from database
 
   // Remove the old fake snapshot generator since we're using real data
   // const generateFakeAccountSnapshot = (): AccountSnapshot => {
