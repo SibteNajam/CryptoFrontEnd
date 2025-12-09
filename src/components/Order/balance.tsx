@@ -51,7 +51,7 @@ export default function BalanceViewer({
       setError(null);
       
       try {
-        const res = await fetch("http://localhost:3000/binance/account-info");
+        const res = await fetch("http://146.59.93.94:3000/binance/account-info");
         
         if (!res.ok) {
           throw new Error('Failed to fetch account info');

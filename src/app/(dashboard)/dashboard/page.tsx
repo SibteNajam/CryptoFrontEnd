@@ -77,7 +77,7 @@ interface BinanceTickerData {
     };
 }
 
-const API_BASE_URL = 'http://localhost:3000';
+const API_BASE_URL = 'http://146.59.93.94:3000';
 
 export default function Dashboard() {
     const { selectedExchange } = useAppSelector((state) => state.exchange);

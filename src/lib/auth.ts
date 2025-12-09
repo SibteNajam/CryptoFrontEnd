@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { LoginCredentials, SignupCredentials, AuthResponse } from '@/types/auth';
 import TokenStorage from './tokenStorage';
-const API_BASE_URL = 'http://localhost:3000';
+const API_BASE_URL = 'http://146.59.93.94:3000';
 export async function login(credentials: LoginCredentials): Promise<any> {
     const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
@@ -55,7 +55,7 @@ export async function login(credentials: LoginCredentials): Promise<any> {
 }
 
 export async function signup(credentials: SignupCredentials): Promise<any> {
-    const response = await fetch('http://localhost:3000/user/register-user', {
+    const response = await fetch('http://146.59.93.94:3000/user/register-user', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

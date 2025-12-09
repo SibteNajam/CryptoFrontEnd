@@ -44,7 +44,7 @@ interface BitgetTickerBarProps {
   onSymbolChange?: (symbol: string) => void;
 }
 
-const BITGET_WS_URL = (process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:3000') + '/bitget';
+const BITGET_WS_URL = (process.env.NEXT_PUBLIC_WS_URL || 'http://146.59.93.94:3000') + '/bitget';
 
 export default function BitgetTickerBar({ selectedSymbol, availableSymbols = [], onSymbolChange }: BitgetTickerBarProps) {
   const [tickerData, setTickerData] = useState<BitgetTickerData | null>(null);
