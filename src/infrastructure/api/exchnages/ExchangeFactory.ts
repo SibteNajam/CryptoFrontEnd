@@ -13,9 +13,11 @@ export function createExchangeService(
   passphrase?: string
 ): ExchangeService {
   const credentials: ExchangeCredentials = {
+    exchange: exchangeType,
     apiKey,
     secretKey,
-    passphrase
+    passphrase,
+    label: `${exchangeType.toUpperCase()} Connection`
   };
 
   let service: ExchangeService;
