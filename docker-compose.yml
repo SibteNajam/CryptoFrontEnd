@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  nextjs-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: crypto-frontend
+    restart: unless-stopped
+    ports:
+      - "3002:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_TRADING_BOT_API=${NEXT_PUBLIC_TRADING_BOT_API}
+    networks:
+      - crypto-network
+
+networks:
+  crypto-network:
+    driver: bridge
