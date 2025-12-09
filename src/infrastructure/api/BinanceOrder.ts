@@ -126,46 +126,46 @@ export class BinanceApiService {
     }
 
 
-async getSymbolsWithPrice(limit = 20): Promise<any[]> {
-  try {
-    const response = await fetch(`${this.apiUrl}/binance/prices?limit=${limit}`, {
-      method: "GET",
-      headers: {
-        accept: "*/*",
-      },
-    });
+    async getSymbolsWithPrice(limit = 20): Promise<any[]> {
+        try {
+            const response = await fetch(`${this.apiUrl}/binance/prices?limit=${limit}`, {
+                method: "GET",
+                headers: {
+                    accept: "*/*",
+                },
+            });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
 
-    return await response.json();
-  } catch (error) {
-    console.error("❌ Error fetching prices:", error);
-    throw error;
-  }
-}
-
-
-async getAllSymbols(): Promise<string[]> {
-    try {
-        const response = await fetch(`${this.apiUrl}/binance/symbols`, {
-            method: 'GET',
-            headers: {
-                'accept': '*/*',
-            },
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            return await response.json();
+        } catch (error) {
+            console.error("❌ Error fetching prices:", error);
+            throw error;
         }
-
-        return await response.json();
-    } catch (error) {
-        console.error('❌ Error fetching all symbols:', error);
-        throw error;
     }
-}
+
+
+    async getAllSymbols(): Promise<string[]> {
+        try {
+            const response = await fetch(`${this.apiUrl}/binance/symbols`, {
+                method: 'GET',
+                headers: {
+                    'accept': '*/*',
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('❌ Error fetching all symbols:', error);
+            throw error;
+        }
+    }
 
     async getAccountInfo(): Promise<AccountInfo> {
         try {
@@ -191,57 +191,57 @@ async getAllSymbols(): Promise<string[]> {
         }
     }
 
-async placeOrder(order: OrderRequest): Promise<OrderResult> {
-    try {
-        console.log(' Frontend API Service - Placing order:', order);
-        console.log(' Calling URL:', `${this.apiUrl}/binance/place-order`);
-        
-        // Log the exact same format that worked in console
-        const orderPayload = {
-            symbol: order.symbol,
-            side: order.side,
-            type: order.type,
-            quantity: order.quantity,
-            price: order.price ? order.price : undefined,
-            timeInForce: order.timeInForce ? order.timeInForce : undefined
-        };
-        
-        console.log(' Exact payload being sent:', JSON.stringify(orderPayload, null, 2));
-        
-        const response = await fetch(`${this.apiUrl}/binance/place-order`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${TokenStorage.getAccessToken()}`,
-            },
-            body: JSON.stringify(orderPayload)
-        });
+    async placeOrder(order: OrderRequest): Promise<OrderResult> {
+        try {
+            console.log(' Frontend API Service - Placing order:', order);
+            console.log(' Calling URL:', `${this.apiUrl}/binance/place-order`);
 
-        console.log(' Response status:', response.status);
-        console.log(' Response ok:', response.ok);
-        
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error(' Error response text:', errorText);
-            throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+            // Log the exact same format that worked in console
+            const orderPayload = {
+                symbol: order.symbol,
+                side: order.side,
+                type: order.type,
+                quantity: order.quantity,
+                price: order.price ? order.price : undefined,
+                timeInForce: order.timeInForce ? order.timeInForce : undefined
+            };
+
+            console.log(' Exact payload being sent:', JSON.stringify(orderPayload, null, 2));
+
+            const response = await fetch(`${this.apiUrl}/binance/place-order`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${TokenStorage.getAccessToken()}`,
+                },
+                body: JSON.stringify(orderPayload)
+            });
+
+            console.log(' Response status:', response.status);
+            console.log(' Response ok:', response.ok);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error(' Error response text:', errorText);
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+            }
+
+            const result = await response.json();
+            console.log(' Order placed successfully:', result);
+            return result;
+
+        } catch (error) {
+            console.error('Frontend API Service - Error details:', {
+                error: error,
+                message: error instanceof Error ? error.message : 'Unknown error',
+                stack: error instanceof Error ? error.stack : undefined
+            });
+            throw error;
         }
-
-        const result = await response.json();
-        console.log(' Order placed successfully:', result);
-        return result;
-
-    } catch (error) {
-        console.error('Frontend API Service - Error details:', {
-            error: error,
-            message: error instanceof Error ? error.message : 'Unknown error',
-            stack: error instanceof Error ? error.stack : undefined
-        });
-        throw error;
     }
-}
     async getOpenOrders(symbol?: string): Promise<OpenOrder[]> {
         try {
-            const url = symbol 
+            const url = symbol
                 ? `${this.apiUrl}/binance/open-orders?symbol=${symbol}`
                 : `${this.apiUrl}/binance/open-orders`;
 
@@ -264,77 +264,77 @@ async placeOrder(order: OrderRequest): Promise<OrderResult> {
         }
     }
     async getExchangeInfo(): Promise<any> {
-    try {
-      const response = await fetch('https://api.binance.com/api/v3/exchangeInfo');
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      return await response.json();
-    } catch (error) {
-      console.error('Error fetching exchange info:', error);
-      throw error;
-    }
-  }
-
-  async cancelOrder(symbol: string, orderId: number): Promise<any> {
-  try {
-    const response = await fetch(
-      `${this.apiUrl}/binance/cancel-order?symbol=${encodeURIComponent(symbol)}&orderId=${orderId}`,
-      {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${TokenStorage.getAccessToken()}`,
-        },
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const result = await response.json();
-    console.log('✅ Order cancelled:', result);
-    return result;
-  } catch (error) {
-    console.error('Error cancelling order:', error);
-    throw error;
-  }
-}
-
-async placeMarketOrder(payload: any): Promise<any> {
-     const start = Date.now();
-    try {      
-        const response = await fetch('http://localhost:3000/binance/place-market-order', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': '*/*'
-            },
-            body: JSON.stringify(payload)
-        });
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const duration = Date.now() - start;
-
-    console.log(`Placed market order in................... ${duration}ms`);
-        return await response.json();
-    } catch (error) {
-        if (error instanceof Error) {
-            throw new Error(`Failed to place market order: ${error.message}`);
-        } else {
-            throw new Error('Failed to place market order: Unknown error');
+        try {
+            const response = await fetch('https://api.binance.com/api/v3/exchangeInfo');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching exchange info:', error);
+            throw error;
         }
     }
-};
 
-async placeOrderListOTOCO(payload: any): Promise<any> {
-    try {
+    async cancelOrder(symbol: string, orderId: number): Promise<any> {
+        try {
+            const response = await fetch(
+                `${this.apiUrl}/binance/cancel-order?symbol=${encodeURIComponent(symbol)}&orderId=${orderId}`,
+                {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${TokenStorage.getAccessToken()}`,
+                    },
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const result = await response.json();
+            console.log('✅ Order cancelled:', result);
+            return result;
+        } catch (error) {
+            console.error('Error cancelling order:', error);
+            throw error;
+        }
+    }
+
+    async placeMarketOrder(payload: any): Promise<any> {
         const start = Date.now();
-        const response = await fetch('http://localhost:3000/binance/place-otoc-order', {
-            method: 'POST',
-            headers: {
+        try {
+            const response = await fetch('http://localhost:3000/binance/place-market-order', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': '*/*'
+                },
+                body: JSON.stringify(payload)
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const duration = Date.now() - start;
+
+            console.log(`Placed market order in................... ${duration}ms`);
+            return await response.json();
+        } catch (error) {
+            if (error instanceof Error) {
+                throw new Error(`Failed to place market order: ${error.message}`);
+            } else {
+                throw new Error('Failed to place market order: Unknown error');
+            }
+        }
+    };
+
+    async placeOrderListOTOCO(payload: any): Promise<any> {
+        try {
+            const start = Date.now();
+            const response = await fetch('http://localhost:3000/binance/place-otoc-order', {
+                method: 'POST',
+                headers: {
                     'Content-Type': 'application/json',
                     'Accept': '*/*'
                 },
@@ -389,5 +389,5 @@ async placeOrderListOTOCO(payload: any): Promise<any> {
         };
     }
 
-    
+
 }

@@ -3,10 +3,10 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { RefreshCw, TrendingUp, Wallet, Clock, History, XCircle, Activity, DollarSign } from 'lucide-react';
-import { 
+import {
   getAccountInfoByExchange,
   getUserAssetsByExchange,
-  getOpenOrdersByExchange, 
+  getOpenOrdersByExchange,
   getOrderHistory,
   getAccountSnapshotByExchange,
   NormalizedAccountInfo,
@@ -25,15 +25,16 @@ import TransferHistoryTable from '@/components/portfolio/transferHistory';
 // import TradeAnalysisTab from '../../../components/portfolio/tradeAnalysis';
 import { useAppSelector } from '@/infrastructure/store/hooks';
 import PerformanceAnalysis from '@/components/portfolio/performanceAnalysis';
+import DbTradesTab from '@/components/portfolio/dbTrades';
 // import TradeAnalysisTab from '@/components/portfolio/tradeAnalysis';
 
-type TabType = 'overview' | 'balances' | 'orders' | 'filled' | 'history' | 'performance' | 'transfers' | 'trade-analysis';
+type TabType = 'overview' | 'balances' | 'orders' | 'filled' | 'db-trades' | 'history' | 'performance' | 'transfers' | 'trade-analysis';
 
 export default function PortfolioPage() {
   // Get selected exchange and credentials from Redux
-    const { selectedExchange, credentials } = useAppSelector((state: any) => state.exchange);
-    
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  const { selectedExchange, credentials } = useAppSelector((state: any) => state.exchange);
+
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('🔷 PORTFOLIO PAGE - Redux State');
   console.log('   Selected Exchange:', selectedExchange);
   console.log('   Credentials:', credentials ? {
@@ -44,36 +45,36 @@ export default function PortfolioPage() {
     label: credentials.label
   } : 'NULL');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  
+
   // Prepare credentials for API calls
   const apiCredentials = credentials && credentials.exchange === selectedExchange ? {
     apiKey: credentials.apiKey,
     secretKey: credentials.secretKey,
     passphrase: credentials.passphrase
   } : undefined;
-  
+
   // Cache utilities
   const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-  
+
   const getCacheKey = (key: string) => `portfolio_${key}`;
-  
+
   const getCachedData = (key: string) => {
     try {
       const cached = localStorage.getItem(getCacheKey(key));
       if (!cached) return null;
-      
+
       const { data, timestamp } = JSON.parse(cached);
       if (Date.now() - timestamp > CACHE_DURATION) {
         localStorage.removeItem(getCacheKey(key));
         return null;
       }
-      
+
       return data;
     } catch {
       return null;
     }
   };
-  
+
   const setCachedData = (key: string, data: any) => {
     try {
       localStorage.setItem(getCacheKey(key), JSON.stringify({
@@ -99,25 +100,25 @@ export default function PortfolioPage() {
   const fetchBasicData = useCallback(async (forceRefresh = false) => {
     setLoading(true);
     setError(null);
-    
+
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('📊 FETCH BASIC DATA - Starting fetch...');
     console.log('   Exchange:', selectedExchange);
     console.log('   Force Refresh:', forceRefresh);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    
+
     try {
       // Check cache first (unless force refresh)
       if (!forceRefresh) {
         const cachedAccount = getCachedData(`account_${selectedExchange}`);
         const cachedOrders = getCachedData(`orders_${selectedExchange}`);
-        
+
         if (cachedAccount && cachedOrders) {
           console.log('✅ Using cached data for', selectedExchange);
           setAccountData(cachedAccount);
           setOpenOrders(cachedOrders);
           setLastUpdate(new Date());
-          
+
           // Load enhanced data in background
           fetchEnhancedData();
           setLoading(false);
@@ -131,7 +132,7 @@ export default function PortfolioPage() {
 
       console.log(`🌐 Calling API for exchange: ${selectedExchange}`);
       console.log(`🔐 Passing credentials:`, apiCredentials ? 'YES' : 'NO');
-      
+
       // Load critical data first (account info and open orders)
       const [accountInfo, openOrdersData] = await Promise.all([
         getAccountInfoByExchange(selectedExchange as 'binance' | 'bitget', apiCredentials),
@@ -149,13 +150,13 @@ export default function PortfolioPage() {
 
       setAccountData(accountInfo);
       setOpenOrders(openOrdersData as Order[]);
-      
+
       // Cache the data with exchange-specific keys
       setCachedData(`account_${selectedExchange}`, accountInfo);
       setCachedData(`orders_${selectedExchange}`, openOrdersData);
-      
+
       setLastUpdate(new Date());
-      
+
       // Load enhanced data in background (non-blocking)
       fetchEnhancedData();
     } catch (err) {
@@ -170,7 +171,7 @@ export default function PortfolioPage() {
     console.log('🔍 FETCH ENHANCED DATA - Starting...');
     console.log('   Exchange:', selectedExchange);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    
+
     try {
       // Load snapshot data (for performance tab)
       try {
@@ -181,7 +182,7 @@ export default function PortfolioPage() {
           selectedExchange as 'binance' | 'bitget',
           apiCredentials
         );
-        console.log('✅ Snapshot loaded:', { 
+        console.log('✅ Snapshot loaded:', {
           exchange: selectedExchange,
           totalSnapshots: snapshot.totalSnapshots,
           currentValue: snapshot.currentValue
@@ -239,13 +240,14 @@ export default function PortfolioPage() {
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: TrendingUp },
-    { id: 'performance', label: 'Performance', icon: Activity },
+    // { id: 'performance', label: 'Performance', icon: Activity },
     { id: 'balances', label: 'Balances', icon: Wallet },
     { id: 'orders', label: 'Open Orders', icon: Clock },
     { id: 'filled', label: 'Filled Orders', icon: DollarSign },
+    { id: 'db-trades', label: 'DB Trades', icon: Activity },
     { id: 'trade-analysis', label: 'Trade Analysis', icon: TrendingUp },
     { id: 'history', label: 'History', icon: History },
-    { id: 'transfers', label: 'Transfers', icon: History },
+    // { id: 'transfers', label: 'Transfers', icon: History },
   ];
 
   const renderTabContent = () => {
@@ -292,18 +294,20 @@ export default function PortfolioPage() {
         return <OpenOrdersTab openOrders={openOrders} />;
       case 'filled':
         return <FilledOrdersTab />;
+      case 'db-trades':
+        return <DbTradesTab selectedExchange={selectedExchange} />;
       case 'trade-analysis':
         return <PerformanceAnalysis />;
       case 'history':
         return <HistoryTab orderHistory={orderHistory} />;
-      case 'transfers':
-        return <TransferHistoryTable 
-          current={1}
-          size={50}
-          onDataLoaded={(data) => {
-            console.log('Transfer data loaded:', data);
-          }}
-        />;
+      // case 'transfers':
+      //   return <TransferHistoryTable 
+      //     current={1}
+      //     size={50}
+      //     onDataLoaded={(data) => {
+      //       console.log('Transfer data loaded:', data);
+      //     }}
+      //   />;
       default:
         return null;
     }
@@ -331,12 +335,12 @@ export default function PortfolioPage() {
             )}
           </p>
         </div>
-        
-        <button 
+
+        <button
           onClick={() => {
             fetchBasicData(true);
             fetchEnhancedData();
-          }} 
+          }}
           disabled={loading}
           className="inline-flex items-center gap-2 px-4 py-2 bg-card border border-default rounded-lg hover:bg-muted disabled:opacity-50 transition-colors text-sm font-medium text-muted-foreground"
         >
@@ -344,6 +348,9 @@ export default function PortfolioPage() {
           {loading ? 'Loading...' : 'Refresh'}
         </button>
       </div>
+
+      {/* Separator Line */}
+      {/* <div className="border-b border-default"></div> */}
 
       {/* Error Display */}
       {error && (
@@ -361,16 +368,15 @@ export default function PortfolioPage() {
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
-            
+
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as TabType)}
-                className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                  isActive
-                    ? 'border-primary text-primary hover:text-primary-foreground'
-                    : 'border-transparent text-muted-foreground hover:text-card-foreground hover:border-muted'
-                }`}
+                className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${isActive
+                  ? 'border-primary text-primary hover:text-primary-foreground'
+                  : 'border-transparent text-muted-foreground hover:text-card-foreground hover:border-muted'
+                  }`}
               >
                 <Icon className="h-4 w-4" />
                 {tab.label}
@@ -384,6 +390,9 @@ export default function PortfolioPage() {
           })}
         </nav>
       </div>
+
+      {/* Separator Line */}
+      <div className="border-b border-default"></div>
 
       {/* Tab Content */}
       <div className="h-full">

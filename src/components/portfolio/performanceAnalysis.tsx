@@ -121,70 +121,304 @@ export default function PerformanceAnalysis() {
       return mostRecentB - mostRecentA;
     });
 
-    // Process each symbol to create pairs
-    const allPairs: (TradePair & { symbol: string })[] = [];
+    // Process each symbol to create pairs using day-based logic
+    const allPairs: (TradePair & { symbol: string; date: string })[] = [];
     const symbolPnLMap: Record<string, SymbolPnLData> = {};
 
     sortedSymbols.forEach(([symbol, trades]) => {
-      // Sort trades by time (oldest first for pairing logic)
+      // Sort trades by time (oldest first)
       const sortedTrades = [...trades].sort((a, b) => Number(a.cTime) - Number(b.cTime));
       
-      const pairs: TradePair[] = [];
-      let currentBuyGroup: TradeHistory[] = [];
-      let currentSellGroup: TradeHistory[] = [];
-      
-      // Pairing logic (same as filledOrders)
-      for (const trade of sortedTrades) {
-        if (trade.side === 'buy') {
-          // Complete previous pair if exists
-          if (currentBuyGroup.length > 0 && currentSellGroup.length > 0) {
-            const pair = createPair(currentBuyGroup, currentSellGroup);
-            pairs.push(pair);
-            currentBuyGroup = [];
-            currentSellGroup = [];
-          } else if (currentSellGroup.length > 0) {
-            // Unpaired sells
-            const pair = createPair([], currentSellGroup);
-            pairs.push(pair);
-            currentSellGroup = [];
-          }
-          currentBuyGroup.push(trade);
-        } else if (trade.side === 'sell') {
-          currentSellGroup.push(trade);
+      // Group trades by date
+      const tradesByDate: Record<string, TradeHistory[]> = {};
+      sortedTrades.forEach(trade => {
+        const dateKey = new Date(Number(trade.cTime)).toLocaleDateString(undefined, { 
+          year: 'numeric', 
+          month: 'short', 
+          day: 'numeric' 
+        });
+        if (!tradesByDate[dateKey]) {
+          tradesByDate[dateKey] = [];
         }
-      }
-      
-      // Handle remaining unpaired groups
-      if (currentBuyGroup.length > 0 && currentSellGroup.length > 0) {
-        const pair = createPair(currentBuyGroup, currentSellGroup);
-        pairs.push(pair);
-      } else if (currentBuyGroup.length > 0) {
-        const pair = createPair(currentBuyGroup, []);
-        pairs.push(pair);
-      } else if (currentSellGroup.length > 0) {
-        const pair = createPair([], currentSellGroup);
-        pairs.push(pair);
-      }
-
-      // Store pairs with symbol
-      pairs.forEach(pair => {
-        allPairs.push({ ...pair, symbol });
+        tradesByDate[dateKey].push(trade);
       });
 
+      // Process dates chronologically
+      const dateKeys = Object.keys(tradesByDate).sort((a, b) => {
+        const dateA = tradesByDate[a][0];
+        const dateB = tradesByDate[b][0];
+        return Number(dateA.cTime) - Number(dateB.cTime);
+      });
+
+      let carryOverBuys: TradeHistory[] = [];
+      const tempPairs: (TradePair & { symbol: string; date: string })[] = [];
+
+      dateKeys.forEach((dateKey, dateIndex) => {
+        const dayTrades = tradesByDate[dateKey].sort((a, b) => Number(a.cTime) - Number(b.cTime));
+        
+        const dayBuys: TradeHistory[] = [];
+        const daySells: TradeHistory[] = [];
+
+        // Separate buys and sells
+        dayTrades.forEach(trade => {
+          if (trade.side === 'buy') {
+            dayBuys.push(trade);
+          } else {
+            daySells.push(trade);
+          }
+        });
+
+        // Check if sells appear before any buys on this day
+        const firstBuyTime = dayBuys.length > 0 ? Number(dayBuys[0].cTime) : Infinity;
+        const firstSellTime = daySells.length > 0 ? Number(daySells[0].cTime) : Infinity;
+
+        let finalBuys: TradeHistory[] = [];
+        let finalSells: TradeHistory[] = [];
+
+        // Add carry-over buys from previous day
+        if (carryOverBuys.length > 0) {
+          finalBuys.push(...carryOverBuys);
+          carryOverBuys = [];
+        }
+
+        // If sells appear BEFORE any buys, AND there are unmatched buys from previous day
+        if (firstSellTime < firstBuyTime && tempPairs.length > 0) {
+          const prevPair = tempPairs[tempPairs.length - 1];
+          
+          // Check if previous pair has unmatched buys (more buys than sells)
+          if (prevPair.totalBuySize && prevPair.totalSellSize && prevPair.totalBuySize > prevPair.totalSellSize + 0.001) {
+            // Get sells that appear before first buy
+            const sellsBeforeBuys = daySells.filter(sell => Number(sell.cTime) < firstBuyTime);
+            
+            if (sellsBeforeBuys.length > 0) {
+              // Recalculate previous day with these sells
+              const prevBuys = prevPair.buys;
+              const prevSells = [...prevPair.sells, ...sellsBeforeBuys];
+              
+              // Recalculate previous day metrics
+              let prevTotalBuySize = 0;
+              let prevTotalBuyCost = 0;
+              for (const buy of prevBuys) {
+                const buySize = parseFloat(buy.size || '0');
+                const price = parseFloat(buy.price || '0');
+                let effectiveSize = buySize;
+                if (buy.feeDetail && buy.feeDetail.feeCoin !== 'USDT') {
+                  const feeInAsset = Math.abs(parseFloat(buy.feeDetail.totalFee || '0'));
+                  effectiveSize = buySize - feeInAsset;
+                }
+                prevTotalBuySize += effectiveSize;
+                prevTotalBuyCost += buySize * price;
+                if (buy.feeDetail && buy.feeDetail.feeCoin === 'USDT') {
+                  prevTotalBuyCost += Math.abs(parseFloat(buy.feeDetail.totalFee || '0'));
+                }
+              }
+              
+              let prevTotalSellSize = 0;
+              let prevTotalSellRevenue = 0;
+              for (const sell of prevSells) {
+                const size = parseFloat(sell.size || '0');
+                const price = parseFloat(sell.price || '0');
+                prevTotalSellSize += size;
+                prevTotalSellRevenue += size * price;
+                const feeDetail = sell.feeDetail;
+                if (feeDetail && feeDetail.feeCoin === 'USDT') {
+                  const fee = Math.abs(parseFloat(feeDetail.totalFee || '0'));
+                  prevTotalSellRevenue -= fee;
+                } else if (feeDetail && feeDetail.feeCoin !== 'USDT') {
+                  const feeInAsset = Math.abs(parseFloat(feeDetail.totalFee || '0'));
+                  const feeInUSDT = feeInAsset * price;
+                  prevTotalSellRevenue -= feeInUSDT;
+                }
+              }
+              
+              const prevAvgBuyPrice = prevTotalBuySize > 0 ? prevTotalBuyCost / prevTotalBuySize : null;
+              const prevAvgSellPrice = prevTotalSellSize > 0 ? prevTotalSellRevenue / prevTotalSellSize : null;
+              
+              let prevPnl = null;
+              let prevPnlPercent = null;
+              let prevUnmatchedBuys: TradeHistory[] = [];
+              
+              if (prevTotalBuySize > prevTotalSellSize + 0.001) {
+                // Still have unmatched buys
+                const matchedSize = prevTotalSellSize;
+                const unmatchedSize = prevTotalBuySize - prevTotalSellSize;
+                let remainingUnmatched = unmatchedSize;
+                for (let j = prevBuys.length - 1; j >= 0 && remainingUnmatched > 0.001; j--) {
+                  const buySize = parseFloat(prevBuys[j].size || '0');
+                  if (buySize <= remainingUnmatched + 0.001) {
+                    prevUnmatchedBuys.unshift(prevBuys[j]);
+                    remainingUnmatched -= buySize;
+                  }
+                }
+                carryOverBuys = prevUnmatchedBuys;
+                if (matchedSize > 0 && prevAvgBuyPrice && prevAvgBuyPrice > 0) {
+                  const costBasis = matchedSize * prevAvgBuyPrice;
+                  prevPnl = prevTotalSellRevenue - costBasis;
+                  prevPnlPercent = (prevPnl / costBasis) * 100;
+                }
+              } else {
+                // Fully matched or more sells
+                carryOverBuys = [];
+                if (prevTotalBuySize > 0 && prevAvgBuyPrice && prevAvgBuyPrice > 0) {
+                  const effectiveSize = Math.min(prevTotalBuySize, prevTotalSellSize);
+                  const costBasis = effectiveSize * prevAvgBuyPrice;
+                  prevPnl = (effectiveSize / prevTotalSellSize) * prevTotalSellRevenue - costBasis;
+                  prevPnlPercent = (prevPnl / costBasis) * 100;
+                }
+              }
+              
+              // Update previous pair
+              tempPairs[tempPairs.length - 1] = {
+                ...prevPair,
+                buys: prevBuys.filter(b => !prevUnmatchedBuys.includes(b)),
+                sells: prevSells,
+                pnl: prevPnl,
+                pnlPercent: prevPnlPercent,
+                avgBuyPrice: prevAvgBuyPrice,
+                totalBuySize: prevTotalBuySize,
+                totalBuyCost: prevTotalBuyCost,
+                avgSellPrice: prevAvgSellPrice,
+                totalSellSize: prevTotalSellSize,
+                totalSellRevenue: prevTotalSellRevenue
+              };
+              
+              // Keep remaining sells for current day (those after first buy)
+              finalSells = daySells.filter(sell => Number(sell.cTime) >= firstBuyTime);
+            } else {
+              finalSells = daySells;
+            }
+          } else {
+            finalSells = daySells;
+          }
+        } else {
+          finalSells = daySells;
+        }
+
+        // Add current day's buys
+        finalBuys.push(...dayBuys);
+
+        // Calculate metrics
+        let totalBuySize = 0;
+        let totalBuyCost = 0;
+
+        for (const buy of finalBuys) {
+          const buySize = parseFloat(buy.size || '0');
+          const price = parseFloat(buy.price || '0');
+          let effectiveSize = buySize;
+
+          if (buy.feeDetail && buy.feeDetail.feeCoin !== 'USDT') {
+            const feeInAsset = Math.abs(parseFloat(buy.feeDetail.totalFee || '0'));
+            effectiveSize = buySize - feeInAsset;
+          }
+
+          totalBuySize += effectiveSize;
+          totalBuyCost += buySize * price;
+
+          if (buy.feeDetail && buy.feeDetail.feeCoin === 'USDT') {
+            totalBuyCost += Math.abs(parseFloat(buy.feeDetail.totalFee || '0'));
+          }
+        }
+
+        let totalSellSize = 0;
+        let totalSellRevenue = 0;
+
+        for (const sell of finalSells) {
+          const size = parseFloat(sell.size || '0');
+          const price = parseFloat(sell.price || '0');
+          totalSellSize += size;
+          totalSellRevenue += size * price;
+
+          const feeDetail = sell.feeDetail;
+          if (feeDetail && feeDetail.feeCoin === 'USDT') {
+            const fee = Math.abs(parseFloat(feeDetail.totalFee || '0'));
+            totalSellRevenue -= fee;
+          } else if (feeDetail && feeDetail.feeCoin !== 'USDT') {
+            const feeInAsset = Math.abs(parseFloat(feeDetail.totalFee || '0'));
+            const feeInUSDT = feeInAsset * price;
+            totalSellRevenue -= feeInUSDT;
+          }
+        }
+
+        const avgBuyPrice = totalBuySize > 0 ? totalBuyCost / totalBuySize : null;
+        const avgSellPrice = totalSellSize > 0 ? totalSellRevenue / totalSellSize : null;
+
+        let pnl = null;
+        let pnlPercent = null;
+
+        // Determine unmatched orders and calculate PNL
+        if (totalBuySize > totalSellSize + 0.001) {
+          // More buys than sells - carry over unmatched buys
+          const matchedSize = totalSellSize;
+          const unmatchedSize = totalBuySize - totalSellSize;
+          
+          let remainingUnmatched = unmatchedSize;
+          for (let j = finalBuys.length - 1; j >= 0 && remainingUnmatched > 0.001; j--) {
+            const buySize = parseFloat(finalBuys[j].size || '0');
+            if (buySize <= remainingUnmatched + 0.001) {
+              carryOverBuys.unshift(finalBuys[j]);
+              remainingUnmatched -= buySize;
+            }
+          }
+          
+          if (matchedSize > 0 && avgBuyPrice && avgBuyPrice > 0) {
+            const costBasis = matchedSize * avgBuyPrice;
+            pnl = totalSellRevenue - costBasis;
+            pnlPercent = (pnl / costBasis) * 100;
+          }
+        } else if (totalSellSize > totalBuySize + 0.001) {
+          // More sells than buys
+          if (totalBuySize > 0 && avgBuyPrice && avgBuyPrice > 0) {
+            const costBasis = totalBuySize * avgBuyPrice;
+            pnl = (totalBuySize / totalSellSize) * totalSellRevenue - costBasis;
+            pnlPercent = (pnl / costBasis) * 100;
+          }
+        } else if (totalBuySize > 0 && totalSellSize > 0) {
+          // Equal or nearly equal sizes
+          if (avgBuyPrice && avgBuyPrice > 0) {
+            const costBasis = totalBuySize * avgBuyPrice;
+            pnl = totalSellRevenue - costBasis;
+            pnlPercent = (pnl / costBasis) * 100;
+          }
+        }
+
+        // Only create pair if there's actual trading activity
+        if (finalBuys.length > 0 || finalSells.length > 0) {
+          const pair: TradePair & { symbol: string; date: string } = {
+            symbol,
+            date: dateKey,
+            buys: finalBuys,
+            sells: finalSells,
+            pnl,
+            pnlPercent,
+            avgBuyPrice,
+            totalBuySize,
+            totalBuyCost,
+            avgSellPrice,
+            totalSellSize,
+            totalSellRevenue
+          };
+          
+          tempPairs.push(pair);
+        }
+      });
+
+      // Add all temp pairs to allPairs
+      allPairs.push(...tempPairs);
+
       // Calculate total P&L for this symbol
-      const totalPnL = pairs.reduce((sum, pair) => {
-        return sum + (pair.pnl || 0);
-      }, 0);
+      const totalPnL = allPairs
+        .filter(p => p.symbol === symbol && p.pnl !== null)
+        .reduce((sum, pair) => sum + (pair.pnl || 0), 0);
 
       symbolPnLMap[symbol] = {
         symbol,
         totalPnL,
-        pairCount: pairs.length
+        pairCount: allPairs.filter(p => p.symbol === symbol).length
       };
     });
 
     // Calculate win/loss data
-    const completedPairs = allPairs.filter(pair => pair.pnl !== null);
+    const completedPairs = allPairs.filter(pair => pair.pnl !== null && pair.sells.length > 0 && pair.buys.length > 0);
     const wins = completedPairs.filter(pair => pair.pnl! > 0).length;
     const losses = completedPairs.filter(pair => pair.pnl! < 0).length;
 
@@ -274,15 +508,19 @@ export default function PerformanceAnalysis() {
     let cumulativePnL = 0;
     
     allPairs
-      .filter(pair => pair.pnl !== null && pair.sells.length > 0)
+      .filter(pair => pair.pnl !== null && pair.sells.length > 0 && pair.buys.length > 0)
       .sort((a, b) => {
-        const timeA = Math.max(...a.sells.map(s => Number(s.cTime)));
-        const timeB = Math.max(...b.sells.map(s => Number(s.cTime)));
-        return timeA - timeB; // Sort chronologically
+        // Sort by the pair's date
+        const dateA = new Date(tradeHistory.find(t => t.tradeId === (a.buys[0]?.tradeId || a.sells[0]?.tradeId))?.cTime || 0);
+        const dateB = new Date(tradeHistory.find(t => t.tradeId === (b.buys[0]?.tradeId || b.sells[0]?.tradeId))?.cTime || 0);
+        return dateA.getTime() - dateB.getTime();
       })
       .forEach(pair => {
-        const sellTime = Math.max(...pair.sells.map(s => Number(s.cTime)));
-        const dateKey = new Date(sellTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        // Use the date property we stored in the pair
+        const dateKey = (pair as any).date || new Date(Number(pair.sells[0]?.cTime || pair.buys[0]?.cTime)).toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric' 
+        });
         
         if (!dailyStats[dateKey]) {
           dailyStats[dateKey] = {
@@ -330,7 +568,7 @@ export default function PerformanceAnalysis() {
     console.log('Final cumulative P&L:', result[result.length - 1]?.cumulativePnL);
     
     return result;
-  }, [processedData]);
+  }, [processedData, tradeHistory]);
 
   // Calculate symbol win rates
   const symbolWinRates = useMemo(() => {

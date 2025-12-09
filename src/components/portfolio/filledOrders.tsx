@@ -3,11 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, RefreshCw } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '@/infrastructure/store/hooks';
-import { 
+import {
   setTradeHistory,
-  setSymbolGroups, 
-  setLoading, 
-  setError, 
+  setSymbolGroups,
+  setLoading,
+  setError,
   setLastFetchTime,
   type TradeHistory,
   type TradePair,
@@ -24,7 +24,13 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
 export default function FilledOrdersTab({ onSymbolClick }: FilledOrdersTabProps) {
   const dispatch = useAppDispatch();
   const { tradeHistory, symbolGroups, loading, error, lastFetchTime } = useAppSelector(state => state.trades);
-  const [historyDays, setHistoryDays] = useState(20);
+  const [expandedSymbols, setExpandedSymbols] = useState<Set<string>>(new Set());
+
+  // Date filter state
+  const [dateFilterMode, setDateFilterMode] = useState<'single' | 'range'>('range');
+  const [singleDate, setSingleDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [dateRangeStart, setDateRangeStart] = useState<string>(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+  const [dateRangeEnd, setDateRangeEnd] = useState<string>(new Date().toISOString().split('T')[0]);
 
   // Format helpers (matching the original code)
   const formatAmount = (v: any, maxDecimals = 8) => {
@@ -68,11 +74,11 @@ export default function FilledOrdersTab({ onSymbolClick }: FilledOrdersTabProps)
     try {
       const cached = localStorage.getItem(CACHE_KEY);
       if (cached) {
-        const { data, timestamp, days } = JSON.parse(cached);
+        const { data, timestamp } = JSON.parse(cached);
         const now = Date.now();
-        
-        // Check if cache is still valid (within 5 minutes) and same historyDays
-        if (now - timestamp < CACHE_DURATION && days === historyDays) {
+
+        // Check if cache is still valid (within 5 minutes)
+        if (now - timestamp < CACHE_DURATION) {
           dispatch(setTradeHistory(data));
           dispatch(setLastFetchTime(timestamp));
           return true;
@@ -89,8 +95,7 @@ export default function FilledOrdersTab({ onSymbolClick }: FilledOrdersTabProps)
     try {
       const cacheData = {
         data,
-        timestamp: Date.now(),
-        days: historyDays
+        timestamp: Date.now()
       };
       localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
       dispatch(setLastFetchTime(Date.now()));
@@ -109,57 +114,85 @@ export default function FilledOrdersTab({ onSymbolClick }: FilledOrdersTabProps)
     dispatch(setLoading(true));
     dispatch(setError(null));
     try {
+      let startTime: number;
+      let endTime: number;
       const now = Date.now();
-      const cutoffTime = now - (historyDays * 24 * 60 * 60 * 1000);
-      
+
+      // Calculate time range based on filter mode
+      if (dateFilterMode === 'single') {
+        const date = new Date(singleDate);
+        startTime = date.setHours(0, 0, 0, 0);
+        endTime = date.setHours(23, 59, 59, 999);
+      } else {
+        // 'range' mode
+        const start = new Date(dateRangeStart);
+        const end = new Date(dateRangeEnd);
+        startTime = start.setHours(0, 0, 0, 0);
+        endTime = end.setHours(23, 59, 59, 999);
+      }
+
+      // Validate max 80 days lookback
+      const eightyDaysAgo = Date.now() - (80 * 24 * 60 * 60 * 1000);
+      if (startTime < eightyDaysAgo) {
+        dispatch(setError('Date cannot be older than 80 days'));
+        dispatch(setLoading(false));
+        return;
+      }
+
       let allTrades: any[] = [];
       let lastTradeId: string | null = null;
       let shouldContinue = true;
-      
+
       while (shouldContinue) {
         const params = new URLSearchParams({
           limit: '100'
         });
-        
+
         if (lastTradeId) {
           params.append('idLessThan', lastTradeId);
         } else {
           params.append('endTime', now.toString());
         }
-        
+
         const response = await fetch(`${API_BASE_URL}/bitget/order/trade-fills?${params.toString()}`);
-        
+
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
           dispatch(setError(errorData.message || 'Failed to fetch trade history'));
           return;
         }
-        
+
         const data = await response.json();
-        
+
         // Handle both NestJS direct response and wrapped response formats
         const trades = Array.isArray(data) ? data : (data.data || []);
-        
+
         if (trades.length === 0) {
           shouldContinue = false;
           break;
         }
-        
+
         allTrades = allTrades.concat(trades);
-        
+
         const lastTrade = trades[trades.length - 1];
         lastTradeId = lastTrade.tradeId;
-        
+
         if (trades.length < 100) {
           shouldContinue = false;
         }
       }
-      
-      const filteredTrades = allTrades.filter((t: any) => Number(t.cTime) >= cutoffTime);
-      
-      allTrades.sort((a, b) => Number(b.cTime) - Number(a.cTime));
-      
-      const normalized = allTrades.map((t: any) => {
+
+      // Filter trades within the exact time range
+      const filteredTrades = allTrades.filter((t: any) => {
+        const time = Number(t.cTime);
+        return time >= startTime && time <= endTime;
+      });
+
+      // Sort filtered trades by most recent first
+      filteredTrades.sort((a, b) => Number(b.cTime) - Number(a.cTime));
+
+      // Normalize the FILTERED trades
+      const normalized = filteredTrades.map((t: any) => {
         const priceStr = t.price ?? t.priceAvg ?? '0';
         const sizeStr = t.size ?? '0';
         let amountStr = t.amount ?? '0';
@@ -174,7 +207,7 @@ export default function FilledOrdersTab({ onSymbolClick }: FilledOrdersTabProps)
           amount: amountStr,
         };
       });
-      
+
       dispatch(setTradeHistory(normalized as TradeHistory[]));
       saveCachedData(normalized as TradeHistory[]); // Save to cache
     } catch (err) {
@@ -191,15 +224,6 @@ export default function FilledOrdersTab({ onSymbolClick }: FilledOrdersTabProps)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Refetch when historyDays changes
-  useEffect(() => {
-    // Skip first render (already fetched in mount effect)
-    if (lastFetchTime !== null) {
-      fetchTradeHistory(true); // Force refresh when days change
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [historyDays]);
-
   const handleSymbolClick = (symbol: string) => {
     if (onSymbolClick) {
       onSymbolClick(symbol);
@@ -208,41 +232,90 @@ export default function FilledOrdersTab({ onSymbolClick }: FilledOrdersTabProps)
 
   return (
     <div className="bg-card rounded-lg border border-default">
-      {/* Days Input Control */}
-      <div className="px-6 py-4 border-b border-default flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <span className="text-sm font-medium text-card-foreground">History Period:</span>
-          <div className="flex items-center gap-2">
-            <input
-              id="filled-orders-days"
-              type="number"
-              min="1"
-              max="80"
-              value={historyDays}
-              onChange={(e) => {
-                const value = parseInt(e.target.value);
-                if (value >= 1 && value <= 80) {
-                  setHistoryDays(value);
-                }
-              }}
-              className="w-16 px-2 py-1 text-sm text-center font-medium border border-default rounded bg-card text-card-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-            <span className="text-sm text-muted-foreground">days</span>
+      {/* Date Filter Controls */}
+      <div className="px-6 py-4 border-b border-default bg-gray-50/80 dark:bg-gray-900/50">
+        <div className="flex flex-col gap-4">
+          {/* Mode Selection Row */}
+          <div className="flex items-center gap-6">
+            <span className="text-sm font-semibold text-card-foreground">Filter By:</span>
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  checked={dateFilterMode === 'single'}
+                  onChange={() => setDateFilterMode('single')}
+                  className="w-4 h-4 text-primary focus:ring-primary"
+                />
+                <span className="text-sm font-medium text-card-foreground">Single Date</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  checked={dateFilterMode === 'range'}
+                  onChange={() => setDateFilterMode('range')}
+                  className="w-4 h-4 text-primary focus:ring-primary"
+                />
+                <span className="text-sm font-medium text-card-foreground">Date Range</span>
+              </label>
+            </div>
           </div>
-          {lastFetchTime && (
-            <span className="text-xs text-muted-foreground">
-              Last updated: {new Date(lastFetchTime).toLocaleTimeString()}
-            </span>
-          )}
+
+          {/* Date Input Row */}
+          <div className="flex items-center gap-4">
+            {dateFilterMode === 'single' && (
+              <>
+                <span className="text-sm font-medium text-muted-foreground">Select Date:</span>
+                <input
+                  type="date"
+                  value={singleDate}
+                  max={new Date().toISOString().split('T')[0]}
+                  min={new Date(Date.now() - 80 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
+                  onChange={(e) => setSingleDate(e.target.value)}
+                  className="px-3 py-2 bg-card border border-default rounded text-sm focus:ring-2 focus:ring-primary outline-none text-card-foreground"
+                />
+              </>
+            )}
+
+            {dateFilterMode === 'range' && (
+              <>
+                <span className="text-sm font-medium text-muted-foreground">Date Range:</span>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="date"
+                    value={dateRangeStart}
+                    max={dateRangeEnd}
+                    min={new Date(Date.now() - 80 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
+                    onChange={(e) => setDateRangeStart(e.target.value)}
+                    className="px-3 py-2 bg-card border border-default rounded text-sm focus:ring-2 focus:ring-primary outline-none text-card-foreground"
+                  />
+                  <span className="text-muted-foreground text-sm">to</span>
+                  <input
+                    type="date"
+                    value={dateRangeEnd}
+                    min={dateRangeStart}
+                    max={new Date().toISOString().split('T')[0]}
+                    onChange={(e) => setDateRangeEnd(e.target.value)}
+                    className="px-3 py-2 bg-card border border-default rounded text-sm focus:ring-2 focus:ring-primary outline-none text-card-foreground"
+                  />
+                </div>
+              </>
+            )}
+
+            <button
+              onClick={() => fetchTradeHistory(true)}
+              className="px-4 py-2 text-sm font-semibold bg-primary text-primary-foreground rounded-lg transition-all shadow-sm hover:shadow disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={loading}
+            >
+              {loading ? 'Loading...' : 'Search'}
+            </button>
+
+            {lastFetchTime && (
+              <span className="text-xs text-muted-foreground ml-auto">
+                Last updated: {new Date(lastFetchTime).toLocaleTimeString()}
+              </span>
+            )}
+          </div>
         </div>
-        <button
-          onClick={() => fetchTradeHistory(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          disabled={loading}
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          {loading ? 'Loading...' : 'Refresh'}
-        </button>
       </div>
 
       {error && (
@@ -283,7 +356,7 @@ export default function FilledOrdersTab({ onSymbolClick }: FilledOrdersTabProps)
             })
             .map(([symbol, trades]) => {
               const sortedTrades = [...trades].sort((a, b) => Number(a.cTime) - Number(b.cTime));
-              
+
               const pairs: Array<{
                 buys: TradeHistory[];
                 sells: TradeHistory[];
@@ -296,47 +369,47 @@ export default function FilledOrdersTab({ onSymbolClick }: FilledOrdersTabProps)
                 totalSellSize: number | null;
                 totalSellRevenue: number | null;
               }> = [];
-              
+
               let currentBuyGroup: TradeHistory[] = [];
               let currentSellGroup: TradeHistory[] = [];
-              
+
               for (const trade of sortedTrades) {
                 if (trade.side === 'buy') {
                   if (currentBuyGroup.length > 0 && currentSellGroup.length > 0) {
                     let totalBuySize = 0;
                     let totalBuyCost = 0;
-                    
+
                     for (const buy of currentBuyGroup) {
                       const size = parseFloat(buy.size || '0');
                       const price = parseFloat(buy.price || '0');
                       const feeDetail = buy.feeDetail;
-                      
+
                       let effectiveBuySize = size;
                       if (feeDetail && feeDetail.feeCoin !== 'USDT') {
                         const feeInAsset = Math.abs(parseFloat(feeDetail.totalFee || '0'));
                         effectiveBuySize = size - feeInAsset;
                       }
-                      
+
                       totalBuySize += effectiveBuySize;
                       totalBuyCost += size * price;
-                      
+
                       if (feeDetail && feeDetail.feeCoin === 'USDT') {
                         const fee = Math.abs(parseFloat(feeDetail.totalFee || '0'));
                         totalBuyCost += fee;
                       }
                     }
-                    
+
                     const avgBuyPrice = totalBuySize > 0 ? totalBuyCost / totalBuySize : 0;
-                    
+
                     let totalSellSize = 0;
                     let totalSellRevenue = 0;
-                    
+
                     for (const sell of currentSellGroup) {
                       const size = parseFloat(sell.size || '0');
                       const price = parseFloat(sell.price || '0');
                       totalSellSize += size;
                       totalSellRevenue += size * price;
-                      
+
                       const feeDetail = sell.feeDetail;
                       if (feeDetail && feeDetail.feeCoin === 'USDT') {
                         const fee = Math.abs(parseFloat(feeDetail.totalFee || '0'));
@@ -347,19 +420,19 @@ export default function FilledOrdersTab({ onSymbolClick }: FilledOrdersTabProps)
                         totalSellRevenue -= feeInUSDT;
                       }
                     }
-                    
+
                     const avgSellPrice = totalSellSize > 0 ? totalSellRevenue / totalSellSize : 0;
-                    
+
                     let pnl = null;
                     let pnlPercent = null;
-                    
+
                     if (totalBuySize > 0 && totalSellSize > 0 && avgBuyPrice > 0) {
                       const effectiveSize = Math.min(totalBuySize, totalSellSize);
                       const costBasis = effectiveSize * avgBuyPrice;
                       pnl = totalSellRevenue - costBasis;
                       pnlPercent = (pnl / costBasis) * 100;
                     }
-                    
+
                     pairs.push({
                       buys: [...currentBuyGroup],
                       sells: [...currentSellGroup],
@@ -372,19 +445,19 @@ export default function FilledOrdersTab({ onSymbolClick }: FilledOrdersTabProps)
                       totalSellSize,
                       totalSellRevenue
                     });
-                    
+
                     currentBuyGroup = [];
                     currentSellGroup = [];
                   } else if (currentSellGroup.length > 0) {
                     let totalSellSize = 0;
                     let totalSellRevenue = 0;
-                    
+
                     for (const sell of currentSellGroup) {
                       const size = parseFloat(sell.size || '0');
                       const price = parseFloat(sell.price || '0');
                       totalSellSize += size;
                       totalSellRevenue += size * price;
-                      
+
                       const feeDetail = sell.feeDetail;
                       if (feeDetail && feeDetail.feeCoin === 'USDT') {
                         const fee = Math.abs(parseFloat(feeDetail.totalFee || '0'));
@@ -395,9 +468,9 @@ export default function FilledOrdersTab({ onSymbolClick }: FilledOrdersTabProps)
                         totalSellRevenue -= feeInUSDT;
                       }
                     }
-                    
+
                     const avgSellPrice = totalSellSize > 0 ? totalSellRevenue / totalSellSize : 0;
-                    
+
                     pairs.push({
                       buys: [],
                       sells: [...currentSellGroup],
@@ -410,53 +483,53 @@ export default function FilledOrdersTab({ onSymbolClick }: FilledOrdersTabProps)
                       totalSellSize,
                       totalSellRevenue
                     });
-                    
+
                     currentSellGroup = [];
                   }
-                  
+
                   currentBuyGroup.push(trade);
-                  
+
                 } else if (trade.side === 'sell') {
                   currentSellGroup.push(trade);
                 }
               }
-              
+
               // Handle remaining unpaired groups
               if (currentBuyGroup.length > 0 && currentSellGroup.length > 0) {
                 let totalBuySize = 0;
                 let totalBuyCost = 0;
-                
+
                 for (const buy of currentBuyGroup) {
                   const size = parseFloat(buy.size || '0');
                   const price = parseFloat(buy.price || '0');
                   const feeDetail = buy.feeDetail;
-                  
+
                   let effectiveBuySize = size;
                   if (feeDetail && feeDetail.feeCoin !== 'USDT') {
                     const feeInAsset = Math.abs(parseFloat(feeDetail.totalFee || '0'));
                     effectiveBuySize = size - feeInAsset;
                   }
-                  
+
                   totalBuySize += effectiveBuySize;
                   totalBuyCost += size * price;
-                  
+
                   if (feeDetail && feeDetail.feeCoin === 'USDT') {
                     const fee = Math.abs(parseFloat(feeDetail.totalFee || '0'));
                     totalBuyCost += fee;
                   }
                 }
-                
+
                 const avgBuyPrice = totalBuySize > 0 ? totalBuyCost / totalBuySize : 0;
-                
+
                 let totalSellSize = 0;
                 let totalSellRevenue = 0;
-                
+
                 for (const sell of currentSellGroup) {
                   const size = parseFloat(sell.size || '0');
                   const price = parseFloat(sell.price || '0');
                   totalSellSize += size;
                   totalSellRevenue += size * price;
-                  
+
                   const feeDetail = sell.feeDetail;
                   if (feeDetail && feeDetail.feeCoin === 'USDT') {
                     const fee = Math.abs(parseFloat(feeDetail.totalFee || '0'));
@@ -467,19 +540,19 @@ export default function FilledOrdersTab({ onSymbolClick }: FilledOrdersTabProps)
                     totalSellRevenue -= feeInUSDT;
                   }
                 }
-                
+
                 const avgSellPrice = totalSellSize > 0 ? totalSellRevenue / totalSellSize : 0;
-                
+
                 let pnl = null;
                 let pnlPercent = null;
-                
+
                 if (totalBuySize > 0 && totalSellSize > 0 && avgBuyPrice > 0) {
                   const effectiveSize = Math.min(totalBuySize, totalSellSize);
                   const costBasis = effectiveSize * avgBuyPrice;
                   pnl = totalSellRevenue - costBasis;
                   pnlPercent = (pnl / costBasis) * 100;
                 }
-                
+
                 pairs.push({
                   buys: [...currentBuyGroup],
                   sells: [...currentSellGroup],
@@ -492,33 +565,33 @@ export default function FilledOrdersTab({ onSymbolClick }: FilledOrdersTabProps)
                   totalSellSize,
                   totalSellRevenue
                 });
-                
+
               } else if (currentBuyGroup.length > 0) {
                 let totalBuySize = 0;
                 let totalBuyCost = 0;
-                
+
                 for (const buy of currentBuyGroup) {
                   const size = parseFloat(buy.size || '0');
                   const price = parseFloat(buy.price || '0');
                   const feeDetail = buy.feeDetail;
-                  
+
                   let effectiveBuySize = size;
                   if (feeDetail && feeDetail.feeCoin !== 'USDT') {
                     const feeInAsset = Math.abs(parseFloat(feeDetail.totalFee || '0'));
                     effectiveBuySize = size - feeInAsset;
                   }
-                  
+
                   totalBuySize += effectiveBuySize;
                   totalBuyCost += size * price;
-                  
+
                   if (feeDetail && feeDetail.feeCoin === 'USDT') {
                     const fee = Math.abs(parseFloat(feeDetail.totalFee || '0'));
                     totalBuyCost += fee;
                   }
                 }
-                
+
                 const avgBuyPrice = totalBuySize > 0 ? totalBuyCost / totalBuySize : 0;
-                
+
                 pairs.push({
                   buys: [...currentBuyGroup],
                   sells: [],
@@ -531,17 +604,17 @@ export default function FilledOrdersTab({ onSymbolClick }: FilledOrdersTabProps)
                   totalSellSize: null,
                   totalSellRevenue: null
                 });
-                
+
               } else if (currentSellGroup.length > 0) {
                 let totalSellSize = 0;
                 let totalSellRevenue = 0;
-                
+
                 for (const sell of currentSellGroup) {
                   const size = parseFloat(sell.size || '0');
                   const price = parseFloat(sell.price || '0');
                   totalSellSize += size;
                   totalSellRevenue += size * price;
-                  
+
                   const feeDetail = sell.feeDetail;
                   if (feeDetail && feeDetail.feeCoin === 'USDT') {
                     const fee = Math.abs(parseFloat(feeDetail.totalFee || '0'));
@@ -552,9 +625,9 @@ export default function FilledOrdersTab({ onSymbolClick }: FilledOrdersTabProps)
                     totalSellRevenue -= feeInUSDT;
                   }
                 }
-                
+
                 const avgSellPrice = totalSellSize > 0 ? totalSellRevenue / totalSellSize : 0;
-                
+
                 pairs.push({
                   buys: [],
                   sells: [...currentSellGroup],
@@ -568,7 +641,7 @@ export default function FilledOrdersTab({ onSymbolClick }: FilledOrdersTabProps)
                   totalSellRevenue
                 });
               }
-              
+
               pairs.reverse();
 
               const totalBuys = sortedTrades.filter(t => t.side === 'buy').length;
@@ -586,7 +659,7 @@ export default function FilledOrdersTab({ onSymbolClick }: FilledOrdersTabProps)
                   <div className="bg-gray-50 dark:bg-gray-800 px-1 py-3 border-b border-gray-200 dark:border-gray-700">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 
+                        <h3
                           className="font-bold text-lg text-gray-900 dark:text-white cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                           onClick={() => handleSymbolClick(symbol)}
                         >
@@ -606,7 +679,7 @@ export default function FilledOrdersTab({ onSymbolClick }: FilledOrdersTabProps)
                   <div className="space-y-0 border-b-4 border-gray-300 dark:border-gray-600">
                     {pairs.map((pair, pairIndex) => (
                       <div key={pairIndex} className="bg-white dark:bg-gray-900 border-0 border-b-4 border-gray-300 dark:border-gray-600 shadow-none hover:shadow-none transition-all">
-                        
+
                         {/* Sell Section */}
                         {pair.sells.length > 0 && (
                           <>

@@ -6,66 +6,66 @@
   /* Font definitions */
   --font-inter: 'Inter', 'Segoe UI', 'Roboto', sans-serif;
   --font-display: 'Inter', sans-serif;
-  
+
   /* Base theme colors */
   --background: #ffffff;
   --foreground: #111827;
-  
+
   /* Primary colors - Blue theme for trading */
-  --primary: #609dff; 
+  --primary: #609dff;
   --primary-foreground: #ffffff;
   --primary-light: #dbeafe;
   --card: #ffffff;
   --card-foreground: #111827;
-  
+
   /* Muted colors for backgrounds */
   --muted: #f9fafb;
   --muted-foreground: #6b7280;
   --muted-dark: #e5e7eb;
-  
+
   /* Border and input colors */
   --border: #e5e7eb;
   --border-light: #d1d5db;
   --input: #ffffff;
   --input-border: #d1d5db;
   --input-foreground: #111827;
-  
+
   /* Status colors */
   --success: #16a34a;
   --success-light: #f0fdf4;
   --success-foreground: #15803d;
   --success-border: #bbf7d0;
-  
+
   --danger: #ef4444;
   --danger-light: #fef2f2;
   --danger-foreground: #b91c1c;
   --danger-border: #fecaca;
-  
+
   --warning: #f59e0b;
   --warning-light: #fffbeb;
   --warning-foreground: #c2410c;
   --warning-border: #fed7aa;
-  
+
   --info: #3b82f6;
   --info-light: #eff6ff;
   --info-foreground: #1d4ed8;
   --info-border: #bfdbfe;
-  
+
   /* Trading specific colors */
   --buy-color: #16a34a;
   --sell-color: #ef4444;
   --neutral-color: #6b7280;
-  
+
   /* Purple accent for special elements */
   --purple: #9333ea;
   --purple-light: #faf5ff;
   --purple-border: #e9d5ff;
-  
+
   /* Text colors */
   --text-primary: #111827;
   --text-secondary: #374151;
   --text-muted: #6b7280;
-  
+
   /* Focus ring */
   --ring: #3b82f6;
 
@@ -220,64 +220,64 @@
 .dark {
   --background: #0b0e11;
   --foreground: #eaecef;
-  
+
   /* Primary colors - Clean minimal */
   --primary: #eaecef;
   --primary-foreground: #0b0e11;
   --primary-light: #2b3139;
-  
+
   /* Card and surface colors */
   --card: #181a20;
   --card-foreground: #eaecef;
-  
+
   /* Muted colors for backgrounds */
   --muted: #2b3139;
   --muted-foreground: #5e6673;
   --muted-dark: #0b0e11;
-  
+
   /* Border and input colors - NO VISIBLE BORDERS */
-  --border: transparent;
-  --border-light: transparent;
+  --border: #2b3139;
+  --border-light: #474d57;
   --input: #2b3139;
   --input-border: transparent;
   --input-foreground: #eaecef;
-  
+
   /* Status colors - Binance exact colors */
   --success: #0ecb81;
   --success-light: rgba(14, 203, 129, 0.08);
   --success-foreground: #0ecb81;
   --success-border: transparent;
-  
+
   --danger: #f6465d;
   --danger-light: rgba(246, 70, 93, 0.08);
   --danger-foreground: #f6465d;
   --danger-border: transparent;
-  
+
   --warning: #eaecef;
   --warning-light: #2b3139;
   --warning-foreground: #eaecef;
   --warning-border: transparent;
-  
+
   --info: #eaecef;
   --info-light: #2b3139;
   --info-foreground: #eaecef;
   --info-border: transparent;
-  
+
   /* Trading specific colors */
   --buy-color: #0ecb81;
   --sell-color: #f6465d;
   --neutral-color: #5e6673;
-  
+
   /* Purple accent removed - use neutral */
   --purple: #5e6673;
   --purple-light: #2b3139;
   --purple-border: transparent;
-  
+
   /* Text colors - Binance hierarchy */
   --text-primary: #eaecef;
   --text-secondary: #848e9c;
   --text-muted: #5e6673;
-  
+
   /* Focus ring - subtle */
   --ring: #2b3139;
 
@@ -336,7 +336,7 @@
 
 /* Universal smooth transitions */
 * {
-  transition: 
+  transition:
     background-color 0.3s ease,
     color 0.3s ease,
     border-color 0.3s ease,
@@ -354,130 +354,441 @@ body {
 }
 
 /* Utility classes to replace Tailwind */
-.bg-card { background-color: var(--card); }
-.bg-muted { background-color: var(--muted); }
-.bg-muted-dark { background-color: var(--muted-dark); }
-.bg-primary { background-color: var(--primary); }
-.bg-primary-light { background-color: var(--primary-light); }
-.bg-success { background-color: var(--success); }
-.bg-success-light { background-color: var(--success-light); }
-.bg-danger { background-color: var(--danger); }
-.bg-danger-light { background-color: var(--danger-light); }
-.bg-warning-light { background-color: var(--warning-light); }
-.bg-info-light { background-color: var(--info-light); }
-.bg-purple-light { background-color: var(--purple-light); }
+.bg-card {
+  background-color: var(--card);
+}
+
+.bg-muted {
+  background-color: var(--muted);
+}
+
+.bg-muted-dark {
+  background-color: var(--muted-dark);
+}
+
+.bg-primary {
+  background-color: var(--primary);
+}
+
+.bg-primary-light {
+  background-color: var(--primary-light);
+}
+
+.bg-success {
+  background-color: var(--success);
+}
+
+.bg-success-light {
+  background-color: var(--success-light);
+}
+
+.bg-danger {
+  background-color: var(--danger);
+}
+
+.bg-danger-light {
+  background-color: var(--danger-light);
+}
+
+.bg-warning-light {
+  background-color: var(--warning-light);
+}
+
+.bg-info-light {
+  background-color: var(--info-light);
+}
+
+.bg-purple-light {
+  background-color: var(--purple-light);
+}
 
 /* Additional background classes */
-.bg-gray-50 { background-color: var(--gray-50); }
-.bg-gray-100 { background-color: var(--gray-100); }
-.bg-gray-200 { background-color: var(--gray-200); }
-.bg-gray-300 { background-color: var(--gray-300); }
-.bg-gray-400 { background-color: var(--gray-400); }
-.bg-gray-500 { background-color: var(--gray-500); }
-.bg-gray-600 { background-color: var(--gray-600); }
-.bg-gray-700 { background-color: var(--gray-700); }
-.bg-green-50 { background-color: var(--green-50); }
-.bg-green-100 { background-color: var(--green-100); }
-.bg-green-200 { background-color: var(--green-200); }
-.bg-red-50 { background-color: var(--red-50); }
-.bg-red-100 { background-color: var(--red-100); }
-.bg-red-200 { background-color: var(--red-200); }
-.bg-blue-50 { background-color: var(--blue-50); }
-.bg-blue-100 { background-color: var(--blue-100); }
-.bg-blue-200 { background-color: var(--blue-200); }
-.bg-indigo-50 { background-color: var(--indigo-50); }
-.bg-indigo-100 { background-color: var(--indigo-100); }
-.bg-indigo-200 { background-color: var(--indigo-200); }
-.bg-purple-50 { background-color: var(--purple-50); }
-.bg-purple-100 { background-color: var(--purple-100); }
-.bg-purple-200 { background-color: var(--purple-200); }
-.bg-emerald-50 { background-color: var(--emerald-50); }
-.bg-rose-50 { background-color: var(--rose-50); }
+.bg-gray-50 {
+  background-color: var(--gray-50);
+}
+
+.bg-gray-100 {
+  background-color: var(--gray-100);
+}
+
+.bg-gray-200 {
+  background-color: var(--gray-200);
+}
+
+.bg-gray-300 {
+  background-color: var(--gray-300);
+}
+
+.bg-gray-400 {
+  background-color: var(--gray-400);
+}
+
+.bg-gray-500 {
+  background-color: var(--gray-500);
+}
+
+.bg-gray-600 {
+  background-color: var(--gray-600);
+}
+
+.bg-gray-700 {
+  background-color: var(--gray-700);
+}
+
+.bg-green-50 {
+  background-color: var(--green-50);
+}
+
+.bg-green-100 {
+  background-color: var(--green-100);
+}
+
+.bg-green-200 {
+  background-color: var(--green-200);
+}
+
+.bg-red-50 {
+  background-color: var(--red-50);
+}
+
+.bg-red-100 {
+  background-color: var(--red-100);
+}
+
+.bg-red-200 {
+  background-color: var(--red-200);
+}
+
+.bg-blue-50 {
+  background-color: var(--blue-50);
+}
+
+.bg-blue-100 {
+  background-color: var(--blue-100);
+}
+
+.bg-blue-200 {
+  background-color: var(--blue-200);
+}
+
+.bg-indigo-50 {
+  background-color: var(--indigo-50);
+}
+
+.bg-indigo-100 {
+  background-color: var(--indigo-100);
+}
+
+.bg-indigo-200 {
+  background-color: var(--indigo-200);
+}
+
+.bg-purple-50 {
+  background-color: var(--purple-50);
+}
+
+.bg-purple-100 {
+  background-color: var(--purple-100);
+}
+
+.bg-purple-200 {
+  background-color: var(--purple-200);
+}
+
+.bg-emerald-50 {
+  background-color: var(--emerald-50);
+}
+
+.bg-rose-50 {
+  background-color: var(--rose-50);
+}
 
 /* Gradient backgrounds */
-.bg-gradient-blue { background: linear-gradient(to bottom right, var(--blue-50), var(--blue-100)); }
-.bg-gradient-green { background: linear-gradient(to bottom right, var(--green-50), var(--green-100)); }
-.bg-gradient-red { background: linear-gradient(to bottom right, var(--red-50), var(--red-100)); }
-.bg-gradient-purple { background: linear-gradient(to bottom right, var(--purple-50), var(--purple-100)); }
-.bg-gradient-indigo { background: linear-gradient(to bottom right, var(--indigo-50), var(--indigo-100)); }
+.bg-gradient-blue {
+  background: linear-gradient(to bottom right, var(--blue-50), var(--blue-100));
+}
 
-.text-card-foreground { color: var(--card-foreground); }
-.text-muted-foreground { color: var(--muted-foreground); }
-.text-primary { color: var(--text-primary); }
-.text-secondary { color: var(--text-secondary); }
-.text-muted { color: var(--text-muted); }
-.text-success { color: var(--success-foreground); }
-.text-success-dark { color: var(--success); }
-.text-danger { color: var(--danger-foreground); }
-.text-danger-dark { color: var(--danger); }
-.text-warning { color: var(--warning-foreground); }
-.text-info { color: var(--info-foreground); }
-.text-purple { color: var(--purple); }
-.text-buy { color: var(--buy-color); }
-.text-sell { color: var(--sell-color); }
+.bg-gradient-green {
+  background: linear-gradient(to bottom right, var(--green-50), var(--green-100));
+}
+
+.bg-gradient-red {
+  background: linear-gradient(to bottom right, var(--red-50), var(--red-100));
+}
+
+.bg-gradient-purple {
+  background: linear-gradient(to bottom right, var(--purple-50), var(--purple-100));
+}
+
+.bg-gradient-indigo {
+  background: linear-gradient(to bottom right, var(--indigo-50), var(--indigo-100));
+}
+
+.text-card-foreground {
+  color: var(--card-foreground);
+}
+
+.text-muted-foreground {
+  color: var(--muted-foreground);
+}
+
+.text-primary {
+  color: var(--text-primary);
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.text-muted {
+  color: var(--text-muted);
+}
+
+.text-success {
+  color: var(--success-foreground);
+}
+
+.text-success-dark {
+  color: var(--success);
+}
+
+.text-danger {
+  color: var(--danger-foreground);
+}
+
+.text-danger-dark {
+  color: var(--danger);
+}
+
+.text-warning {
+  color: var(--warning-foreground);
+}
+
+.text-info {
+  color: var(--info-foreground);
+}
+
+.text-purple {
+  color: var(--purple);
+}
+
+.text-buy {
+  color: var(--buy-color);
+}
+
+.text-sell {
+  color: var(--sell-color);
+}
 
 /* Additional text classes */
-.text-gray-400 { color: var(--gray-400); }
-.text-gray-500 { color: var(--gray-500); }
-.text-gray-600 { color: var(--gray-600); }
-.text-gray-700 { color: var(--gray-700); }
-.text-gray-800 { color: var(--gray-800); }
-.text-gray-900 { color: var(--gray-900); }
-.text-green-500 { color: var(--green-500); }
-.text-green-600 { color: var(--green-600); }
-.text-green-700 { color: var(--green-700); }
-.text-green-900 { color: var(--green-900); }
-.text-red-400 { color: var(--red-400); }
-.text-red-500 { color: var(--red-500); }
-.text-red-600 { color: var(--red-600); }
-.text-red-700 { color: var(--red-700); }
-.text-red-900 { color: var(--red-900); }
-.text-blue-300 { color: var(--blue-300); }
-.text-blue-400 { color: var(--blue-400); }
-.text-blue-500 { color: var(--blue-500); }
-.text-blue-600 { color: var(--blue-600); }
-.text-blue-700 { color: var(--blue-700); }
-.text-blue-800 { color: var(--blue-700); }
-.text-blue-900 { color: var(--blue-900); }
-.text-indigo-600 { color: var(--indigo-600); }
-.text-indigo-700 { color: var(--indigo-700); }
-.text-indigo-900 { color: var(--indigo-900); }
-.text-purple-600 { color: var(--purple-600); }
-.text-purple-700 { color: var(--purple-700); }
-.text-purple-900 { color: var(--purple-900); }
-.text-orange-600 { color: var(--orange-600); }
+.text-gray-400 {
+  color: var(--gray-400);
+}
 
-.border-default { border-color: var(--border); }
-.border-light { border-color: var(--border-light); }
-.border-success { border-color: var(--success-border); }
-.border-danger { border-color: var(--danger-border); }
-.border-warning { border-color: var(--warning-border); }
-.border-info { border-color: var(--info-border); }
-.border-purple { border-color: var(--purple-border); }
+.text-gray-500 {
+  color: var(--gray-500);
+}
+
+.text-gray-600 {
+  color: var(--gray-600);
+}
+
+.text-gray-700 {
+  color: var(--gray-700);
+}
+
+.text-gray-800 {
+  color: var(--gray-800);
+}
+
+.text-gray-900 {
+  color: var(--gray-900);
+}
+
+.text-green-500 {
+  color: var(--green-500);
+}
+
+.text-green-600 {
+  color: var(--green-600);
+}
+
+.text-green-700 {
+  color: var(--green-700);
+}
+
+.text-green-900 {
+  color: var(--green-900);
+}
+
+.text-red-400 {
+  color: var(--red-400);
+}
+
+.text-red-500 {
+  color: var(--red-500);
+}
+
+.text-red-600 {
+  color: var(--red-600);
+}
+
+.text-red-700 {
+  color: var(--red-700);
+}
+
+.text-red-900 {
+  color: var(--red-900);
+}
+
+.text-blue-300 {
+  color: var(--blue-300);
+}
+
+.text-blue-400 {
+  color: var(--blue-400);
+}
+
+.text-blue-500 {
+  color: var(--blue-500);
+}
+
+.text-blue-600 {
+  color: var(--blue-600);
+}
+
+.text-blue-700 {
+  color: var(--blue-700);
+}
+
+.text-blue-800 {
+  color: var(--blue-700);
+}
+
+.text-blue-900 {
+  color: var(--blue-900);
+}
+
+.text-indigo-600 {
+  color: var(--indigo-600);
+}
+
+.text-indigo-700 {
+  color: var(--indigo-700);
+}
+
+.text-indigo-900 {
+  color: var(--indigo-900);
+}
+
+.text-purple-600 {
+  color: var(--purple-600);
+}
+
+.text-purple-700 {
+  color: var(--purple-700);
+}
+
+.text-purple-900 {
+  color: var(--purple-900);
+}
+
+.text-orange-600 {
+  color: var(--orange-600);
+}
+
+.border-default {
+  border-color: var(--border);
+}
+
+.border-light {
+  border-color: var(--border-light);
+}
+
+.border-success {
+  border-color: var(--success-border);
+}
+
+.border-danger {
+  border-color: var(--danger-border);
+}
+
+.border-warning {
+  border-color: var(--warning-border);
+}
+
+.border-info {
+  border-color: var(--info-border);
+}
+
+.border-purple {
+  border-color: var(--purple-border);
+}
 
 /* Additional border classes */
-.border-gray-100 { border-color: var(--gray-100); }
-.border-gray-200 { border-color: var(--gray-200); }
-.border-gray-300 { border-color: var(--gray-300); }
-.border-green-200 { border-color: var(--green-200); }
-.border-red-200 { border-color: var(--red-200); }
-.border-blue-100 { border-color: var(--blue-100); }
-.border-blue-200 { border-color: var(--blue-200); }
-.border-blue-400 { border-color: var(--blue-400); }
-.border-blue-600 { border-color: var(--blue-600); }
-.border-indigo-200 { border-color: var(--indigo-200); }
-.border-purple-200 { border-color: var(--purple-200); }
-.border-green-400 { border-color: var(--green-400); }
-.border-red-400 { border-color: var(--red-400); }
+.border-gray-100 {
+  border-color: var(--gray-100);
+}
 
-.hover-muted:hover { background-color: var(--muted); }
-.focus-ring:focus { 
-  outline: none; 
-  box-shadow: 0 0 0 2px var(--ring); 
+.border-gray-200 {
+  border-color: var(--gray-200);
+}
+
+.border-gray-300 {
+  border-color: var(--gray-300);
+}
+
+.border-green-200 {
+  border-color: var(--green-200);
+}
+
+.border-red-200 {
+  border-color: var(--red-200);
+}
+
+.border-blue-100 {
+  border-color: var(--blue-100);
+}
+
+.border-blue-200 {
+  border-color: var(--blue-200);
+}
+
+.border-blue-400 {
+  border-color: var(--blue-400);
+}
+
+.border-blue-600 {
+  border-color: var(--blue-600);
+}
+
+.border-indigo-200 {
+  border-color: var(--indigo-200);
+}
+
+.border-purple-200 {
+  border-color: var(--purple-200);
+}
+
+.border-green-400 {
+  border-color: var(--green-400);
+}
+
+.border-red-400 {
+  border-color: var(--red-400);
+}
+
+.hover-muted:hover {
+  background-color: var(--muted);
+}
+
+.focus-ring:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ring);
 }
 
 /* Form and Input Styles */
-.bg-input { 
+.bg-input {
   background-color: var(--input);
   color: var(--input-foreground);
 }
@@ -487,16 +798,16 @@ body {
 }
 
 /* Input field styling */
-input[type="number"], 
-input[type="text"], 
+input[type="number"],
+input[type="text"],
 select {
   background-color: var(--input) !important;
   color: var(--input-foreground) !important;
   border-color: var(--input-border) !important;
 }
 
-input[type="number"]:focus, 
-input[type="text"]:focus, 
+input[type="number"]:focus,
+input[type="text"]:focus,
 select:focus {
   border-color: var(--ring) !important;
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1) !important;
@@ -515,33 +826,72 @@ select:focus {
 }
 
 /* Hover effects */
-.hover-bg-blue-50:hover { background-color: var(--blue-50); }
-.hover-bg-green-600:hover { background-color: var(--green-600); }
-.hover-bg-red-600:hover { background-color: var(--red-600); }
-.hover-bg-gray-200:hover { background-color: var(--gray-200); }
-.hover-border-blue-400:hover { border-color: var(--blue-400); }
-.hover-text-blue-700:hover { color: var(--blue-700); }
-.hover-text-blue-800:hover { color: var(--blue-700); }
-.hover-text-gray-700:hover { color: var(--gray-700); }
-.hover-text-gray-800:hover { color: var(--gray-800); }
-.hover-bg-blue-700:hover { background-color: var(--blue-700); }
-.hover-bg-red-600:hover { background-color: var(--red-600); }
+.hover-bg-blue-50:hover {
+  background-color: var(--blue-50);
+}
+
+.hover-bg-green-600:hover {
+  background-color: var(--green-600);
+}
+
+.hover-bg-red-600:hover {
+  background-color: var(--red-600);
+}
+
+.hover-bg-gray-200:hover {
+  background-color: var(--gray-200);
+}
+
+.hover-border-blue-400:hover {
+  border-color: var(--blue-400);
+}
+
+.hover-text-blue-700:hover {
+  color: var(--blue-700);
+}
+
+.hover-text-blue-800:hover {
+  color: var(--blue-700);
+}
+
+.hover-text-gray-700:hover {
+  color: var(--gray-700);
+}
+
+.hover-text-gray-800:hover {
+  color: var(--gray-800);
+}
+
+.hover-bg-blue-700:hover {
+  background-color: var(--blue-700);
+}
+
+.hover-bg-red-600:hover {
+  background-color: var(--red-600);
+}
 
 
 
 /* Add this to your global CSS file */
 .hide-scrollbar {
-  -ms-overflow-style: none;  /* Internet Explorer 10+ */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;
+  /* Internet Explorer 10+ */
+  scrollbar-width: none;
+  /* Firefox */
 }
+
 .hide-scrollbar::-webkit-scrollbar {
-  display: none;  /* Safari and Chrome */
+  display: none;
+  /* Safari and Chrome */
 }
 
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
 .scrollbar-hide {
-  -ms-overflow-style: none;  /* IE/Edge */
-  scrollbar-width: none;     /* Firefox */
+  -ms-overflow-style: none;
+  /* IE/Edge */
+  scrollbar-width: none;
+  /* Firefox */
 }

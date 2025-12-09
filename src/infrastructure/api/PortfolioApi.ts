@@ -828,14 +828,6 @@ export async function getBitgetSpotAssets(credentials?: ApiCredentials): Promise
     }
     
     // Add credentials to headers if available
-    if (credentials) {
-      headers['x-api-key'] = credentials.apiKey;
-      headers['x-secret-key'] = credentials.secretKey;
-      if (credentials.passphrase) {
-        headers['x-passphrase'] = credentials.passphrase;
-      }
-    }
-    
     console.log('📤 Request Headers:', Object.keys(headers));
     
     const response = await fetch(`${API_BASE_URL}/bitget/account/spot/assets`, {
