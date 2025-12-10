@@ -169,7 +169,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://146.59.93.94:3000"],  # Your Next.js app
+    allow_origins=["http://localhost:3000"],  # Your Next.js app
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -51,7 +51,7 @@ export default function BinanceOrderBook({ symbol }: OrderBookProps) {
   const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
   const refreshCountdownRef = useRef<NodeJS.Timeout | null>(null);
   
-  const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://146.59.93.94:3000';
+  const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
 
   // Fetch OrderBook data
   const fetchOrderBook = async (isManual = false) => {

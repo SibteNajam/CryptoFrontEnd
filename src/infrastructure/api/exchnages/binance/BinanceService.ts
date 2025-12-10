@@ -24,7 +24,7 @@
 
 // export class BinanceService extends BaseExchangeService {
 //   constructor() {
-//     super(process.env.NEXT_PUBLIC_BACKEND_URL || 'http://146.59.93.94:3000');
+//     super(process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000');
 //   }
 
 //   getName(): string {

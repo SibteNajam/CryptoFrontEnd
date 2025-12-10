@@ -52,7 +52,7 @@ export default function TradesComponent({ symbol }: TradesProps) {
 
     // Internal configuration
     const refreshInterval = 5000; // 5 seconds
-    const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://146.59.93.94:3000';
+    const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
 
     // Refs for timers
     const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);

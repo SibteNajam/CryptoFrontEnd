@@ -24,11 +24,11 @@ import PerformanceTab from '../../../components/portfolio/performance';
 import TransferHistoryTable from '@/components/portfolio/transferHistory';
 // import TradeAnalysisTab from '../../../components/portfolio/tradeAnalysis';
 import { useAppSelector } from '@/infrastructure/store/hooks';
-import PerformanceAnalysis from '@/components/portfolio/performanceAnalysis';
+// import PerformanceAnalysis from '@/components/portfolio/performanceAnalysis'; // Removed - trade analysis pairing logic incorrect
 import DbTradesTab from '@/components/portfolio/dbTrades';
 // import TradeAnalysisTab from '@/components/portfolio/tradeAnalysis';
 
-type TabType = 'overview' | 'balances' | 'orders' | 'filled' | 'db-trades' | 'history' | 'performance' | 'transfers' | 'trade-analysis';
+type TabType = 'overview' | 'balances' | 'orders' | 'db-trades';
 
 export default function PortfolioPage() {
   // Get selected exchange and credentials from Redux
@@ -243,10 +243,10 @@ export default function PortfolioPage() {
     // { id: 'performance', label: 'Performance', icon: Activity },
     { id: 'balances', label: 'Balances', icon: Wallet },
     { id: 'orders', label: 'Open Orders', icon: Clock },
-    { id: 'filled', label: 'Filled Orders', icon: DollarSign },
+    // { id: 'filled', label: 'Filled Orders', icon: DollarSign },
     { id: 'db-trades', label: 'DB Trades', icon: Activity },
-    { id: 'trade-analysis', label: 'Trade Analysis', icon: TrendingUp },
-    { id: 'history', label: 'History', icon: History },
+    // { id: 'trade-analysis', label: 'Trade Analysis', icon: TrendingUp }, // Removed - pairing logic incorrect
+    // { id: 'history', label: 'History', icon: History }, // Hidden from UI - API logic preserved
     // { id: 'transfers', label: 'Transfers', icon: History },
   ];
 
@@ -292,14 +292,14 @@ export default function PortfolioPage() {
         return <BalancesTab userAssets={userAssets} btcPrice={117300} />;
       case 'orders':
         return <OpenOrdersTab openOrders={openOrders} />;
-      case 'filled':
-        return <FilledOrdersTab />;
+      // case 'filled':
+      //   return <FilledOrdersTab />;
       case 'db-trades':
         return <DbTradesTab selectedExchange={selectedExchange} />;
-      case 'trade-analysis':
-        return <PerformanceAnalysis />;
-      case 'history':
-        return <HistoryTab orderHistory={orderHistory} />;
+      // case 'trade-analysis': // Removed - trade analysis pairing logic incorrect
+      //   return <PerformanceAnalysis />;
+      // case 'history':
+      //   return <HistoryTab orderHistory={orderHistory} />;
       // case 'transfers':
       //   return <TransferHistoryTable 
       //     current={1}

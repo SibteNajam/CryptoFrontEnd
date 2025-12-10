@@ -13,6 +13,7 @@ import {
   ExchangeType,
   setSelectedExchange,
   getCredentialsForExchange,
+  clearCredentials,
 } from '@/infrastructure/features/exchange/exchangeSlice';
 import ExchangeSelector from './ExchangeSelector';
 
@@ -25,10 +26,10 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
   const router = useRouter();
   const { logout, user } = useAuth();
   const selectedExchange = useAppSelector((state) => state.exchange.selectedExchange);
-  
+
   // Get configured exchanges from user auth state instead of Redux credentials
   const configuredExchanges = user?.configuredExchanges || [];
-  
+
   console.log('🔄 Header - configured exchanges:', configuredExchanges);
   console.log('🔄 Header - user object:', user);
 
@@ -40,7 +41,12 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
 
   const handleLogout = async () => {
     try {
+      // Clear exchange credentials from Redux
+      dispatch(clearCredentials());
+
+      // Call logout (clears tokens and localStorage caches)
       await logout();
+
       router.push('/login');
     } catch (error) {
       console.error('Logout error:', error);
@@ -62,7 +68,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
     const hasCredentials = configuredExchanges.some(
       exchange => exchange.toLowerCase() === exchangeId.toLowerCase()
     );
-    
+
     if (hasCredentials) {
       // Has credentials, switch to this exchange
       dispatch(setSelectedExchange(exchangeId));
@@ -86,7 +92,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
   };
 
   return (
-  <header className="bg-card px-6 py-2 flex items-center justify-between border-b border-default">
+    <header className="bg-card px-6 py-2 flex items-center justify-between border-b border-default">
       {/* Left side - Sidebar toggle + Title */}
       <div className="flex items-center space-x-3">
         <button onClick={onToggleSidebar} className="p-1.5 hover:bg-muted rounded-lg transition-colors text-primary" title="Toggle sidebar">
@@ -134,25 +140,24 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                   exchange => exchange.toLowerCase() === id.toLowerCase()
                 );
                 const isActive = selectedExchange === exchangeId;
-                
+
                 return (
                   <div
                     key={id}
-                    className={`flex items-center justify-between px-3 py-2.5 border-b border-default last:border-b-0 ${
-                      isActive ? 'bg-primary/5' : 'hover:bg-muted/50'
-                    } transition-colors`}
+                    className={`flex items-center justify-between px-3 py-2.5 border-b border-default last:border-b-0 ${isActive ? 'bg-primary/5' : 'hover:bg-muted/50'
+                      } transition-colors`}
                   >
                     {/* Left side - Exchange info (clickable) */}
                     <button
                       onClick={() => handleExchangeClick(exchangeId)}
                       className="flex items-center gap-2.5 flex-1 text-left"
                     >
-                      <Image 
-                        src={exchangeLogos[id]} 
-                        alt={name} 
-                        width={24} 
-                        height={24} 
-                        className="rounded-sm" 
+                      <Image
+                        src={exchangeLogos[id]}
+                        alt={name}
+                        width={24}
+                        height={24}
+                        className="rounded-sm"
                       />
                       <div className="flex flex-col">
                         <div className="flex items-center gap-1.5">
@@ -168,15 +173,14 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                         </span>
                       </div>
                     </button>
-                    
+
                     {/* Right side - Setup/Update button */}
                     <button
                       onClick={(e) => handleSetupCredentials(exchangeId, e)}
-                      className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold transition-all duration-200 ${
-                        hasCredentials
-                          ? 'bg-muted hover:bg-muted/80 text-foreground border border-default'
-                          : 'bg-primary hover:bg-primary/90 text-primary-foreground border border-primary'
-                      }`}
+                      className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold transition-all duration-200 ${hasCredentials
+                        ? 'bg-muted hover:bg-muted/80 text-foreground border border-default'
+                        : 'bg-primary hover:bg-primary/90 text-primary-foreground border border-primary'
+                        }`}
                     >
                       <Settings className="w-3 h-3" />
                       {hasCredentials ? 'Update' : 'Setup'}
@@ -242,7 +246,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
 
       {/* Exchange Setup Modal */}
       {isSetupModalOpen && (
-        <ExchangeSelector 
+        <ExchangeSelector
           isOpen={isSetupModalOpen}
           onClose={() => setIsSetupModalOpen(false)}
           exchangeToSetup={exchangeToSetup}
