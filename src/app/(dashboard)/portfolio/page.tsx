@@ -24,6 +24,7 @@ import PerformanceTab from '../../../components/portfolio/performance';
 import TransferHistoryTable from '@/components/portfolio/transferHistory';
 // import TradeAnalysisTab from '../../../components/portfolio/tradeAnalysis';
 import { useAppSelector } from '@/infrastructure/store/hooks';
+import { useAuth } from '@/hooks/auth';
 // import PerformanceAnalysis from '@/components/portfolio/performanceAnalysis'; // Removed - trade analysis pairing logic incorrect
 import DbTradesTab from '@/components/portfolio/dbTrades';
 // import TradeAnalysisTab from '@/components/portfolio/tradeAnalysis';
@@ -34,9 +35,15 @@ export default function PortfolioPage() {
   // Get selected exchange and credentials from Redux
   const { selectedExchange, credentials } = useAppSelector((state: any) => state.exchange);
 
+  // Get current user for user-specific cache keys
+  const { user } = useAuth();
+  const userId = user?.id || 'anonymous';
+
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('🔷 PORTFOLIO PAGE - Redux State');
   console.log('   Selected Exchange:', selectedExchange);
+  console.log('   Current User:', user?.email || 'Not logged in');
+  console.log('   User ID:', userId);
   console.log('   Credentials:', credentials ? {
     exchange: credentials.exchange,
     hasApiKey: !!credentials.apiKey,
@@ -56,7 +63,8 @@ export default function PortfolioPage() {
   // Cache utilities
   const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-  const getCacheKey = (key: string) => `portfolio_${key}`;
+  // Include user ID in cache key to prevent data leakage between users
+  const getCacheKey = (key: string) => `portfolio_${userId}_${key}`;
 
   const getCachedData = (key: string) => {
     try {
@@ -232,11 +240,23 @@ export default function PortfolioPage() {
 
   // Refetch when exchange changes
   useEffect(() => {
-    console.log('� EXCHANGE CHANGE DETECTED!');
+    console.log('🔄 EXCHANGE CHANGE DETECTED!');
     console.log('   New Exchange:', selectedExchange);
     console.log('   Triggering force refresh...');
     fetchBasicData(true); // Force refresh on exchange change
   }, [selectedExchange, fetchBasicData]);
+
+  // Refetch when user changes (e.g., after login with different account)
+  useEffect(() => {
+    if (userId && userId !== 'anonymous') {
+      console.log('👤 USER CHANGE DETECTED!');
+      console.log('   New User ID:', userId);
+      console.log('   User Email:', user?.email);
+      console.log('   Triggering force refresh...');
+      fetchBasicData(true); // Force refresh on user change
+      fetchEnhancedData(); // Also refresh enhanced data
+    }
+  }, [userId, fetchBasicData, fetchEnhancedData, user?.email]);
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: TrendingUp },
