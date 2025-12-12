@@ -17,7 +17,8 @@ export function createExchangeService(
     apiKey,
     secretKey,
     passphrase,
-    label: `${exchangeType.toUpperCase()} Connection`
+    label: `${exchangeType.toUpperCase()} Account`,
+    activeTrading: true,
   };
 
   let service: ExchangeService;

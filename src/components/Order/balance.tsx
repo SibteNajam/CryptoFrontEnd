@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import TokenStorage from "@/lib/tokenStorage";
 
 interface Balance {
   asset: string;
@@ -13,6 +12,8 @@ interface BalanceViewerProps {
   showLocked?: boolean; // Option to show locked balance
   compact?: boolean; // For compact display in trading panel
 }
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
 
 export default function BalanceViewer({ 
   selectedSymbol, 
@@ -52,13 +53,7 @@ export default function BalanceViewer({
       setError(null);
       
       try {
-        const token = TokenStorage.getAccessToken();
-        const res = await fetch("http://146.59.93.94:3000/binance/account-info", {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
-            }
-        });
+        const res = await fetch(`${API_BASE_URL}/binance/account-info`);
         
         if (!res.ok) {
           throw new Error('Failed to fetch account info');

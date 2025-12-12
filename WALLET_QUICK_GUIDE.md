@@ -247,7 +247,7 @@ if (credentials) {
 
 // API calls
 🔵 BITGET API CALL: getBitgetDepositHistory
-   URL: http://146.59.93.94:3000/bitget/account/deposit-history
+   URL: http://localhost:3000/bitget/account/deposit-history
 
 // Responses
 ✅ BITGET DEPOSIT HISTORY RESPONSE: {

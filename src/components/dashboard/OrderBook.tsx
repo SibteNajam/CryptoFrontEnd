@@ -51,7 +51,7 @@ export default function BinanceOrderBook({ symbol }: OrderBookProps) {
   const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
   const refreshCountdownRef = useRef<NodeJS.Timeout | null>(null);
   
-  const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://146.59.93.94:3000';
+  const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
 
   // Fetch OrderBook data
   const fetchOrderBook = async (isManual = false) => {
@@ -253,11 +253,11 @@ export default function BinanceOrderBook({ symbol }: OrderBookProps) {
   // Show loading state
   if (!orderBookData && isLoading) {
     return (
-      <div className="bg-card rounded-sm border border-gray-200 shadow-sm overflow-hidden flex flex-col h-full">
+      <div className="bg-card border border-default shadow-sm overflow-hidden flex flex-col h-full">
         <div className="flex items-center justify-center h-full">
-          <div className="text-center py-8">
-            <div className="w-8 h-8 border-2 border-light border-t-primary rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading order book...</p>
+          <div className="text-center py-6">
+            <div className="w-6 h-6 border-2 border-muted border-t-primary rounded-full animate-spin mx-auto mb-3"></div>
+            <p className="text-xs text-muted-foreground">Loading order book...</p>
           </div>
         </div>
       </div>
@@ -265,15 +265,17 @@ export default function BinanceOrderBook({ symbol }: OrderBookProps) {
   }
 
   if (!orderBookData) {
-    return null;
+    return (
+      <div className="bg-card border border-default shadow-sm overflow-hidden flex flex-col h-full" />
+    );
   }
 
  return (
-  <div className="bg-card rounded-sm border border-gray-200 shadow-sm overflow-hidden flex flex-col h-full">
+  <div className="bg-card border border-default shadow-sm overflow-hidden flex flex-col h-full">
     {/* Enhanced Header */}
-    <div className="border-b border-gray-200 px-3 py-3 flex-shrink-0">
+    <div className="border-b border-default px-3 py-2 flex-shrink-0">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-primary flex items-center gap-2">
+        <h3 className="text-xs font-semibold text-primary flex items-center gap-2">
           <BarChart3 size={14} />
           Order Book
           <span className="text-blue-600 font-bold">{symbol}</span>
@@ -284,10 +286,10 @@ export default function BinanceOrderBook({ symbol }: OrderBookProps) {
         <button
           onClick={() => fetchOrderBook()}
           disabled={isManualRefreshing}
-          className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 transform hover:scale-105 ${
+          className={`flex items-center gap-1 px-2.5 py-1 text-[10px] font-medium rounded-md transition-colors duration-150 ${
             isManualRefreshing 
               ? 'opacity-50 cursor-not-allowed bg-muted text-muted-foreground' 
-              : 'bg-primary text-primary-foreground hover-primary shadow-sm hover:shadow-md'
+              : 'bg-primary text-primary-foreground hover:bg-primary/90'
           }`}
           title="Refresh order book data"
         >
@@ -338,7 +340,7 @@ export default function BinanceOrderBook({ symbol }: OrderBookProps) {
     </div>
 
     {/* Order Book Body */}
-    <div className="flex-1 overflow-y-auto" style={{ maxHeight: '400px', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+    <div className="flex-1 overflow-y-auto" style={{ maxHeight: '460px', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
       {(isLoading && processedData.bids.length === 0 && processedData.asks.length === 0) ? (
         <div className="flex items-center justify-center py-8">
           <div className="w-6 h-6 border-2 border-info-light border-t-info rounded-full animate-spin mx-auto mb-2"></div>

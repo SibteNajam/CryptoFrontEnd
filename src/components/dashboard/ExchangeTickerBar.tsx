@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { TrendingUp, TrendingDown, Activity } from 'lucide-react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { TrendingUp, TrendingDown, Activity, Search, X } from 'lucide-react';
 import { useExchangeWebSocket } from '@/hooks/useExchangeWebSocket';
 
 interface TickerData {
@@ -17,6 +17,9 @@ export default function ExchangeTickerBar({ symbol, onSymbolClick }: ExchangeTic
   const [tickerData, setTickerData] = useState<TickerData | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<string>('disconnected');
   const [exchange, setExchange] = useState<'binance' | 'bitget'>('binance');
+  const [isSearchMode, setIsSearchMode] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   const { subscribeBinanceSymbol, subscribeBitgetSymbol, selectedExchange, isConnected } = useExchangeWebSocket({
     onTickerUpdate: (data: any) => {
@@ -99,12 +102,32 @@ export default function ExchangeTickerBar({ symbol, onSymbolClick }: ExchangeTic
     }
   }, [symbol, selectedExchange, isConnected, subscribeBinanceSymbol, subscribeBitgetSymbol]);
 
+  useEffect(() => {
+    if (isSearchMode && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [isSearchMode]);
+
+  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const nextSymbol = searchValue.trim().toUpperCase();
+    if (nextSymbol) {
+      onSymbolClick?.(nextSymbol);
+    }
+    setSearchValue('');
+    setIsSearchMode(false);
+  };
+
   if (!tickerData) {
     return (
-      <div className="bg-card border border-default rounded-lg p-4">
-        <div className="flex items-center justify-center gap-2 text-muted-foreground">
-          <Activity className="w-4 h-4 animate-pulse" />
-          <span className="text-sm">Waiting for ticker data...</span>
+      <div className="bg-card border-b border-default px-4 py-2 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">Updates: 0</span>
+          <span className="text-xs text-muted-foreground">| Last: --:--:--</span>
+        </div>
+        <div className="flex items-center gap-2 text-muted-foreground text-xs">
+          <Activity className="w-3 h-3 animate-pulse" />
+          <span>Waiting for ticker data…</span>
         </div>
       </div>
     );
@@ -156,25 +179,62 @@ export default function ExchangeTickerBar({ symbol, onSymbolClick }: ExchangeTic
 
   return (
     <div className="bg-card border-b border-default">
-      <div className="px-4 py-1">
-        {/* Header */}
-        <div className="bg-muted px-4 py-1 border-b border-default flex items-center justify-between mb-3">
+      <div className="px-4 py-2 flex items-center justify-between">
+        {/* Symbol & price block */}
+        <div className="flex-1 flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <h3 className="font-bold text-card-foreground">{symbol}</h3>
-            <span className="text-xs px-2 py-0.5 rounded bg-primary/10 text-primary font-medium">
-              {exchange.toUpperCase()}
+            <h3 className="text-base font-semibold text-card-foreground">{symbol}</h3>
+            <span className="text-[10px] px-2 py-0.5 rounded bg-primary/10 text-primary font-medium uppercase tracking-wide">
+              {exchange}
             </span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-gray-400'} animate-pulse`}></div>
-            <span className="text-xs text-muted-foreground">
-              {isConnected ? 'Live' : 'Disconnected'}
-            </span>
+          <div className="flex items-center gap-3">
+            <span className="text-xl font-semibold text-card-foreground">${lastPrice.toFixed(2)}</span>
+            <div
+              className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                isPositive
+                  ? 'bg-emerald-500/15 text-emerald-400'
+                  : 'bg-rose-500/15 text-rose-400'
+              }`}
+            >
+              {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+              <span>{isPositive ? '+' : ''}{changePercent.toFixed(2)}%</span>
+            </div>
+          </div>
+          <div className="ml-auto">
+            {isSearchMode ? (
+              <form onSubmit={handleSearchSubmit} className="flex items-center gap-1">
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchValue}
+                  onChange={(e) => setSearchValue(e.target.value)}
+                  placeholder="BTCUSDT"
+                  className="w-32 px-2 py-1 rounded-full bg-muted border border-default text-xs text-card-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/60"
+                />
+                <button
+                  type="button"
+                  onClick={() => setIsSearchMode(false)}
+                  className="px-2 text-muted-foreground hover:text-primary transition-colors"
+                  aria-label="Close search"
+                >
+                  <X size={14} />
+                </button>
+              </form>
+            ) : (
+              <button
+                onClick={() => setIsSearchMode(true)}
+                className="p-1.5 rounded-full hover:bg-muted border border-default text-muted-foreground hover:text-primary transition-colors"
+                aria-label="Open symbol search"
+              >
+                <Search size={16} />
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Ticker Stats */}
-        <div className="grid grid-cols-6 gap-2 text-xs">
+        {/* Secondary stats row */}
+        <div className="mt-1 grid grid-cols-5 gap-4 text-[11px]">
           {/* 24h High/Low */}
           <div className="flex flex-col gap-0.5">
             <div className="flex items-center justify-start gap-2">
@@ -225,21 +285,7 @@ export default function ExchangeTickerBar({ symbol, onSymbolClick }: ExchangeTic
             </div>
           </div>
 
-          {/* Last Price & Change % */}
-          <div className="flex flex-col gap-0.5">
-            <div className="flex items-center justify-start gap-2">
-              <span className="text-muted-foreground">Last Price:</span>
-              <span className="font-bold text-card-foreground text-lg">${lastPrice.toFixed(2)}</span>
-            </div>
-            <div className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold ${
-              isPositive ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
-            }`}>
-              {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-              {isPositive ? '+' : ''}{changePercent.toFixed(2)}%
-            </div>
-          </div>
-
-          {/* Spread */}
+        {/* Spread */}
           <div className="flex flex-col gap-0.5">
             <div className="flex items-center justify-start gap-2">
               <span className="text-muted-foreground">Spread:</span>
@@ -251,18 +297,6 @@ export default function ExchangeTickerBar({ symbol, onSymbolClick }: ExchangeTic
             </div>
           </div>
         </div>
-
-        {/* Debug Info (Development Only) */}
-        {process.env.NODE_ENV === 'development' && (
-          <details className="mt-3">
-            <summary className="text-xs text-muted-foreground cursor-pointer hover:text-card-foreground">
-              Debug Info
-            </summary>
-            <div className="mt-2 p-2 bg-muted rounded text-xs font-mono max-h-40 overflow-auto">
-              <pre>{JSON.stringify(tickerData, null, 2)}</pre>
-            </div>
-          </details>
-        )}
       </div>
     </div>
   );

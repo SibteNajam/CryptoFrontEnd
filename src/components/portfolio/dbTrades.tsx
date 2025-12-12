@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { 
-  RefreshCw, TrendingUp, TrendingDown, Clock, CheckCircle, XCircle, 
+import {
+  RefreshCw, TrendingUp, TrendingDown, Clock, CheckCircle, XCircle,
   AlertCircle, Target, Shield, Activity, BarChart3, PieChart as PieChartIcon,
   Calendar, ChevronDown, ChevronUp, Wallet, DollarSign, Percent
 } from 'lucide-react';
@@ -11,6 +11,7 @@ import {
   CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, BarChart,
   ReferenceLine
 } from 'recharts';
+import TokenStorage from '../../lib/tokenStorage';
 
 // ============================================
 // TYPE DEFINITIONS
@@ -116,26 +117,38 @@ interface HeatmapDay {
 // API FUNCTION
 // ============================================
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://146.59.93.94:3000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
 
 async function fetchTrades(exchange?: string, symbol?: string): Promise<TradesResponse> {
   const params = new URLSearchParams();
   if (exchange) params.append('exchange', exchange.toUpperCase());
   if (symbol) params.append('symbol', symbol);
-  
+
   const url = `${API_BASE_URL}/exchanges/trades${params.toString() ? '?' + params.toString() : ''}`;
-  
+
+  // Build headers with JWT token
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+
+  // Add JWT token for authentication
+  const token = TokenStorage.getAccessToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+    console.log('🔑 DB Trades - JWT token added to headers');
+  } else {
+    console.warn('⚠️ DB Trades - No JWT token found in storage');
+  }
+
   const response = await fetch(url, {
     method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers,
   });
-  
+
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
   }
-  
+
   return response.json();
 }
 
@@ -229,7 +242,10 @@ const CustomTooltip = ({ active, payload, label }: any) => {
       <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
         <p className="text-sm font-medium text-card-foreground mb-1">{label}</p>
         {payload.map((entry: any, index: number) => (
-          <p key={index} className="text-sm" style={{ color: entry.color }}>
+          <p
+            key={index}
+            className={`text-sm ${getColorClass(entry.color)}`}
+          >
             {entry.name}: {typeof entry.value === 'number' ? `$${entry.value.toFixed(2)}` : entry.value}
           </p>
         ))}
@@ -242,6 +258,28 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 // ============================================
 // MAIN COMPONENT
 // ============================================
+
+// Helper to map color hex to a CSS class
+function getColorClass(color: string) {
+  switch (color) {
+    case '#0ecb81':
+      return 'text-green-500';
+    case '#f6465d':
+      return 'text-red-500';
+    case '#609dff':
+      return 'text-blue-500';
+    case '#a855f7':
+      return 'text-purple-500';
+    case '#f59e0b':
+      return 'text-yellow-500';
+    case '#06b6d4':
+      return 'text-cyan-500';
+    case '#848e9c':
+      return 'text-gray-500';
+    default:
+      return '';
+  }
+}
 
 interface DbTradesTabProps {
   selectedExchange?: string;
@@ -265,7 +303,7 @@ export default function DbTradesTab({ selectedExchange }: DbTradesTabProps) {
     try {
       setError(null);
       const response = await fetchTrades(selectedExchange);
-      
+
       if (response.status === 'Success') {
         setTrades(response.data.trades);
         setSummary(response.data.summary);
@@ -298,7 +336,7 @@ export default function DbTradesTab({ selectedExchange }: DbTradesTabProps) {
   // Filter trades by time range
   const filteredByTimeRange = useMemo(() => {
     if (timeRange === 'all') return trades;
-    
+
     const now = Date.now();
     const ranges: Record<TimeRange, number> = {
       'all': 0,
@@ -306,7 +344,7 @@ export default function DbTradesTab({ selectedExchange }: DbTradesTabProps) {
       '30d': 30 * 24 * 60 * 60 * 1000,
       '90d': 90 * 24 * 60 * 60 * 1000,
     };
-    
+
     return trades.filter(trade => {
       const tradeDate = new Date(trade.entryOrder.createdAt).getTime();
       return now - tradeDate <= ranges[timeRange];
@@ -498,22 +536,20 @@ export default function DbTradesTab({ selectedExchange }: DbTradesTabProps) {
           <div className="flex items-center gap-1 p-1 bg-card border border-border rounded-lg">
             <button
               onClick={() => setViewMode('overview')}
-              className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${
-                viewMode === 'overview'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:text-card-foreground'
-              }`}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${viewMode === 'overview'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:text-card-foreground'
+                }`}
             >
               <BarChart3 className="w-4 h-4 inline mr-2" />
               Overview
             </button>
             <button
               onClick={() => setViewMode('trades')}
-              className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${
-                viewMode === 'trades'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:text-card-foreground'
-              }`}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${viewMode === 'trades'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:text-card-foreground'
+                }`}
             >
               <Activity className="w-4 h-4 inline mr-2" />
               Trades
@@ -526,11 +562,10 @@ export default function DbTradesTab({ selectedExchange }: DbTradesTabProps) {
               <button
                 key={range}
                 onClick={() => setTimeRange(range)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-                  timeRange === range
-                    ? 'bg-muted text-card-foreground'
-                    : 'text-muted-foreground hover:text-card-foreground'
-                }`}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${timeRange === range
+                  ? 'bg-muted text-card-foreground'
+                  : 'text-muted-foreground hover:text-card-foreground'
+                  }`}
               >
                 {range === 'all' ? 'All Time' : range}
               </button>
@@ -655,9 +690,8 @@ function StatCard({ label, value, icon, variant = 'default', highlighted }: Stat
   };
 
   return (
-    <div className={`bg-card border border-border rounded-xl p-4 transition-all hover:border-border-light ${
-      highlighted ? 'ring-2 ring-primary/20' : ''
-    }`}>
+    <div className={`bg-card border border-border rounded-xl p-4 transition-all hover:border-border-light ${highlighted ? 'ring-2 ring-primary/20' : ''
+      }`}>
       <div className="flex items-center justify-between mb-2">
         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{label}</span>
         {icon && <span className="text-muted-foreground">{icon}</span>}
@@ -690,11 +724,11 @@ interface AnalyticsViewProps {
 function AnalyticsView({ chartData }: AnalyticsViewProps) {
   const [pnlPeriod, setPnlPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
 
-  const pnlData = pnlPeriod === 'daily' 
-    ? chartData.dailyPnL 
-    : pnlPeriod === 'weekly' 
-    ? chartData.weeklyPnL 
-    : chartData.monthlyPnL;
+  const pnlData = pnlPeriod === 'daily'
+    ? chartData.dailyPnL
+    : pnlPeriod === 'weekly'
+      ? chartData.weeklyPnL
+      : chartData.monthlyPnL;
 
   return (
     <div className="space-y-6">
@@ -712,8 +746,8 @@ function AnalyticsView({ chartData }: AnalyticsViewProps) {
                 <ComposedChart data={chartData.equityCurve}>
                   <defs>
                     <linearGradient id="equityGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={CHART_COLORS.green} stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor={CHART_COLORS.green} stopOpacity={0}/>
+                      <stop offset="5%" stopColor={CHART_COLORS.green} stopOpacity={0.3} />
+                      <stop offset="95%" stopColor={CHART_COLORS.green} stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
@@ -721,17 +755,17 @@ function AnalyticsView({ chartData }: AnalyticsViewProps) {
                   <YAxis stroke="var(--muted-foreground)" tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
                   <Tooltip content={<CustomTooltip />} />
                   <ReferenceLine y={0} stroke="var(--border)" />
-                  <Area 
-                    type="monotone" 
-                    dataKey="cumulative" 
-                    stroke={CHART_COLORS.green} 
+                  <Area
+                    type="monotone"
+                    dataKey="cumulative"
+                    stroke={CHART_COLORS.green}
                     fill="url(#equityGradient)"
                     name="Cumulative PnL"
                   />
-                  <Line 
-                    type="monotone" 
-                    dataKey="cumulative" 
-                    stroke={CHART_COLORS.green} 
+                  <Line
+                    type="monotone"
+                    dataKey="cumulative"
+                    stroke={CHART_COLORS.green}
                     strokeWidth={2}
                     dot={false}
                     name="Cumulative PnL"
@@ -815,11 +849,10 @@ function AnalyticsView({ chartData }: AnalyticsViewProps) {
                 <button
                   key={period}
                   onClick={() => setPnlPeriod(period)}
-                  className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
-                    pnlPeriod === period
-                      ? 'bg-card text-card-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-card-foreground'
-                  }`}
+                  className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${pnlPeriod === period
+                    ? 'bg-card text-card-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-card-foreground'
+                    }`}
                 >
                   {period.charAt(0).toUpperCase() + period.slice(1)}
                 </button>
@@ -835,15 +868,15 @@ function AnalyticsView({ chartData }: AnalyticsViewProps) {
                   <YAxis stroke="var(--muted-foreground)" tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
                   <Tooltip content={<CustomTooltip />} />
                   <ReferenceLine y={0} stroke="var(--border)" />
-                  <Bar 
-                    dataKey="pnl" 
+                  <Bar
+                    dataKey="pnl"
                     name="PnL"
                     radius={[4, 4, 0, 0]}
                   >
                     {pnlData.map((entry, index) => (
-                      <Cell 
-                        key={`cell-${index}`} 
-                        fill={entry.pnl >= 0 ? CHART_COLORS.green : CHART_COLORS.red} 
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={entry.pnl >= 0 ? CHART_COLORS.green : CHART_COLORS.red}
                       />
                     ))}
                   </Bar>
@@ -872,9 +905,9 @@ function AnalyticsView({ chartData }: AnalyticsViewProps) {
                   <ReferenceLine x={0} stroke="var(--border)" />
                   <Bar dataKey="pnl" name="PnL" radius={[0, 4, 4, 0]}>
                     {chartData.symbolPerformance.map((entry, index) => (
-                      <Cell 
-                        key={`cell-${index}`} 
-                        fill={entry.pnl >= 0 ? CHART_COLORS.green : CHART_COLORS.red} 
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={entry.pnl >= 0 ? CHART_COLORS.green : CHART_COLORS.red}
                       />
                     ))}
                   </Bar>
@@ -908,7 +941,7 @@ function AnalyticsView({ chartData }: AnalyticsViewProps) {
 function PnLHeatmap({ data }: { data: HeatmapDay[] }) {
   const weeks = Array.from({ length: 12 }, (_, i) => i);
   const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  
+
   const getColor = (pnl: number, trades: number) => {
     if (trades === 0) return 'bg-muted';
     if (pnl > 10) return 'bg-green-500';
@@ -1004,11 +1037,10 @@ function TradesView({ trades, filter, setFilter, expandedTrades, toggleTradeExpa
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={`px-4 py-1.5 text-xs font-medium rounded-md transition-all ${
-                  filter === f
-                    ? 'bg-card text-card-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-card-foreground'
-                }`}
+                className={`px-4 py-1.5 text-xs font-medium rounded-md transition-all ${filter === f
+                  ? 'bg-card text-card-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-card-foreground'
+                  }`}
               >
                 {f.charAt(0).toUpperCase() + f.slice(1)}
                 {f === 'active' && summary && ` (${summary.activeTrades})`}
@@ -1059,7 +1091,7 @@ interface TradeCardProps {
 
 function TradeCard({ trade, isExpanded, onToggle }: TradeCardProps) {
   const { entryOrder, exitOrders, pnl } = trade;
-  
+
   // Count exit order statuses
   const filledExits = exitOrders.filter(o => o.status === 'FILLED').length;
   const pendingExits = exitOrders.filter(o => o.status === 'NEW' || o.status === 'PARTIALLY_FILLED').length;
@@ -1068,7 +1100,7 @@ function TradeCard({ trade, isExpanded, onToggle }: TradeCardProps) {
   return (
     <div className="transition-all">
       {/* Trade Header - Always Visible */}
-      <div 
+      <div
         className="px-6 py-4 cursor-pointer hover:bg-muted/50 transition-colors"
         onClick={onToggle}
       >
@@ -1078,11 +1110,10 @@ function TradeCard({ trade, isExpanded, onToggle }: TradeCardProps) {
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
                 <span className="font-bold text-lg text-card-foreground">{entryOrder.symbol}</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                  pnl.isComplete 
-                    ? 'bg-muted text-muted-foreground' 
-                    : 'bg-info/10 text-info'
-                }`}>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${pnl.isComplete
+                  ? 'bg-muted text-muted-foreground'
+                  : 'bg-info/10 text-info'
+                  }`}>
                   {pnl.isComplete ? 'Closed' : 'Active'}
                 </span>
               </div>
@@ -1143,11 +1174,10 @@ function TradeCard({ trade, isExpanded, onToggle }: TradeCardProps) {
             )}
 
             {/* Total PnL */}
-            <div className={`text-right px-4 py-2 rounded-lg ${
-              pnl.total >= 0 
-                ? 'bg-success/10' 
-                : 'bg-danger/10'
-            }`}>
+            <div className={`text-right px-4 py-2 rounded-lg ${pnl.total >= 0
+              ? 'bg-success/10'
+              : 'bg-danger/10'
+              }`}>
               <p className="text-xs text-muted-foreground">Total PnL</p>
               <p className={`font-bold text-lg ${pnl.total >= 0 ? 'text-success' : 'text-danger'}`}>
                 {formatPnL(pnl.total)}
@@ -1235,15 +1265,14 @@ function TradeCard({ trade, isExpanded, onToggle }: TradeCardProps) {
             </p>
             <div className="space-y-2">
               {exitOrders.map((exit) => (
-                <div 
+                <div
                   key={exit.orderId}
-                  className={`px-4 py-3 rounded-lg border ${
-                    exit.status === 'FILLED' 
-                      ? 'bg-success/5 border-success/20'
-                      : exit.status === 'NEW' || exit.status === 'PARTIALLY_FILLED'
+                  className={`px-4 py-3 rounded-lg border ${exit.status === 'FILLED'
+                    ? 'bg-success/5 border-success/20'
+                    : exit.status === 'NEW' || exit.status === 'PARTIALLY_FILLED'
                       ? 'bg-info/5 border-info/20'
                       : 'bg-muted/50 border-border'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">

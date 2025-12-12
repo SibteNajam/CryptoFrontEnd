@@ -1,6 +1,6 @@
-'use client';
+﻿'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { RefreshCw } from 'lucide-react';
 import useMarketTicker from '@/hooks/useMarketTicker';
 import SymbolCards from '../../../components/dashboard/SymbolCards';
@@ -77,7 +77,7 @@ interface BinanceTickerData {
     };
 }
 
-const API_BASE_URL = 'http://146.59.93.94:3000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
 
 export default function Dashboard() {
     const { selectedExchange } = useAppSelector((state) => state.exchange);
@@ -275,8 +275,8 @@ export default function Dashboard() {
         fetchSymbols();
     }, []);
 
-    const handleSymbolClick = (symbol: string) => {
-        if (symbol === selectedSymbol) return;
+    const handleSymbolClick = useCallback((symbol: string) => {
+        if (!symbol || symbol === selectedSymbol) return;
 
         setSelectedSymbol(symbol);
         setError(null);
@@ -286,7 +286,7 @@ export default function Dashboard() {
         setTickerData(null);
         // Inform market hook to subscribe
         // subscribeSymbol(symbol, selectedInterval);
-    };
+    }, [selectedSymbol]);
 
     const handleIntervalChange = (interval: string) => {
         if (interval === selectedInterval) return;
@@ -307,8 +307,8 @@ export default function Dashboard() {
 
     return (
         <div className="space-y-1">
-            {/* Status Bar */}
-            <div className="flex items-center justify-between bg-card px-1 shadow-sm">
+            {/* Status Bar (hidden – not used) */}
+            <div className="hidden">
                 <div className="flex items-center space-x-4">
                     <div className="inline-flex items-center gap-4 px-3 py-1 rounded-full text-xs bg-card text-info">
                         <span>📊 Updates: {tickerUpdateCount}</span>
@@ -349,17 +349,18 @@ export default function Dashboard() {
             />
 
             {/* Main Trading Layout */}
-            <div className="bg-muted min-h-screen">
-                <div className="max-w-7xl mx-auto">
-                    <div className="grid grid-cols-1 lg:grid-cols-3">
+            <div className="bg-card min-h-screen">
+                <div className="w-full px-0">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-0">
+                        {/* Full-width chart on the left (2/3) */}
                         <div className="lg:col-span-2">
-                            <div className="bg-card rounded-sm border border-default shadow-sm overflow-hidden h-full">
-                                <div className="bg-card flex-1" style={{ height: '500px' }}>
+                            <div className="bg-card border-b border-default shadow-sm overflow-hidden h-full">
+                                <div className="bg-card flex-1 h-[520px] w-full">
                                     <TradingViewChart
-                                        symbol={`BINANCE:${selectedSymbol}`}
+                                        symbol={`${selectedExchange === 'bitget' ? 'BITGET' : 'BINANCE'}:${selectedSymbol}`}
                                         interval={selectedInterval}
                                         theme={theme}
-                                        height="500px"
+                                        height="520px"
                                         width="100%"
                                         enableTrading={false}
                                     />
@@ -367,15 +368,18 @@ export default function Dashboard() {
                             </div>
                         </div>
 
+                        {/* Compact, full-height order book on the right (1/3) */}
                         <div className="lg:col-span-1">
-                            <BinanceOrderBook symbol={selectedSymbol} />
+                            <div className="h-[520px] bg-card border-b border-default shadow-sm">
+                                <BinanceOrderBook symbol={selectedSymbol} />
+                            </div>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 mt-4">
                         <div className="lg:col-span-2">
-                            <div className="bg-card rounded-sm border border-default shadow-sm" style={{ height: '580px' }}>
-                                <div className="p-3 h-full overflow-hidden">
+                            <div className="bg-card rounded-sm border border-default shadow-sm">
+                                <div className="p-3">
                                     <TradingPanel
                                         selectedSymbol={selectedSymbol}
                                         apiService={apiService}

@@ -25,7 +25,7 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({
     symbol = "BINANCE:BTCUSDT",
     interval = "5",
     theme = "light",
-    height = "500px",
+    height = "100%",
     width = "100%",
     indicators = [],
     enableTrading = true, // ✅ NEW - Enable by default
@@ -69,12 +69,32 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({
             document.head.appendChild(script);
         }
 
+        function injectTopAreaHidingStyles() {
+            if (typeof document === 'undefined') return;
+            if (document.getElementById('tv-hide-top-area-style')) return;
+
+            const style = document.createElement('style');
+            style.id = 'tv-hide-top-area-style';
+            style.innerHTML = `
+                .tradingview-widget-container .layout__area--top {
+                    display: none !important;
+                    height: 0 !important;
+                    min-height: 0 !important;
+                    padding: 0 !important;
+                    margin: 0 !important;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
         function createWidget() {
             if (isCreatingWidget.current || widgetRef.current) return;
 
             const TradingView = (window as any).TradingView;
 
             if (containerRef.current && TradingView && chartId) {
+                // Ensure our CSS for hiding the top layout area is present
+                injectTopAreaHidingStyles();
                 isCreatingWidget.current = true;
                 containerRef.current.innerHTML = '';
 
@@ -123,7 +143,7 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({
                     container_id: chartId,
                     studies: indicators,
                     hide_side_toolbar: false,
-                    hide_top_toolbar: false,
+                    hide_top_toolbar: true,
                     hide_legend: false,
                     save_image: true,
                     range: "1D",
@@ -250,17 +270,19 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({
 
     if (!isMounted) {
         return (
-            <div className="tradingview-widget-container">
-                <div style={{
-                    height,
-                    width,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: theme === "light" ? '#ffffff' : '#1a1a1a',
-                    color: theme === "light" ? '#333333' : '#4CAF50',
-                    border: `1px solid ${theme === "light" ? '#e2e8f0' : '#333'}`
-                }}>
+            <div className="tradingview-widget-container w-full h-full">
+                <div
+                    style={{
+                        height: '100%',
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: theme === "light" ? '#ffffff' : '#1a1a1a',
+                        color: theme === "light" ? '#333333' : '#4CAF50',
+                        border: `1px solid ${theme === "light" ? '#e2e8f0' : '#333'}`
+                    }}
+                >
                     Loading TradingView Chart...
                 </div>
             </div>
@@ -268,11 +290,11 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({
     }
 
     return (
-        <div className="tradingview-widget-container">
+        <div className="tradingview-widget-container w-full h-full">
             <div
                 ref={containerRef}
                 id={chartId}
-                style={{ height, width }}
+                style={{ height: '100%', width: '100%' }}
             />
         </div>
     );

@@ -24,28 +24,47 @@ import PerformanceTab from '../../../components/portfolio/performance';
 import TransferHistoryTable from '@/components/portfolio/transferHistory';
 // import TradeAnalysisTab from '../../../components/portfolio/tradeAnalysis';
 import { useAppSelector } from '@/infrastructure/store/hooks';
-import PerformanceAnalysis from '@/components/portfolio/performanceAnalysis';
+import { useAuth } from '@/hooks/auth';
+// import PerformanceAnalysis from '@/components/portfolio/performanceAnalysis'; // Removed - trade analysis pairing logic incorrect
 import DbTradesTab from '@/components/portfolio/dbTrades';
 // import TradeAnalysisTab from '@/components/portfolio/tradeAnalysis';
 
-type TabType = 'overview' | 'balances' | 'orders' | 'filled' | 'db-trades' | 'history' | 'performance' | 'transfers' | 'trade-analysis';
+type TabType = 'overview' | 'balances' | 'orders' | 'db-trades';
 
 export default function PortfolioPage() {
-  // Get selected exchange from Redux - credentials are stored in backend database
-  const { selectedExchange } = useAppSelector((state: any) => state.exchange);
+  // Get selected exchange and credentials from Redux
+  const { selectedExchange, credentials } = useAppSelector((state: any) => state.exchange);
+
+  // Get current user for user-specific cache keys
+  const { user } = useAuth();
+  const userId = user?.id || 'anonymous';
 
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('🔷 PORTFOLIO PAGE - Using JWT Token');
+  console.log('🔷 PORTFOLIO PAGE - Redux State');
   console.log('   Selected Exchange:', selectedExchange);
-  console.log('   Backend will fetch credentials from database using JWT');
+  console.log('   Current User:', user?.email || 'Not logged in');
+  console.log('   User ID:', userId);
+  console.log('   Credentials:', credentials ? {
+    exchange: credentials.exchange,
+    hasApiKey: !!credentials.apiKey,
+    hasSecretKey: !!credentials.secretKey,
+    hasPassphrase: !!credentials.passphrase,
+    label: credentials.label
+  } : 'NULL');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-  // Backend fetches credentials from database using JWT token - no need to pass credentials
-  
+  // Prepare credentials for API calls
+  const apiCredentials = credentials && credentials.exchange === selectedExchange ? {
+    apiKey: credentials.apiKey,
+    secretKey: credentials.secretKey,
+    passphrase: credentials.passphrase
+  } : undefined;
+
   // Cache utilities
   const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-  const getCacheKey = (key: string) => `portfolio_${key}`;
+  // Include user ID in cache key to prevent data leakage between users
+  const getCacheKey = (key: string) => `portfolio_${userId}_${key}`;
 
   const getCachedData = (key: string) => {
     try {
@@ -120,12 +139,12 @@ export default function PortfolioPage() {
       }
 
       console.log(`🌐 Calling API for exchange: ${selectedExchange}`);
-      console.log(`🔐 Using JWT token - backend will fetch credentials from database`);
+      console.log(`🔐 Passing credentials:`, apiCredentials ? 'YES' : 'NO');
 
       // Load critical data first (account info and open orders)
       const [accountInfo, openOrdersData] = await Promise.all([
-        getAccountInfoByExchange(selectedExchange as 'binance' | 'bitget'),
-        getOpenOrdersByExchange(selectedExchange as 'binance' | 'bitget'),
+        getAccountInfoByExchange(selectedExchange as 'binance' | 'bitget', apiCredentials),
+        getOpenOrdersByExchange(selectedExchange as 'binance' | 'bitget', undefined, apiCredentials),
       ]);
 
       console.log('✅ API Response received:');
@@ -153,7 +172,7 @@ export default function PortfolioPage() {
     } finally {
       setLoading(false);
     }
-  }, [selectedExchange]); // Backend handles credentials from database
+  }, [selectedExchange, apiCredentials]); // Added selectedExchange and apiCredentials to dependency array
 
   const fetchEnhancedData = useCallback(async () => {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -166,9 +185,10 @@ export default function PortfolioPage() {
       try {
         setSnapshotLoading(true);
         console.log(`🌐 Fetching account snapshot from ${selectedExchange}...`);
-        console.log(`🔐 Using JWT - backend will fetch credentials from database`);
+        console.log(`🔐 Passing credentials:`, apiCredentials ? 'YES' : 'NO');
         const snapshot = await getAccountSnapshotByExchange(
-          selectedExchange as 'binance' | 'bitget'
+          selectedExchange as 'binance' | 'bitget',
+          apiCredentials
         );
         console.log('✅ Snapshot loaded:', {
           exchange: selectedExchange,
@@ -186,9 +206,10 @@ export default function PortfolioPage() {
       try {
         setAssetsLoading(true);
         console.log(`🌐 Fetching user assets from ${selectedExchange}...`);
-        console.log(`🔐 Using JWT - backend will fetch credentials from database`);
+        console.log(`🔐 Passing credentials:`, apiCredentials ? 'YES' : 'NO');
         const assets = await getUserAssetsByExchange(
-          selectedExchange as 'binance' | 'bitget'
+          selectedExchange as 'binance' | 'bitget',
+          apiCredentials
         );
         console.log('✅ User Assets Response:', {
           exchange: selectedExchange,
@@ -205,7 +226,7 @@ export default function PortfolioPage() {
     } catch (err) {
       console.error('❌ Enhanced data fetch failed:', err);
     }
-  }, [selectedExchange]); // Backend handles credentials from database
+  }, [selectedExchange, apiCredentials]); // Added apiCredentials to dependency array
 
   // Remove the old fake snapshot generator since we're using real data
   // const generateFakeAccountSnapshot = (): AccountSnapshot => {
@@ -219,21 +240,33 @@ export default function PortfolioPage() {
 
   // Refetch when exchange changes
   useEffect(() => {
-    console.log('� EXCHANGE CHANGE DETECTED!');
+    console.log('🔄 EXCHANGE CHANGE DETECTED!');
     console.log('   New Exchange:', selectedExchange);
     console.log('   Triggering force refresh...');
     fetchBasicData(true); // Force refresh on exchange change
   }, [selectedExchange, fetchBasicData]);
+
+  // Refetch when user changes (e.g., after login with different account)
+  useEffect(() => {
+    if (userId && userId !== 'anonymous') {
+      console.log('👤 USER CHANGE DETECTED!');
+      console.log('   New User ID:', userId);
+      console.log('   User Email:', user?.email);
+      console.log('   Triggering force refresh...');
+      fetchBasicData(true); // Force refresh on user change
+      fetchEnhancedData(); // Also refresh enhanced data
+    }
+  }, [userId, fetchBasicData, fetchEnhancedData, user?.email]);
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: TrendingUp },
     // { id: 'performance', label: 'Performance', icon: Activity },
     { id: 'balances', label: 'Balances', icon: Wallet },
     { id: 'orders', label: 'Open Orders', icon: Clock },
-    { id: 'filled', label: 'Filled Orders', icon: DollarSign },
+    // { id: 'filled', label: 'Filled Orders', icon: DollarSign },
     { id: 'db-trades', label: 'DB Trades', icon: Activity },
-    { id: 'trade-analysis', label: 'Trade Analysis', icon: TrendingUp },
-    { id: 'history', label: 'History', icon: History },
+    // { id: 'trade-analysis', label: 'Trade Analysis', icon: TrendingUp }, // Removed - pairing logic incorrect
+    // { id: 'history', label: 'History', icon: History }, // Hidden from UI - API logic preserved
     // { id: 'transfers', label: 'Transfers', icon: History },
   ];
 
@@ -279,14 +312,14 @@ export default function PortfolioPage() {
         return <BalancesTab userAssets={userAssets} btcPrice={117300} />;
       case 'orders':
         return <OpenOrdersTab openOrders={openOrders} />;
-      case 'filled':
-        return <FilledOrdersTab />;
+      // case 'filled':
+      //   return <FilledOrdersTab />;
       case 'db-trades':
         return <DbTradesTab selectedExchange={selectedExchange} />;
-      case 'trade-analysis':
-        return <PerformanceAnalysis />;
-      case 'history':
-        return <HistoryTab orderHistory={orderHistory} />;
+      // case 'trade-analysis': // Removed - trade analysis pairing logic incorrect
+      //   return <PerformanceAnalysis />;
+      // case 'history':
+      //   return <HistoryTab orderHistory={orderHistory} />;
       // case 'transfers':
       //   return <TransferHistoryTable 
       //     current={1}

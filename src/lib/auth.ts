@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { LoginCredentials, SignupCredentials, AuthResponse } from '@/types/auth';
 import TokenStorage from './tokenStorage';
-const API_BASE_URL = 'http://146.59.93.94:3000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
 export async function login(credentials: LoginCredentials): Promise<any> {
     const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
@@ -28,7 +28,7 @@ export async function login(credentials: LoginCredentials): Promise<any> {
         const { user, payload } = data.data.data;
 
         console.log('🔑 Login response - configured exchanges:', user.configured_exchanges);
-        
+
         TokenStorage.setTokens(payload.token, payload.refresh_token);
         // Map backend fields to frontend format
         const transformedResponse = {
@@ -40,7 +40,7 @@ export async function login(credentials: LoginCredentials): Promise<any> {
                 configuredExchanges: user.configured_exchanges || [], // ← Add configured exchanges
             },
             message: data.message,
-                      payload: {
+            payload: {
                 accessToken: payload.token, // For frontend consistency
                 refreshToken: payload.refresh_token,
             },// Include tokens for storage
@@ -55,7 +55,7 @@ export async function login(credentials: LoginCredentials): Promise<any> {
 }
 
 export async function signup(credentials: SignupCredentials): Promise<any> {
-    const response = await fetch('http://146.59.93.94:3000/user/register-user', {
+    const response = await fetch(`${API_BASE_URL}/user/register-user`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -75,26 +75,54 @@ export async function signup(credentials: SignupCredentials): Promise<any> {
 }
 
 export async function logout(): Promise<void> {
-//     const response = await fetch(`${API_BASE_URL}/auth/logout`, {
-//         method: 'POST',
-//         credentials: 'include',
-//     });
+    //     const response = await fetch(`${API_BASE_URL}/auth/logout`, {
+    //         method: 'POST',
+    //         credentials: 'include',
+    //     });
 
-//     if (!response.ok) {
-//         throw new Error('Logout failed');
-//     }
+    //     if (!response.ok) {
+    //         throw new Error('Logout failed');
+    //     }
 
+    // Clear auth tokens
     TokenStorage.clearTokens();
+
+    // Clear all user-related cached data from localStorage
+    if (typeof window !== 'undefined') {
+        // Clear Redux persisted state
+        localStorage.removeItem('reduxState');
+
+        // Clear filled orders cache
+        localStorage.removeItem('filled_orders_cache');
+
+        // Clear all portfolio cache keys (portfolio_account_*, portfolio_orders_*, etc.)
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && (
+                key.startsWith('portfolio_') ||
+                key.startsWith('wallet_') ||
+                key.startsWith('exchange_')
+            )) {
+                keysToRemove.push(key);
+            }
+        }
+
+        // Remove collected keys
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+
+        console.log('🗑️ Cleared all user data on logout:', keysToRemove.length, 'cache keys removed');
+    }
 }
 
 
 export async function fetchCurrentUser(): Promise<AuthResponse> {
     const token = TokenStorage.getAccessToken();
-    
+
     console.log('🔐 JWT Token Debug:');
     console.log('🔐 Token exists:', !!token);
     console.log('🔐 Token length:', token?.length);
-    
+
     // Decode and show JWT payload
     if (token) {
         try {
@@ -107,9 +135,9 @@ export async function fetchCurrentUser(): Promise<AuthResponse> {
             console.log('🔐 Error decoding JWT:', e);
         }
     }
-    
+
     console.log('📡 Authorization header will be:', `Bearer ${token?.substring(0, 50)}...`);
-    
+
     const response = await fetch(`${API_BASE_URL}/user/me`, {
         headers: {
             'Authorization': `Bearer ${token}`,
@@ -127,7 +155,7 @@ export async function fetchCurrentUser(): Promise<AuthResponse> {
     }
 
     const data = await response.json();
-    
+
     // Transform backend response to match frontend format
     if (data.status === 'Success' && data.data) {
         const userData = data.data;
@@ -141,7 +169,7 @@ export async function fetchCurrentUser(): Promise<AuthResponse> {
             message: data.message || 'User fetched successfully',
         };
     }
-    
+
     // If response structure is different, try to adapt
     return data;
 }

@@ -133,7 +133,7 @@ interface HistoricalKlines {
     timestamp: string;
 }
 
-const API_BASE_URL =  'http://146.59.93.94:3000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
 
 export default function Dashboard() {
     const { theme } = useTheme(); // ✅ Get current theme
@@ -178,7 +178,7 @@ export default function Dashboard() {
 
 
     useEffect(() => {
-        const socket = io('http://146.59.93.94:3000', {
+        const socket = io(process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:3000', {
             transports: ['websocket'],
         reconnection: true,
         reconnectionDelay: 1000,

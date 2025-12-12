@@ -379,31 +379,39 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
             </div>
 
             {/* Tab Navigation */}
-                    <div className="bg-card">
-                <div className="flex">
+            <div className="bg-card border-t border-default px-3">
+                <div className="flex items-center gap-6 text-xs font-medium">
                     <button
                         onClick={() => setActiveTab('limit')}
-                                className={`px-6 py-3 text-sm font-medium transition-all relative ${activeTab === 'limit'
-                                ? 'text-blue-600'
-                                : 'text-gray-500 hover:text-gray-700'
-                            }`}
+                        className={`relative py-3 transition-colors ${
+                            activeTab === 'limit'
+                                ? 'text-primary'
+                                : 'text-muted-foreground hover:text-foreground'
+                        }`}
                     >
                         Limit
+                        {activeTab === 'limit' && (
+                            <span className="absolute left-0 right-0 -bottom-px h-0.5 bg-primary rounded-full" />
+                        )}
                     </button>
                     <button
                         onClick={() => setActiveTab('market')}
-                                className={`px-6 py-3 text-sm font-medium transition-all relative ${activeTab === 'market'
-                                ? 'text-blue-600'
-                                : 'text-gray-500 hover:text-gray-700'
-                            }`}
+                        className={`relative py-3 transition-colors ${
+                            activeTab === 'market'
+                                ? 'text-primary'
+                                : 'text-muted-foreground hover:text-foreground'
+                        }`}
                     >
                         Market
+                        {activeTab === 'market' && (
+                            <span className="absolute left-0 right-0 -bottom-px h-0.5 bg-primary rounded-full" />
+                        )}
                     </button>
                 </div>
             </div>
 
             {/* Trading Form */}
-            <div className="flex-1 bg-card p-4 overflow-y-auto scrollbar-width-none">
+            <div className="flex-1 bg-card px-4 pb-4 pt-3">
                 {/* Buy/Sell Toggle */}
                 <div className="grid grid-cols-2 gap-2 mb-4">
                     <button
@@ -411,10 +419,11 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                             setOrderForm(prev => ({ ...prev, side: 'BUY' }));
                             setMarketForm(prev => ({ ...prev, side: 'BUY' }));
                         }}
-                        className={`py-3 rounded-lg font-semibold transition-all ${(activeTab === 'limit' ? orderForm.side : marketForm.side) === 'BUY'
-                                ? 'bg-green-600 text-white'
-                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                            }`}
+                        className={`py-2.5 rounded-lg font-semibold text-xs tracking-wide border transition-all ${
+                            (activeTab === 'limit' ? orderForm.side : marketForm.side) === 'BUY'
+                                ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm'
+                                : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/25'
+                        }`}
                     >
                         <div className="flex items-center justify-center gap-2">
                             <TrendingUp className="w-4 h-4" />
@@ -426,10 +435,11 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                             setOrderForm(prev => ({ ...prev, side: 'SELL' }));
                             setMarketForm(prev => ({ ...prev, side: 'SELL' }));
                         }}
-                        className={`py-3 rounded-lg font-semibold transition-all ${(activeTab === 'limit' ? orderForm.side : marketForm.side) === 'SELL'
-                                ? 'bg-red-600 text-white'
-                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                            }`}
+                        className={`py-2.5 rounded-lg font-semibold text-xs tracking-wide border transition-all ${
+                            (activeTab === 'limit' ? orderForm.side : marketForm.side) === 'SELL'
+                                ? 'bg-rose-500 text-white border-rose-500 shadow-sm'
+                                : 'bg-rose-500/15 text-rose-300 border-rose-500/40 hover:bg-rose-500/25'
+                        }`}
                     >
                         <div className="flex items-center justify-center gap-2">
                             <TrendingDown className="w-4 h-4" />
@@ -439,14 +449,14 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                 </div>
 
                 {activeTab === 'limit' ? (
-                    <div className="">
-                        {/* Price Input */}
-                        <div className="flex gap-4">
+                    <div className="space-y-4">
+                        {/* Price & Amount row */}
+                        <div className="flex gap-3">
                             {/* Price Input */}
                             <div className="flex-1">
-                                <label className="flex items-center justify-between text-sm text-gray-600 mb-2">
+                                <label className="flex items-center justify-between text-[11px] text-muted-foreground mb-1">
                                     <span>Price</span>
-                                    <span className="text-xs">USDT</span>
+                                    <span className="text-[10px] uppercase">USDT</span>
                                 </label>
                                 <div className="relative">
                                     <input
@@ -456,12 +466,9 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                                         onChange={(e) =>
                                             setOrderForm((prev) => ({ ...prev, price: e.target.value }))
                                         }
-                                        className="w-full px-3 py-2.5  rounded-md
-                           focus:outline-none focus:ring-2
-                            transition-all"
+                                        className="w-full px-3 py-2.5 rounded-md bg-muted border border-default text-sm focus:outline-none focus:ring-2 focus:ring-primary/60"
                                     />
-                                    <button className="absolute right-2 top-1/2 -translate-y-1/2 
-                         text-xs text-blue-600 hover:text-blue-700 font-medium">
+                                    <button className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-primary hover:text-primary/80 font-medium">
                                         Last
                                     </button>
                                 </div>
@@ -469,9 +476,9 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
 
                             {/* Amount Input */}
                             <div className="flex-1">
-                                <label className="flex items-center justify-between text-sm text-gray-600 mb-2">
+                                <label className="flex items-center justify-between text-[11px] text-muted-foreground mb-1">
                                     <span>Amount</span>
-                                    <span className="text-xs">{baseAsset}</span>
+                                    <span className="text-[10px] uppercase">{baseAsset}</span>
                                 </label>
                                 <input
                                     type="text"
@@ -480,9 +487,7 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                                     onChange={(e) =>
                                         setOrderForm((prev) => ({ ...prev, quantity: e.target.value }))
                                     }
-                                    className="w-full px-3 py-2.5 bg-muted rounded-lg 
-                     focus:outline-none focus:ring-2 focus:ring-0 
-                      transition-all"
+                                    className="w-full px-3 py-2.5 rounded-md bg-muted border border-default text-sm focus:outline-none focus:ring-2 focus:ring-primary/60"
                                 />
                             </div>
                         </div>
@@ -548,6 +553,7 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                                 value={orderForm.timeInForce}
                                 onChange={(e) => setOrderForm(prev => ({ ...prev, timeInForce: e.target.value as 'GTC' | 'IOC' | 'FOK' }))}
                                 className="w-full px-3 py-2.5 bg-muted rounded-lg focus:outline-none focus:ring-2 focus:ring-0 "
+                                aria-label="Time in Force"
                             >
                                 <option value="GTC">GTC (Good Till Cancel)</option>
                                 <option value="IOC">IOC (Immediate or Cancel)</option>
@@ -559,22 +565,22 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                     <div className="space-y-4">
                         {/* Market Order Form */}
                         <div className="p-3 bg-card rounded-lg">
-                            <p className="text-xs text-gray-400">
+                            <p className="text-[11px] text-muted-foreground">
                                 Market orders execute immediately at the best available price
                             </p>
                         </div>
 
                         <div>
-                            <label className="flex items-center justify-between text-sm text-gray-600 mb-2">
+                            <label className="flex items-center justify-between text-[11px] text-muted-foreground mb-1">
                                 <span>Amount</span>
-                                <span className="text-xs">{baseAsset}</span>
+                                <span className="text-[10px] uppercase">{baseAsset}</span>
                             </label>
                             <input
                                 type="text"
                                 placeholder="0.00"
                                 value={marketForm.quantity}
                                 onChange={(e) => setMarketForm(prev => ({ ...prev, quantity: e.target.value }))}
-                                className="w-full px-3 py-2.5 bg-muted rounded-lg focus:outline-none focus:ring-2 focus:ring-0 "
+                                className="w-full px-3 py-2.5 bg-muted rounded-lg border border-default text-sm focus:outline-none focus:ring-2 focus:ring-primary/60 "
                             />
                             <div className="flex gap-1 mt-2">
                                 {['25%', '50%', '75%', '100%'].map(pct => (
@@ -591,11 +597,11 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                 )}
 
                 {/* Total and Submit */}
-                    <div className="mt-1">
-                    <div className="p-3 bg-card rounded-lg">
-                        <div className="flex justify-between items-center mt-1">
-                            <span className="text-sm text-gray-600">Total</span>
-                            <span className="text-lg font-bold text-gray-900">
+                    <div className="mt-2 space-y-2">
+                    <div className="px-1">
+                        <div className="flex justify-between items-center">
+                            <span className="text-xs text-muted-foreground">Total</span>
+                            <span className="text-base font-semibold text-foreground">
                                 {activeTab === 'limit' && orderForm.price && orderForm.quantity
                                     ? `${(parseFloat(orderForm.price) * parseFloat(orderForm.quantity)).toFixed(2)} USDT`
                                     : '0.00 USDT'}
@@ -606,9 +612,9 @@ const TradingPanel: React.FC<TradingPanelProps> = ({
                     <button
                         onClick={handlePlaceOrder}
                         disabled={orderLoading}
-                        className={` mt-2 w-full py-3.5 rounded-lg font-semibold text-white transition-all ${(activeTab === 'limit' ? orderForm.side : marketForm.side) === 'BUY'
-                                ? 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800'
-                                : 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800'
+                        className={`mt-2 w-full py-3 rounded-md text-sm font-semibold text-white transition-colors ${(activeTab === 'limit' ? orderForm.side : marketForm.side) === 'BUY'
+                                ? 'bg-emerald-500 hover:bg-emerald-600'
+                                : 'bg-rose-500 hover:bg-rose-600'
                             } disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
                         {orderLoading ? (

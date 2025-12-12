@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://146.59.93.94:3000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
 
 // Types for credentials API
 export interface CreateCredentialDto {
@@ -7,6 +7,7 @@ export interface CreateCredentialDto {
   secretKey: string;
   passphrase?: string;
   label?: string;
+  activeTrading: boolean;
 }
 
 export interface CredentialResponseDto {
@@ -14,6 +15,7 @@ export interface CredentialResponseDto {
   exchange: string;
   isActive: boolean;
   label?: string;
+  activeTrading?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

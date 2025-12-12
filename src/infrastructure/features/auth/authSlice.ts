@@ -18,7 +18,7 @@ const loadInitialState = (): AuthState => {
     try {
         const token = TokenStorage.getAccessToken();
         const savedState = localStorage.getItem('reduxState');
-        
+
         if (token && savedState) {
             const parsedState = JSON.parse(savedState);
             if (parsedState.auth?.user) {
@@ -149,10 +149,11 @@ const authSlice = createSlice({
                 state.isLoading = true;
                 state.error = null;
             })
-            .addCase(signupUser.fulfilled, (state, action: PayloadAction<User>) => {
+            .addCase(signupUser.fulfilled, (state) => {
                 state.isLoading = false;
-                state.user = action.payload;
-                state.isAuthenticated = true;
+                // Don't set user or isAuthenticated - user needs to login after signup
+                state.user = null;
+                state.isAuthenticated = false;
                 state.error = null;
             })
             .addCase(signupUser.rejected, (state, action) => {
