@@ -121,7 +121,7 @@ export interface OpenOrder {
 
 export class BinanceApiService {
     private apiUrl: string;
-    constructor(apiUrl: string = 'http://localhost:3000') {
+    constructor(apiUrl: string = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000') {
         this.apiUrl = apiUrl;
     }
 
@@ -305,7 +305,7 @@ export class BinanceApiService {
     async placeMarketOrder(payload: any): Promise<any> {
         const start = Date.now();
         try {
-            const response = await fetch('http://localhost:3000/binance/place-market-order', {
+            const response = await fetch(`${this.apiUrl}/binance/place-market-order`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -332,7 +332,7 @@ export class BinanceApiService {
     async placeOrderListOTOCO(payload: any): Promise<any> {
         try {
             const start = Date.now();
-            const response = await fetch('http://localhost:3000/binance/place-otoc-order', {
+            const response = await fetch(`${this.apiUrl}/binance/place-otoc-order`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

@@ -271,18 +271,18 @@ export interface TransferHistoryResponse {
 // Account Info API
 export async function getAccountInfo(credentials?: ApiCredentials): Promise<AccountInfo> {
   console.log('🏦 Fetching Account Info...');
-  
+
   try {
     console.log('🔐 Binance Credentials:', credentials ? {
       hasApiKey: !!credentials.apiKey,
       hasSecretKey: !!credentials.secretKey,
       apiKeyPreview: credentials.apiKey?.substring(0, 8) + '...'
     } : 'NO CREDENTIALS PROVIDED');
-    
+
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
     };
-    
+
     // Add JWT token for authentication
     const token = TokenStorage.getAccessToken();
     if (token) {
@@ -291,18 +291,9 @@ export async function getAccountInfo(credentials?: ApiCredentials): Promise<Acco
     } else {
       console.warn('⚠️ No JWT token found in storage');
     }
-    
-    // Add credentials to headers if available
-    if (credentials) {
-      headers['x-api-key'] = credentials.apiKey;
-      headers['x-secret-key'] = credentials.secretKey;
-      if (credentials.passphrase) {
-        headers['x-passphrase'] = credentials.passphrase;
-      }
-    }
-    
+
     console.log('📤 Request Headers:', Object.keys(headers));
-    
+
     const response = await fetch(`${API_BASE_URL}/binance/account-info`, {
       method: 'GET',
       headers,
@@ -325,16 +316,16 @@ export async function getAccountInfo(credentials?: ApiCredentials): Promise<Acco
 // Open Orders API--working-binance-mainnet
 export async function getOpenOrders(symbol?: string, credentials?: ApiCredentials): Promise<Order[]> {
   console.log('📋 Fetching Binance Open Orders...');
-  
+
   try {
-    const url = symbol 
-      ? `${API_BASE_URL}/binance/open-orders?symbol=${symbol}` 
+    const url = symbol
+      ? `${API_BASE_URL}/binance/open-orders?symbol=${symbol}`
       : `${API_BASE_URL}/binance/open-orders`;
-    
+
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
     };
-    
+
     // Add JWT token for authentication
     const token = TokenStorage.getAccessToken();
     if (token) {
@@ -343,16 +334,7 @@ export async function getOpenOrders(symbol?: string, credentials?: ApiCredential
     } else {
       console.warn('⚠️ No JWT token found in storage');
     }
-    
-    // Add credentials to headers if available
-    if (credentials) {
-      headers['x-api-key'] = credentials.apiKey;
-      headers['x-secret-key'] = credentials.secretKey;
-      if (credentials.passphrase) {
-        headers['x-passphrase'] = credentials.passphrase;
-      }
-    }
-    
+
     const response = await fetch(url, {
       method: 'GET',
       headers,
@@ -377,7 +359,7 @@ export async function getBitgetOpenOrders(symbol?: string, credentials?: ApiCred
   console.log('🔵 BITGET API CALL: getBitgetOpenOrders');
   console.log('   URL:', `${API_BASE_URL}/bitget/order/all-open-orders`);
   console.log('   Symbol:', symbol || 'All symbols');
-  
+
   console.log('🔐 Bitget Credentials:', credentials ? {
     hasApiKey: !!credentials.apiKey,
     hasSecretKey: !!credentials.secretKey,
@@ -385,13 +367,13 @@ export async function getBitgetOpenOrders(symbol?: string, credentials?: ApiCred
     apiKeyPreview: credentials.apiKey?.substring(0, 8) + '...'
   } : 'NO CREDENTIALS PROVIDED');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  
+
   try {
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
       'Accept': '*/*',
     };
-    
+
     // Add JWT token for authentication
     const token = TokenStorage.getAccessToken();
     if (token) {
@@ -400,22 +382,13 @@ export async function getBitgetOpenOrders(symbol?: string, credentials?: ApiCred
     } else {
       console.warn('⚠️ No JWT token found in storage');
     }
-    
-    // Add credentials to headers if available
-    if (credentials) {
-      headers['x-api-key'] = credentials.apiKey;
-      headers['x-secret-key'] = credentials.secretKey;
-      if (credentials.passphrase) {
-        headers['x-passphrase'] = credentials.passphrase;
-      }
-    }
-    
+
     console.log('📤 Request Headers:', Object.keys(headers));
-    
-    const url = symbol 
-      ? `${API_BASE_URL}/bitget/order/all-open-orders?symbol=${symbol}` 
+
+    const url = symbol
+      ? `${API_BASE_URL}/bitget/order/all-open-orders?symbol=${symbol}`
       : `${API_BASE_URL}/bitget/order/all-open-orders`;
-    
+
     const response = await fetch(url, {
       method: 'GET',
       headers,
@@ -443,7 +416,7 @@ export async function getBitgetOpenOrders(symbol?: string, credentials?: ApiCred
 // Order History API
 export async function getOrderHistory(): Promise<Array<{ symbol: string; orders: any[] }>> {
   console.log('📜 Fetching Order History...');
-  
+
   try {
     const response = await fetch(`${API_BASE_URL}/binance/order-history`, {
       method: 'GET',
@@ -468,18 +441,18 @@ export async function getOrderHistory(): Promise<Array<{ symbol: string; orders:
 
 export async function getUserAssets(credentials?: ApiCredentials): Promise<UserAsset[]> {
   console.log('💰 Fetching Enhanced User Assets...');
-  
+
   try {
     console.log('🔐 Binance Credentials:', credentials ? {
       hasApiKey: !!credentials.apiKey,
       hasSecretKey: !!credentials.secretKey,
       apiKeyPreview: credentials.apiKey?.substring(0, 8) + '...'
     } : 'NO CREDENTIALS PROVIDED');
-    
+
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
     };
-    
+
     // Add JWT token for authentication
     const token = TokenStorage.getAccessToken();
     if (token) {
@@ -488,23 +461,10 @@ export async function getUserAssets(credentials?: ApiCredentials): Promise<UserA
     } else {
       console.warn('⚠️ No JWT token found in storage');
     }
-    
-    // Add credentials to headers if available
-    if (credentials) {
-      headers['x-api-key'] = credentials.apiKey;
-      headers['x-secret-key'] = credentials.secretKey;
-      if (credentials.passphrase) {
-        headers['x-passphrase'] = credentials.passphrase;
-      }
-      console.log('🔐 Credentials added to headers:', {
-        'x-api-key': credentials.apiKey.substring(0, 10) + '...',
-        'x-secret-key': credentials.secretKey.substring(0, 10) + '...',
-        'x-passphrase': credentials.passphrase ? '***' : 'N/A'
-      });
-    }
-    
+
+
     console.log('📤 Request Headers:', Object.keys(headers));
-    
+
     const response = await fetch(`${API_BASE_URL}/binance/user-assets`, {
       method: 'GET',
       headers,
@@ -525,7 +485,7 @@ export async function getUserAssets(credentials?: ApiCredentials): Promise<UserA
 }
 // Transfer History API
 export async function getTransferHistory(
-  current: number = 1, 
+  current: number = 1,
   size: number = 100
 ): Promise<TransferHistoryResponse> {
   console.log('🔄 Fetching Internal Transfer History...', { current, size });
@@ -562,15 +522,15 @@ export async function getTransferHistory(
 
 export async function getDepositHistory(coin?: string, status?: number, limit = 1000): Promise<Deposit[]> {
   console.log('📥 Fetching Deposit History...');
-  
+
   try {
     let url = `${API_BASE_URL}/binance/deposit-history?limit=${limit}`;
     if (coin) url += `&coin=${coin}`;
     if (status !== undefined) url += `&status=${status}`;
-    
+
     const response = await fetch(url, {
       method: 'GET',
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${TokenStorage.getAccessToken()}`,
       },
@@ -591,15 +551,15 @@ export async function getDepositHistory(coin?: string, status?: number, limit = 
 
 export async function getWithdrawHistory(coin?: string, status?: number, limit = 1000): Promise<Withdrawal[]> {
   console.log('📤 Fetching Withdrawal History...');
-  
+
   try {
     let url = `${API_BASE_URL}/binance/withdraw-history?limit=${limit}`;
     if (coin) url += `&coin=${coin}`;
     if (status !== undefined) url += `&status=${status}`;
-    
+
     const response = await fetch(url, {
       method: 'GET',
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${TokenStorage.getAccessToken()}`,
       },
@@ -627,12 +587,12 @@ export async function getAccountSnapshot(credentials?: ApiCredentials): Promise<
       hasSecretKey: !!credentials.secretKey,
       apiKeyPreview: credentials.apiKey?.substring(0, 8) + '...'
     } : 'NO CREDENTIALS PROVIDED');
-    
+
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     };
-    
+
     // Add JWT token for authentication
     const token = TokenStorage.getAccessToken();
     if (token) {
@@ -641,18 +601,10 @@ export async function getAccountSnapshot(credentials?: ApiCredentials): Promise<
     } else {
       console.warn('⚠️ No JWT token found in storage');
     }
-    
-    // Add credentials to headers if available
-    if (credentials) {
-      headers['x-api-key'] = credentials.apiKey;
-      headers['x-secret-key'] = credentials.secretKey;
-      if (credentials.passphrase) {
-        headers['x-passphrase'] = credentials.passphrase;
-      }
-    }
-    
+
+
     console.log('📤 Request Headers:', Object.keys(headers));
-    
+
     const response = await fetch(`${API_BASE_URL}/binance/account-snapshot`, {
       method: 'GET',
       headers,
@@ -679,14 +631,14 @@ export async function getAccountSnapshot(credentials?: ApiCredentials): Promise<
 }
 export async function getAssetDetail(asset?: string): Promise<AssetDetail> {
   console.log('ℹ️ Fetching Asset Details...');
-  
+
   try {
     let url = `${API_BASE_URL}/binance/asset-detail`;
     if (asset) url += `?asset=${asset}`;
-    
+
     const response = await fetch(url, {
       method: 'GET',
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${TokenStorage.getAccessToken()}`,
       },
@@ -707,14 +659,14 @@ export async function getAssetDetail(asset?: string): Promise<AssetDetail> {
 
 export async function getTradeFee(symbol?: string): Promise<TradeFee[]> {
   console.log('💸 Fetching Trade Fees...');
-  
+
   try {
     let url = `${API_BASE_URL}/binance/trade-fee`;
     if (symbol) url += `?symbol=${symbol}`;
-    
+
     const response = await fetch(url, {
       method: 'GET',
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${TokenStorage.getAccessToken()}`,
       },
@@ -768,9 +720,9 @@ export async function getBitgetTicker(symbol: string): Promise<number> {
 // Bitget: Fetch prices for multiple assets concurrently
 export async function getBitgetPrices(assets: string[]): Promise<{ [key: string]: number }> {
   console.log('💱 Fetching Bitget prices for assets:', assets);
-  
+
   const prices: { [key: string]: number } = {};
-  
+
   // Hardcoded prices for stablecoins
   const stablecoins = ['USDT', 'USDC', 'BUSD', 'DAI', 'TUSD', 'USDP'];
   stablecoins.forEach(coin => {
@@ -778,22 +730,22 @@ export async function getBitgetPrices(assets: string[]): Promise<{ [key: string]
       prices[coin] = 1;
     }
   });
-  
+
   // Fetch prices for non-stablecoins
   const nonStableAssets = assets.filter(asset => !stablecoins.includes(asset));
-  
+
   const pricePromises = nonStableAssets.map(async (asset) => {
     // Bitget uses symbol format like "BTCUSDT", "ETHUSDT"
     const symbol = `${asset}USDT`.toLowerCase();
     const price = await getBitgetTicker(symbol);
     return { asset, price };
   });
-  
+
   const results = await Promise.all(pricePromises);
   results.forEach(({ asset, price }) => {
     prices[asset] = price;
   });
-  
+
   console.log('✅ Bitget prices fetched:', prices);
   return prices;
 }
@@ -803,7 +755,7 @@ export async function getBitgetSpotAssets(credentials?: ApiCredentials): Promise
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('🔵 BITGET API CALL: getBitgetSpotAssets');
   console.log('   URL:', `${API_BASE_URL}/bitget/account/spot/assets`);
-  
+
   console.log('🔐 Bitget Credentials:', credentials ? {
     hasApiKey: !!credentials.apiKey,
     hasSecretKey: !!credentials.secretKey,
@@ -811,13 +763,13 @@ export async function getBitgetSpotAssets(credentials?: ApiCredentials): Promise
     apiKeyPreview: credentials.apiKey?.substring(0, 8) + '...'
   } : 'NO CREDENTIALS PROVIDED');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  
+
   try {
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
       'Accept': '*/*',
     };
-    
+
     // Add JWT token for authentication
     const token = TokenStorage.getAccessToken();
     if (token) {
@@ -826,10 +778,10 @@ export async function getBitgetSpotAssets(credentials?: ApiCredentials): Promise
     } else {
       console.warn('⚠️ No JWT token found in storage');
     }
-    
+
     // Add credentials to headers if available
     console.log('📤 Request Headers:', Object.keys(headers));
-    
+
     const response = await fetch(`${API_BASE_URL}/bitget/account/spot/assets`, {
       method: 'GET',
       headers,
@@ -858,17 +810,17 @@ export async function getBitgetSpotAssets(credentials?: ApiCredentials): Promise
 // Normalize Bitget assets to Binance UserAsset format with USD values
 export async function normalizeBitgetToUserAsset(bitgetAssets: BitgetAsset[]): Promise<NormalizedUserAsset[]> {
   console.log('🔄 normalizeBitgetToUserAsset - Input:', bitgetAssets);
-  
+
   // Fetch prices for all assets
   const assetNames = bitgetAssets.map(asset => asset.coin);
   const prices = await getBitgetPrices(assetNames);
   console.log('💱 Prices for normalization:', prices);
-  
+
   const normalized = bitgetAssets.map(asset => {
     const total = parseFloat(asset.available) + parseFloat(asset.locked) + parseFloat(asset.frozen);
     const pricePerUnit = prices[asset.coin] || 0;
     const usdValue = total * pricePerUnit;
-    
+
     return {
       asset: asset.coin,
       free: asset.available,
@@ -882,7 +834,7 @@ export async function normalizeBitgetToUserAsset(bitgetAssets: BitgetAsset[]): P
       pricePerUnit
     };
   });
-  
+
   console.log('✅ normalizeBitgetToUserAsset - Output:', normalized);
   return normalized;
 }
@@ -890,7 +842,7 @@ export async function normalizeBitgetToUserAsset(bitgetAssets: BitgetAsset[]): P
 // Normalize Binance UserAssets to include exchange tag and USD values
 export async function normalizeBinanceUserAsset(binanceAssets: UserAsset[]): Promise<NormalizedUserAsset[]> {
   console.log('🔄 normalizeBinanceUserAsset - Input:', binanceAssets);
-  
+
   // Fetch BTC price to convert btcValuation to USD
   let btcPrice = 113200; // Fallback price
   try {
@@ -903,11 +855,11 @@ export async function normalizeBinanceUserAsset(binanceAssets: UserAsset[]): Pro
   } catch (error) {
     console.warn('⚠️ Failed to fetch BTC price, using fallback:', btcPrice);
   }
-  
+
   // Fetch prices for all assets to get individual prices
   const assetNames = binanceAssets.map(asset => asset.asset);
   const prices: { [key: string]: number } = {};
-  
+
   // Hardcoded prices for stablecoins
   const stablecoins = ['USDT', 'USDC', 'BUSD', 'DAI', 'TUSD', 'USDP'];
   stablecoins.forEach(coin => {
@@ -915,7 +867,7 @@ export async function normalizeBinanceUserAsset(binanceAssets: UserAsset[]): Pro
       prices[coin] = 1;
     }
   });
-  
+
   // Fetch prices for non-stablecoins from Binance
   const nonStableAssets = assetNames.filter(asset => !stablecoins.includes(asset));
   const pricePromises = nonStableAssets.map(async (asset) => {
@@ -931,22 +883,22 @@ export async function normalizeBinanceUserAsset(binanceAssets: UserAsset[]): Pro
     }
     return { asset, price: 0 };
   });
-  
+
   const priceResults = await Promise.all(pricePromises);
   priceResults.forEach(({ asset, price }) => {
     prices[asset] = price;
   });
-  
+
   console.log('💱 Binance prices fetched:', prices);
-  
+
   const normalized = binanceAssets.map(asset => {
-    const total = parseFloat(asset.free) + parseFloat(asset.locked) + 
-                  parseFloat(asset.freeze) + parseFloat(asset.withdrawing) + 
-                  parseFloat(asset.ipoable);
-    
+    const total = parseFloat(asset.free) + parseFloat(asset.locked) +
+      parseFloat(asset.freeze) + parseFloat(asset.withdrawing) +
+      parseFloat(asset.ipoable);
+
     let usdValue = 0;
     let pricePerUnit = prices[asset.asset] || 0;
-    
+
     // Calculate USD value
     if (asset.btcValuation && parseFloat(asset.btcValuation) > 0) {
       // Use btcValuation if available (most accurate from Binance)
@@ -955,7 +907,7 @@ export async function normalizeBinanceUserAsset(binanceAssets: UserAsset[]): Pro
       // Use fetched price
       usdValue = total * pricePerUnit;
     }
-    
+
     return {
       ...asset,
       exchange: 'binance' as const,
@@ -963,7 +915,7 @@ export async function normalizeBinanceUserAsset(binanceAssets: UserAsset[]): Pro
       pricePerUnit
     };
   });
-  
+
   console.log('✅ normalizeBinanceUserAsset - Output:', normalized.slice(0, 3));
   return normalized;
 }
@@ -971,7 +923,7 @@ export async function normalizeBinanceUserAsset(binanceAssets: UserAsset[]): Pro
 // Normalize Bitget assets to AccountInfo balances format
 export function normalizeBitgetToAccountInfo(bitgetAssets: BitgetAsset[]): NormalizedAccountInfo {
   console.log('🔄 normalizeBitgetToAccountInfo - Input:', bitgetAssets);
-  
+
   const normalized = {
     makerCommission: 0, // Bitget doesn't provide this in assets endpoint
     takerCommission: 0,
@@ -993,35 +945,35 @@ export function normalizeBitgetToAccountInfo(bitgetAssets: BitgetAsset[]): Norma
     permissions: ['SPOT'], // Bitget SPOT account
     exchange: 'bitget' as const
   };
-  
+
   console.log('✅ normalizeBitgetToAccountInfo - Output:', {
     accountType: normalized.accountType,
     balancesCount: normalized.balances.length,
     balances: normalized.balances
   });
-  
+
   return normalized;
 }
 
 // Normalize Bitget assets to AccountSnapshotResponse format (single-point snapshot)
 export async function normalizeBitgetToAccountSnapshot(bitgetAssets: BitgetAsset[]): Promise<AccountSnapshotResponse> {
   console.log('🔄 normalizeBitgetToAccountSnapshot - Input:', bitgetAssets);
-  
+
   // Extract unique asset names
   const assetNames = bitgetAssets.map(asset => asset.coin);
-  
+
   // Fetch real-time prices from Bitget ticker API
   const prices = await getBitgetPrices(assetNames);
   console.log('💱 Real-time prices fetched:', prices);
-  
+
   const today = new Date().toISOString().split('T')[0];
-  
+
   // Calculate balances with USD values using real prices
   const balances: Balance[] = bitgetAssets.map(asset => {
     const total = parseFloat(asset.available) + parseFloat(asset.locked) + parseFloat(asset.frozen);
     const pricePerUnit = prices[asset.coin] || 0; // Use real price or 0 if unavailable
     const usdValue = total * pricePerUnit;
-    
+
     return {
       asset: asset.coin,
       free: parseFloat(asset.available),
@@ -1031,23 +983,23 @@ export async function normalizeBitgetToAccountSnapshot(bitgetAssets: BitgetAsset
       pricePerUnit
     };
   });
-  
+
   const totalValueUSD = balances.reduce((sum, b) => sum + b.usdValue, 0);
   const btcPrice = prices['BTC'] || 113200; // Fallback to approximate if BTC price fetch fails
   const totalAssetOfBtc = totalValueUSD / btcPrice;
-  
+
   // Filter assets with value > 0 for top assets
   const topAssetsData = balances
     .filter(b => b.usdValue > 0)
     .sort((a, b) => b.usdValue - a.usdValue)
     .slice(0, 10);
-  
+
   const topAssets: TopAsset[] = topAssetsData.map(asset => ({
     asset: asset.asset,
     value: asset.usdValue.toFixed(2),
     percentage: totalValueUSD > 0 ? ((asset.usdValue / totalValueUSD) * 100).toFixed(1) : '0'
   }));
-  
+
   const snapshot: Snapshot = {
     date: today,
     totalValueUSD,
@@ -1057,7 +1009,7 @@ export async function normalizeBitgetToAccountSnapshot(bitgetAssets: BitgetAsset
     change24h: 0, // No historical data
     pricesUsed: prices
   };
-  
+
   const result: AccountSnapshotResponse = {
     totalSnapshots: 1,
     period: 'SPOT',
@@ -1077,13 +1029,13 @@ export async function normalizeBitgetToAccountSnapshot(bitgetAssets: BitgetAsset
       assetPricesUsed: prices
     }
   };
-  
+
   console.log('✅ normalizeBitgetToAccountSnapshot - Output:', {
     totalSnapshots: result.totalSnapshots,
     currentValue: result.currentValue,
     topAssetsCount: result.summary.topAssets.length
   });
-  
+
   return result;
 }
 
@@ -1101,7 +1053,7 @@ export async function getAccountInfoByExchange(
   console.log('   Exchange:', exchange);
   console.log('   Has Credentials:', !!credentials);
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  
+
   if (exchange === 'binance') {
     console.log('📞 Calling Binance API: getAccountInfo()');
     const binanceData = await getAccountInfo(credentials);
@@ -1142,7 +1094,7 @@ export async function getUserAssetsByExchange(
   console.log('   Exchange:', exchange);
   console.log('   Has Credentials:', !!credentials);
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  
+
   if (exchange === 'binance') {
     console.log('📞 Calling Binance API: getUserAssets()');
     const binanceAssets = await getUserAssets(credentials);
@@ -1180,7 +1132,7 @@ export async function getOpenOrdersByExchange(
   console.log('   Symbol:', symbol || 'All symbols');
   console.log('   Has Credentials:', !!credentials);
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  
+
   if (exchange === 'binance') {
     console.log('📞 Calling Binance API: getOpenOrders()');
     const binanceOrders = await getOpenOrders(symbol, credentials);
@@ -1210,7 +1162,7 @@ export async function getAccountSnapshotByExchange(
   console.log('   Exchange:', exchange);
   console.log('   Has Credentials:', !!credentials);
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  
+
   if (exchange === 'binance') {
     console.log('📞 Calling Binance API: getAccountSnapshot()');
     const binanceSnapshot = await getAccountSnapshot(credentials);

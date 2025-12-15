@@ -3,7 +3,7 @@ import { io, Socket } from 'socket.io-client';
 
 type ExchangeType = 'binance' | 'bitget';
 
-const DEFAULT_API = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:3000';
+const DEFAULT_API = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:3000';
 
 function normalizeBitgetToBinanceShape(bit: any) {
   // bit is expected to have fields like instId, lastPr, high24h, low24h, change24h, bidPr, askPr, baseVolume, quoteVolume, ts
@@ -229,13 +229,13 @@ export default function useMarketTicker(
           socketRef.current.disconnect();
           socketRef.current = null;
         }
-      } catch (e) {}
+      } catch (e) { }
       try {
         if (esRef.current) {
           esRef.current.close();
           esRef.current = null;
         }
-      } catch (e) {}
+      } catch (e) { }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedExchange]);

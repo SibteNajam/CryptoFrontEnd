@@ -300,15 +300,6 @@ export async function getBitgetDepositHistory(credentials?: any): Promise<Bitget
       'Accept': '*/*',
     };
     
-    // Add credentials to headers if available
-    if (credentials) {
-      headers['x-api-key'] = credentials.apiKey;
-      headers['x-secret-key'] = credentials.secretKey;
-      if (credentials.passphrase) {
-        headers['x-passphrase'] = credentials.passphrase;
-      }
-    }
-    
     const response = await fetch(`${API_BASE_URL}/bitget/account/deposit-history`, {
       method: 'GET',
       headers,
@@ -413,16 +404,7 @@ export async function getBitgetWithdrawalHistory(credentials?: any): Promise<Bit
       'Content-Type': 'application/json',
       'Accept': '*/*',
     };
-    
-    // Add credentials to headers if available
-    if (credentials) {
-      headers['x-api-key'] = credentials.apiKey;
-      headers['x-secret-key'] = credentials.secretKey;
-      if (credentials.passphrase) {
-        headers['x-passphrase'] = credentials.passphrase;
-      }
-    }
-    
+   
     const response = await fetch(`${API_BASE_URL}/bitget/account/withdrawal-history`, {
       method: 'GET',
       headers,

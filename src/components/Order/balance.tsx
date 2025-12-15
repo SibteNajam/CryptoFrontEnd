@@ -13,11 +13,13 @@ interface BalanceViewerProps {
   compact?: boolean; // For compact display in trading panel
 }
 
-export default function BalanceViewer({ 
-  selectedSymbol, 
+const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
+
+export default function BalanceViewer({
+  selectedSymbol,
   apiService,
   showLocked = true,
-  compact = false 
+  compact = false
 }: BalanceViewerProps) {
   const [balances, setBalances] = useState<{ base: Balance | null; quote: Balance | null }>({
     base: null,
@@ -30,10 +32,10 @@ export default function BalanceViewer({
   const getAssetsFromSymbol = (symbol: string) => {
     // Common quote currencies
     const quoteCurrencies = ['USDT', 'BUSD', 'USDC', 'BTC', 'ETH', 'BNB'];
-    
+
     let baseAsset = '';
     let quoteAsset = '';
-    
+
     for (const quote of quoteCurrencies) {
       if (symbol.endsWith(quote)) {
         quoteAsset = quote;
@@ -41,7 +43,7 @@ export default function BalanceViewer({
         break;
       }
     }
-    
+
     return { baseAsset, quoteAsset };
   };
 
@@ -49,21 +51,21 @@ export default function BalanceViewer({
     const fetchBalances = async () => {
       setLoading(true);
       setError(null);
-      
+
       try {
-        const res = await fetch("http://localhost:3000/binance/account-info");
-        
+        const res = await fetch(`${API_BASE_URL}/binance/account-info`);
+
         if (!res.ok) {
           throw new Error('Failed to fetch account info');
         }
-        
+
         const data = await res.json();
         const { baseAsset, quoteAsset } = getAssetsFromSymbol(selectedSymbol);
-        
+
         // Find balances for both base and quote assets
         const baseBalance = data.balances.find((b: Balance) => b.asset === baseAsset);
         const quoteBalance = data.balances.find((b: Balance) => b.asset === quoteAsset);
-        
+
         setBalances({
           base: baseBalance || { asset: baseAsset, free: "0", locked: "0" },
           quote: quoteBalance || { asset: quoteAsset, free: "0", locked: "0" }
@@ -130,7 +132,7 @@ export default function BalanceViewer({
         <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
         Available Balances
       </h4>
-      
+
       <div className="space-y-2">
         {balances.base && (
           <div className="flex justify-between items-center">
@@ -147,7 +149,7 @@ export default function BalanceViewer({
             </div>
           </div>
         )}
-        
+
         {balances.quote && (
           <div className="flex justify-between items-center">
             <span className="text-sm text-gray-600">{balances.quote.asset}</span>
@@ -164,7 +166,7 @@ export default function BalanceViewer({
           </div>
         )}
       </div>
-      
+
       {loading && (
         <div className="text-xs text-gray-500 flex items-center">
           <div className="w-3 h-3 border border-gray-300 border-t-blue-500 rounded-full animate-spin mr-1"></div>

@@ -9,6 +9,7 @@ export interface ExchangeCredentials {
   secretKey: string;
   passphrase?: string; // Optional, used by Bitget
   label: string;
+  activeTrading: boolean;
   id?: string; // Database ID
   isActive?: boolean; // Database active status
 }
@@ -79,7 +80,10 @@ const loadInitialState = (): ExchangeState => {
         console.log('🔄 Restoring exchange state from localStorage');
         return {
           selectedExchange: parsedState.exchange.selectedExchange || 'binance',
-          credentialsArray: parsedState.exchange.credentialsArray || [],
+          credentialsArray: (parsedState.exchange.credentialsArray || []).map((cred: ExchangeCredentials) => ({
+            ...cred,
+            activeTrading: cred.activeTrading ?? true,
+          })),
           isSetupModalOpen: false, // Always start with modal closed
         };
       }
@@ -103,18 +107,24 @@ export const saveCredentials = createAsyncThunk(
   async (credentials: ExchangeCredentials, { rejectWithValue }) => {
     console.log('🚀 saveCredentials thunk called with:', credentials.exchange);
     try {
+      const normalizedCredentials: ExchangeCredentials = {
+        ...credentials,
+        activeTrading: credentials.activeTrading ?? true,
+      };
+
       const credentialData: CreateCredentialDto = {
-        exchange: credentials.exchange,
-        apiKey: credentials.apiKey,
-        secretKey: credentials.secretKey,
-        passphrase: credentials.passphrase,
-        label: credentials.label || `${credentials.exchange.toUpperCase()} Account`,
+        exchange: normalizedCredentials.exchange,
+        apiKey: normalizedCredentials.apiKey,
+        secretKey: normalizedCredentials.secretKey,
+        passphrase: normalizedCredentials.passphrase,
+        label: normalizedCredentials.label || `${normalizedCredentials.exchange.toUpperCase()} Account`,
+        activeTrading: normalizedCredentials.activeTrading,
       };
 
       console.log('📤 Calling saveCredentialsToDatabase...');
       const response = await saveCredentialsToDatabase(credentialData);
       console.log('📥 Database response received:', response);
-      return { credentials, dbResponse: response };
+      return { credentials: normalizedCredentials, dbResponse: response };
     } catch (error: any) {
       console.error('💥 saveCredentials thunk error:', error);
       return rejectWithValue(error.message);
@@ -144,17 +154,22 @@ const exchangeSlice = createSlice({
       saveExchangeStateToLocalStorage(state);
     },
     setCredentials(state, action: PayloadAction<ExchangeCredentials>) {
+      const credentialWithDefaults: ExchangeCredentials = {
+        ...action.payload,
+        activeTrading: action.payload.activeTrading ?? true,
+      };
+
       // Find if credentials for this exchange already exist
       const existingIndex = state.credentialsArray.findIndex(
-        cred => cred.exchange === action.payload.exchange
+        cred => cred.exchange === credentialWithDefaults.exchange
       );
       
       if (existingIndex !== -1) {
         // Update existing credentials
-        state.credentialsArray[existingIndex] = action.payload;
+        state.credentialsArray[existingIndex] = credentialWithDefaults;
       } else {
         // Add new credentials
-        state.credentialsArray.push(action.payload);
+        state.credentialsArray.push(credentialWithDefaults);
       }
 
       saveExchangeStateToLocalStorage(state);
@@ -185,6 +200,7 @@ const exchangeSlice = createSlice({
           ...action.payload.credentials,
           id: action.payload.dbResponse.data.id,
           isActive: action.payload.dbResponse.data.isActive,
+          activeTrading: action.payload.dbResponse.data.activeTrading ?? action.payload.credentials.activeTrading,
         };
         
         const existingIndex = state.credentialsArray.findIndex(

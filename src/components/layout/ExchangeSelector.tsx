@@ -1,12 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useAppSelector, useAppDispatch } from '@/infrastructure/store/hooks';
+import { useAppDispatch } from '@/infrastructure/store/hooks';
 import { 
-  setCredentials,
   saveCredentials,
-  ExchangeType,
-  getCredentialsForExchange
+  ExchangeType
 } from '@/infrastructure/features/exchange/exchangeSlice';
 import TokenStorage from '@/lib/tokenStorage';
 import { X, Eye, EyeOff, Loader2, Check } from 'lucide-react';
@@ -17,18 +15,26 @@ interface ExchangeSelectorProps {
   exchangeToSetup: ExchangeType;
 }
 
+interface FormState {
+  apiKey: string;
+  secretKey: string;
+  passphrase: string;
+  label: string;
+  activeTrading: boolean;
+}
+
 export default function ExchangeSelector({ isOpen, onClose, exchangeToSetup }: ExchangeSelectorProps) {
   const dispatch = useAppDispatch();
-  const selectedExchange = useAppSelector(state => state.exchange.selectedExchange);
   
   // Remove credentials checking - we don't store them locally anymore
   // Backend will handle credential validation and updates
   
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormState>({
     apiKey: '',
     secretKey: '',
     passphrase: '', // Added passphrase
     label: '',
+    activeTrading: true,
   });
   
   const [showSecrets, setShowSecrets] = useState({
@@ -52,18 +58,19 @@ export default function ExchangeSelector({ isOpen, onClose, exchangeToSetup }: E
         secretKey: '',
         passphrase: '',
         label: '',
+        activeTrading: true,
       });
       setErrors({});
       setSuccessMessage('');
     }
   }, [isOpen, exchangeToSetup]);
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: keyof FormState, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     
     // Clear error when typing
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
+    if (errors[field as string]) {
+      setErrors(prev => ({ ...prev, [field as string]: '' }));
     }
     
     // Clear success message when editing
@@ -120,6 +127,7 @@ export default function ExchangeSelector({ isOpen, onClose, exchangeToSetup }: E
         secretKey: formData.secretKey.trim(),
         passphrase: formData.passphrase.trim() || undefined,
         label: formData.label.trim(),
+        activeTrading: formData.activeTrading,
       };
 
       // Only save to database - no local Redux storage
@@ -299,6 +307,37 @@ export default function ExchangeSelector({ isOpen, onClose, exchangeToSetup }: E
               </button>
             </div>
             {errors.passphrase && <p className="text-sm text-danger mt-1">{errors.passphrase}</p>}
+          </div>
+
+          {/* Active Trading Toggle - placed last for clarity */}
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Active Trading</p>
+            <button
+              type="button"
+              onClick={() => handleInputChange('activeTrading', !formData.activeTrading)}
+              className={`w-full flex items-center justify-between rounded-2xl px-4 py-3 border transition-all duration-200 shadow-sm ${
+                formData.activeTrading
+                  ? 'border-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20'
+                  : 'border-rose-400 bg-rose-500/10 hover:bg-rose-500/20'
+              }`}
+            >
+              <div className="text-left">
+                <p className="text-sm font-semibold text-card-foreground">
+                  {formData.activeTrading ? 'Live trading enabled' : 'Live trading disabled'}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Toggle whether this API key can place orders automatically.
+                </p>
+              </div>
+              <span
+                className={`inline-flex items-center gap-1 text-xs font-semibold px-3 py-1 rounded-full ${
+                  formData.activeTrading ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-white/90" />
+                {formData.activeTrading ? 'Enabled' : 'Disabled'}
+              </span>
+            </button>
           </div>
 
           {/* Info text */}

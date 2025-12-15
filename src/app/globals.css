@@ -312,7 +312,7 @@
   --blue-100: #181a20;
   --blue-200: #2b3139;
   --blue-300: #eaecef;
-  --blue-400: #eaecef;
+  --blue-400: #283343;
   --blue-500: #eaecef;
   --blue-600: #eaecef;
   --blue-700: #eaecef;
@@ -470,7 +470,9 @@ body {
 .bg-blue-200 {
   background-color: var(--blue-200);
 }
-
+.bg-blue-400 {
+  background-color: var(--blue-400);
+}
 .bg-indigo-50 {
   background-color: var(--indigo-50);
 }

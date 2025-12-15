@@ -1,6 +1,6 @@
-'use client';
+﻿'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { RefreshCw } from 'lucide-react';
 import useMarketTicker from '@/hooks/useMarketTicker';
 import SymbolCards from '../../../components/dashboard/SymbolCards';
@@ -77,7 +77,7 @@ interface BinanceTickerData {
     };
 }
 
-const API_BASE_URL = 'http://localhost:3000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
 
 export default function Dashboard() {
     const { selectedExchange } = useAppSelector((state) => state.exchange);
@@ -105,7 +105,7 @@ export default function Dashboard() {
     const [apiService] = useState(() => new BinanceApiService());
     const [recentOrders, setRecentOrders] = useState<any[]>([]);
 
-// Replace the useEffect that initializes WebSocket with this:
+    // Replace the useEffect that initializes WebSocket with this:
 
     // Use centralized market ticker hook which manages Binance socket.io or Bitget SSE
     const dispatch = useAppDispatch();
@@ -129,7 +129,7 @@ export default function Dashboard() {
 
     // Connection status is now managed locally in useExchange hook, no need to sync to Redux
 
-    
+
 
     const useRestPricePolling = (symbol: string, interval: number, active: boolean) => {
         const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -257,13 +257,13 @@ export default function Dashboard() {
         restPollingActive
     );
 
-     const fetchSymbols = async () => {
-       try {
+    const fetchSymbols = async () => {
+        try {
             //call getSymbolsWithPrices
             console.log('🔄 Fetching symbols with prices...');
             const data = await apiService.getSymbolsWithPrice(1000);
             setSymbols(data);
-            console.log('fetched data',data);
+            console.log('fetched data', data);
         } catch (err: any) {
             setError(err.message || "Failed to fetch symbols");
         } finally {
@@ -275,8 +275,8 @@ export default function Dashboard() {
         fetchSymbols();
     }, []);
 
-    const handleSymbolClick = (symbol: string) => {
-        if (symbol === selectedSymbol) return;
+    const handleSymbolClick = useCallback((symbol: string) => {
+        if (!symbol || symbol === selectedSymbol) return;
 
         setSelectedSymbol(symbol);
         setError(null);
@@ -286,7 +286,7 @@ export default function Dashboard() {
         setTickerData(null);
         // Inform market hook to subscribe
         // subscribeSymbol(symbol, selectedInterval);
-    };
+    }, [selectedSymbol]);
 
     const handleIntervalChange = (interval: string) => {
         if (interval === selectedInterval) return;
@@ -307,8 +307,8 @@ export default function Dashboard() {
 
     return (
         <div className="space-y-1">
-            {/* Status Bar */}
-            <div className="flex items-center justify-between bg-card px-1 shadow-sm">
+            {/* Status Bar (hidden – not used) */}
+            <div className="hidden">
                 <div className="flex items-center space-x-4">
                     <div className="inline-flex items-center gap-4 px-3 py-1 rounded-full text-xs bg-card text-info">
                         <span>📊 Updates: {tickerUpdateCount}</span>
@@ -349,17 +349,18 @@ export default function Dashboard() {
             />
 
             {/* Main Trading Layout */}
-            <div className="bg-muted min-h-screen">
-                <div className="max-w-7xl mx-auto">
-                    <div className="grid grid-cols-1 lg:grid-cols-3">
+            <div className="bg-card min-h-screen">
+                <div className="w-full px-0">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-0">
+                        {/* Full-width chart on the left (2/3) */}
                         <div className="lg:col-span-2">
-                            <div className="bg-card rounded-sm border border-default shadow-sm overflow-hidden h-full">
-                                <div className="bg-card flex-1" style={{ height: '500px' }}>
+                            <div className="bg-card border-b border-default shadow-sm overflow-hidden h-full">
+                                <div className="bg-card flex-1 h-[520px] w-full">
                                     <TradingViewChart
-                                        symbol={`BINANCE:${selectedSymbol}`}
+                                        symbol={`${selectedExchange === 'bitget' ? 'BITGET' : 'BINANCE'}:${selectedSymbol}`}
                                         interval={selectedInterval}
                                         theme={theme}
-                                        height="500px"
+                                        height="520px"
                                         width="100%"
                                         enableTrading={false}
                                     />
@@ -367,15 +368,18 @@ export default function Dashboard() {
                             </div>
                         </div>
 
+                        {/* Compact, full-height order book on the right (1/3) */}
                         <div className="lg:col-span-1">
-                            <BinanceOrderBook symbol={selectedSymbol} />
+                            <div className="h-[520px] bg-card border-b border-default shadow-sm">
+                                <BinanceOrderBook symbol={selectedSymbol} />
+                            </div>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 mt-4">
                         <div className="lg:col-span-2">
-                            <div className="bg-card rounded-sm border border-default shadow-sm" style={{ height: '580px' }}>
-                                <div className="p-3 h-full overflow-hidden">
+                            <div className="bg-card rounded-sm border border-default shadow-sm">
+                                <div className="p-3">
                                     <TradingPanel
                                         selectedSymbol={selectedSymbol}
                                         apiService={apiService}

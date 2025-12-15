@@ -7,6 +7,7 @@ export interface CreateCredentialDto {
   secretKey: string;
   passphrase?: string;
   label?: string;
+  activeTrading: boolean;
 }
 
 export interface CredentialResponseDto {
@@ -14,6 +15,7 @@ export interface CredentialResponseDto {
   exchange: string;
   isActive: boolean;
   label?: string;
+  activeTrading?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

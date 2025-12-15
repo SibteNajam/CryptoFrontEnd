@@ -93,27 +93,11 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
 
   return (
     <header className="bg-card px-6 py-2 flex items-center justify-between border-b border-default">
-      {/* Left side - Sidebar toggle + Title */}
-      <div className="flex items-center space-x-3">
-        <button onClick={onToggleSidebar} className="p-1.5 hover:bg-muted rounded-lg transition-colors text-primary" title="Toggle sidebar">
-          <span className="sr-only">Toggle sidebar</span>
-          ☰
-        </button>
-        <h1 className="text-lg font-semibold text-primary">Trading Dashboard</h1>
-      </div>
-
-      {/* Center - Search */}
-      <div className="flex-1 max-w-md mx-8">
-        <input
-          type="text"
-          placeholder="Search symbols, pairs..."
-          className="w-full px-3 py-1.5 bg-muted rounded text-sm text-primary placeholder-text-muted focus:outline-none border border-default focus:border-primary transition-colors"
-        />
-      </div>
+      {/* Left side - empty (reserved for future controls) */}
+      <div className="flex items-center space-x-3" />
 
       {/* Right side */}
       <div className="flex items-center space-x-1">
-        {/* Exchange Selector Dropdown */}
         <div className="relative">
           <button
             onClick={() => setShowExchangeDropdown((prev) => !prev)}
