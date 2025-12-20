@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from 'react';
 import Image from 'next/image';
@@ -12,7 +12,6 @@ import { useAuth } from '@/hooks/auth';
 import {
   ExchangeType,
   setSelectedExchange,
-  getCredentialsForExchange,
   clearCredentials,
 } from '@/infrastructure/features/exchange/exchangeSlice';
 import ExchangeSelector from './ExchangeSelector';
@@ -24,14 +23,16 @@ interface HeaderProps {
 export default function Header({ onToggleSidebar }: HeaderProps) {
   const dispatch = useAppDispatch();
   const router = useRouter();
-  const { logout, user } = useAuth();
+  const { logout } = useAuth();
+  // Get user directly from Redux state
+  const user = useAppSelector((state) => state.auth.user);
   const selectedExchange = useAppSelector((state) => state.exchange.selectedExchange);
+  const configuredExchanges = useAppSelector((state) => state.exchange.configuredExchanges);
 
-  // Get configured exchanges from user auth state instead of Redux credentials
-  const configuredExchanges = user?.configuredExchanges || [];
-
-  console.log('🔄 Header - configured exchanges:', configuredExchanges);
-  console.log('🔄 Header - user object:', user);
+  console.log('ðŸ”„ Header - configured exchanges:', configuredExchanges);
+  console.log('ðŸ”„ Header - user object:', user);
+  console.log('ðŸ”„ Header - user.displayName:', user?.displayName);
+  console.log('ðŸ”„ Header - user full data:', JSON.stringify(user, null, 2));
 
   const [showExchangeDropdown, setShowExchangeDropdown] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
@@ -202,9 +203,9 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
             className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-muted/50 hover:bg-muted border border-default transition-all duration-200 group"
           >
             <div className="w-7 h-7 bg-primary/20 rounded-full flex items-center justify-center text-xs font-semibold text-primary border border-primary/30 group-hover:bg-primary/30 transition-colors">
-              {user?.displayName?.charAt(0).toUpperCase() || 'U'}
+              {user?.name?.charAt(0).toUpperCase() || 'U'}
             </div>
-            <span className="text-xs font-semibold text-primary hidden sm:inline max-w-[80px] truncate">{user?.displayName || 'User'}</span>
+            <span className="text-xs font-semibold text-primary hidden sm:inline max-w-[80px] truncate">{user?.name || 'User'}</span>
             <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
           </button>
 

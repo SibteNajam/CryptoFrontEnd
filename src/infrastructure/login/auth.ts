@@ -3,7 +3,7 @@
  * Handles login, signup, logout, and user session management
  */
 
-import TokenStorage from './tokenStorage';
+import TokenStorage from '../../lib/tokenStorage';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
 
@@ -25,6 +25,7 @@ export interface User {
   displayName: string;
   createdAt: string;
   configuredExchanges?: string[];
+  configured_exchanges?: string[];
 }
 
 export interface AuthResponsePayload {
@@ -36,14 +37,15 @@ export interface AuthResponsePayload {
 export interface AuthResponse {
   status: string;
   message?: string;
-  user?: User;
-  payload?: AuthResponsePayload;
-  data?: {
-    user?: User;
-    accessToken?: string;
-    data?: {
+  statusCode: number;
+  data: {
+    data: {
       user: User;
-      accessToken?: string;
+      payload: {
+        type: string;
+        token: string;
+        refresh_token?: string;
+      };
     };
   };
 }
@@ -67,38 +69,18 @@ export async function login(credentials: LoginCredentials): Promise<AuthResponse
   }
 
   const data: AuthResponse = await response.json();
-  
+
   console.log('🔍 Login response structure:', JSON.stringify(data, null, 2));
-  
+
   // Store token from response
   // Backend returns: {"status":"Success","data":{"data":{"user":{...},"payload":{"token":"..."}}}}
-  let tokenStored = false;
-  
-  // Check data.data.payload.token (actual backend structure)
-  if ((data as any).data?.data?.payload?.token) {
+  const token = (data as any).data?.data?.payload?.token;
+
+  if (token) {
     console.log('✅ Token found in data.data.payload.token');
-    TokenStorage.setToken((data as any).data.data.payload.token);
-    tokenStored = true;
-  } 
-  // Fallback paths for different response structures
-  else if (data.payload?.accessToken) {
-    console.log('✅ Token found in payload.accessToken');
-    TokenStorage.setToken(data.payload.accessToken, data.payload.expiresIn);
-    tokenStored = true;
-  } else if (data.data?.data?.accessToken) {
-    console.log('✅ Token found in data.data.accessToken');
-    TokenStorage.setToken(data.data.data.accessToken);
-    tokenStored = true;
-  } else if (data.data?.accessToken) {
-    console.log('✅ Token found in data.accessToken');
-    TokenStorage.setToken(data.data.accessToken);
-    tokenStored = true;
-  }
-  
-  if (!tokenStored) {
-    console.error('❌ No token found in response!', data);
+    TokenStorage.setToken(token);
   } else {
-    console.log('✅ Token stored successfully');
+    console.error('❌ No token found in response!', data);
   }
 
   return data;
@@ -107,7 +89,7 @@ export async function login(credentials: LoginCredentials): Promise<AuthResponse
 /**
  * Sign up new user
  */
-export async function signup(credentials: SignupCredentials): Promise<AuthResponse> {
+export async function signup(credentials: SignupCredentials): Promise<SignupResponse> {
   const response = await fetch(`${API_BASE_URL}/user/register-user`, {
     method: 'POST',
     headers: {
@@ -122,15 +104,7 @@ export async function signup(credentials: SignupCredentials): Promise<AuthRespon
     throw new Error(error.message || 'Signup failed');
   }
 
-  const data: AuthResponse = await response.json();
-  
-  // Store token from payload or data
-  if (data.payload?.accessToken) {
-    TokenStorage.setToken(data.payload.accessToken, data.payload.expiresIn);
-  } else if (data.data?.accessToken) {
-    TokenStorage.setToken(data.data.accessToken);
-  }
-
+  const data: SignupResponse = await response.json();
   return data;
 }
 
@@ -139,7 +113,7 @@ export async function signup(credentials: SignupCredentials): Promise<AuthRespon
  */
 export async function logout(): Promise<void> {
   const token = TokenStorage.getToken();
-  
+
   if (token) {
     try {
       await fetch(`${API_BASE_URL}/auth/logout`, {
@@ -164,7 +138,7 @@ export async function logout(): Promise<void> {
  */
 export async function fetchCurrentUser(): Promise<User> {
   const token = TokenStorage.getToken();
-  
+
   if (!token) {
     throw new Error('No authentication token found');
   }
@@ -183,7 +157,7 @@ export async function fetchCurrentUser(): Promise<User> {
       TokenStorage.clearAll();
       throw new Error('Session expired. Please login again.');
     }
-    
+
     const error = await response.json().catch(() => ({ message: 'Failed to fetch user' }));
     throw new Error(error.message || 'Failed to fetch user');
   }
@@ -204,7 +178,7 @@ export function isAuthenticated(): boolean {
  */
 export function getAuthHeaders(): HeadersInit {
   const token = TokenStorage.getToken();
-  
+
   if (!token) {
     return {
       'Content-Type': 'application/json',
@@ -216,3 +190,5 @@ export function getAuthHeaders(): HeadersInit {
     'Content-Type': 'application/json',
   };
 }
+
+export interface SignupResponse { status: string; data: { user: { id: string; email: string; displayName: string; createdAt: string; } }; statusCode: number; message: string; }

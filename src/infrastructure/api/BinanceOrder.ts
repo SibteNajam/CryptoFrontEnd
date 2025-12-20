@@ -1,5 +1,5 @@
 // Create this file: services/BinanceApiService.ts
-import TokenStorage from '../../lib/tokenStorage';
+import TokenStorage from '../login/tokenStorage';
 export interface OrderRequest {
     symbol: string;
     side: string;

@@ -1,3 +1,5 @@
+import TokenStorage from '../login/tokenStorage';
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
 
 // Types for credentials API
@@ -37,11 +39,11 @@ export async function saveCredentialsToDatabase(credentialData: CreateCredential
   console.log('🔗 Full endpoint URL:', `${API_BASE_URL}/api-credentials/save-credentials`);
 
   try {
-    // Get JWT token from TokenStorage (which uses 'access_token' key)
-    const token = localStorage.getItem('access_token');
+    // Get JWT token from TokenStorage
+    const token = TokenStorage.getToken();
 
     if (!token) {
-      console.error('❌ No access token found in localStorage. Available keys:', Object.keys(localStorage));
+      console.error('❌ No access token found in TokenStorage. Available localStorage keys:', Object.keys(localStorage));
       throw new Error('No authentication token found. Please login first.');
     }
 
@@ -101,6 +103,41 @@ export async function saveCredentialsToDatabase(credentialData: CreateCredential
     return data;
   } catch (error) {
     console.error('❌ Failed to save credentials:', error);
+    throw error;
+  }
+}
+
+export interface ApiCredentialsListResponse {
+  status: string;
+  statusCode: number;
+  message: string;
+  data: CredentialResponseDto[];
+}
+
+/**
+ * Get all credentials for the authenticated user
+ */
+export async function getUserCredentials(): Promise<ApiCredentialsListResponse> {
+  try {
+    const token = TokenStorage.getToken();
+    if (!token) throw new Error('No authentication token found');
+
+    const response = await fetch(`${API_BASE_URL}/api-credentials`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('❌ Failed to get credentials:', error);
     throw error;
   }
 }

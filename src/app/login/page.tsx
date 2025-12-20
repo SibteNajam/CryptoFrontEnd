@@ -45,6 +45,8 @@ export default function LoginForm() {
             console.log('Login result: user expected', result);
             if (result) {
                 console.log('Login successful:', result);
+                // Redirect to dashboard after successful login
+                router.push('/dashboard');
             }
         } catch (error) {
             console.error('Login failed:', error);

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/auth';
-import TokenStorage from '@/lib/tokenStorage';
+import TokenStorage from '@/infrastructure/login/tokenStorage';
 
 interface AuthGuardProps {
   children: React.ReactNode;

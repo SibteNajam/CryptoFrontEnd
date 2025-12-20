@@ -12,14 +12,25 @@ RUN npm ci
 
 # Rebuild the source code only when needed
 FROM base AS builder
+
+# Accept build arguments (passed from docker-compose.yml)
+ARG NEXT_PUBLIC_BACKEND_URL=http://localhost
+ARG NEXT_PUBLIC_API_BASE_URL=http://localhost
+ARG NEXT_PUBLIC_WS_URL=ws://localhost/ws
+ARG NEXT_PUBLIC_API_URL=http://localhost
+
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Set environment variables for build
+# Set environment variables for build (embedded in client bundle)
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL}
+ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
+ENV NEXT_PUBLIC_WS_URL=${NEXT_PUBLIC_WS_URL}
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 
-# Build the application
+# Build the application (NEXT_PUBLIC_* vars are now embedded in client JS)
 RUN npm run build
 
 # Production image, copy all the files and run next
@@ -29,17 +40,16 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# Install curl for healthcheck
+RUN apk add --no-cache curl
+
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Copy the standalone output
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-
-# Copy static files
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-
-# Copy public files if not included in standalone
+# Copy built files
 COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 USER nextjs
 

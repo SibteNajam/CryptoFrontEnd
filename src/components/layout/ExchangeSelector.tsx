@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useAppDispatch } from '@/infrastructure/store/hooks';
-import { 
+import { useAppDispatch, useAppSelector } from '@/infrastructure/store/hooks';
+import {
   saveCredentials,
   ExchangeType
 } from '@/infrastructure/features/exchange/exchangeSlice';
-import TokenStorage from '@/lib/tokenStorage';
+import TokenStorage from '@/infrastructure/login/tokenStorage';
 import { X, Eye, EyeOff, Loader2, Check } from 'lucide-react';
 
 interface ExchangeSelectorProps {
@@ -25,10 +25,10 @@ interface FormState {
 
 export default function ExchangeSelector({ isOpen, onClose, exchangeToSetup }: ExchangeSelectorProps) {
   const dispatch = useAppDispatch();
-  
+
   // Remove credentials checking - we don't store them locally anymore
   // Backend will handle credential validation and updates
-  
+
   const [formData, setFormData] = useState<FormState>({
     apiKey: '',
     secretKey: '',
@@ -36,43 +36,60 @@ export default function ExchangeSelector({ isOpen, onClose, exchangeToSetup }: E
     label: '',
     activeTrading: true,
   });
-  
+
   const [showSecrets, setShowSecrets] = useState({
     apiKey: false,
     secretKey: false,
     passphrase: false, // Added passphrase toggle
   });
-  
+
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [successMessage, setSuccessMessage] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  
+
   // Always start with empty form since we don't store credentials locally
   const isUpdating = false; // We don't know if updating or creating new
+
+  // Get existing credentials from store to pre-fill form if updating
+  const existingCredentials = useAppSelector(state =>
+    state.exchange.credentialsArray.find(c => c.exchange === exchangeToSetup)
+  );
 
   // Reset form when modal opens
   useEffect(() => {
     if (isOpen) {
-      setFormData({
-        apiKey: '',
-        secretKey: '',
-        passphrase: '',
-        label: '',
-        activeTrading: true,
-      });
+      if (existingCredentials) {
+        // Pre-fill for update
+        setFormData({
+          apiKey: '', // Security: User must re-enter keys to update
+          secretKey: '',
+          passphrase: '',
+          label: existingCredentials.label,
+          activeTrading: existingCredentials.activeTrading,
+        });
+      } else {
+        // Reset for new setup
+        setFormData({
+          apiKey: '',
+          secretKey: '',
+          passphrase: '',
+          label: '',
+          activeTrading: true,
+        });
+      }
       setErrors({});
       setSuccessMessage('');
     }
-  }, [isOpen, exchangeToSetup]);
+  }, [isOpen, exchangeToSetup, existingCredentials]);
 
   const handleInputChange = (field: keyof FormState, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    
+
     // Clear error when typing
     if (errors[field as string]) {
       setErrors(prev => ({ ...prev, [field as string]: '' }));
     }
-    
+
     // Clear success message when editing
     if (successMessage) {
       setSuccessMessage('');
@@ -85,11 +102,11 @@ export default function ExchangeSelector({ isOpen, onClose, exchangeToSetup }: E
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-    
+
     if (!formData.apiKey.trim()) {
       newErrors.apiKey = 'API Key is required';
     }
-    
+
     if (!formData.secretKey.trim()) {
       newErrors.secretKey = 'Secret Key is required';
     }
@@ -102,7 +119,7 @@ export default function ExchangeSelector({ isOpen, onClose, exchangeToSetup }: E
     if (!formData.label.trim()) {
       newErrors.label = 'Label is required';
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -138,8 +155,8 @@ export default function ExchangeSelector({ isOpen, onClose, exchangeToSetup }: E
       console.log(`✅ Credentials saved for ${exchangeToSetup}`);
 
       // Show success message
-      setSuccessMessage(`Credentials saved successfully!`);
-      
+      setSuccessMessage(existingCredentials ? 'Credentials updated successfully!' : 'Credentials saved successfully!');
+
       // Close modal after 1.5 seconds
       setTimeout(() => {
         onClose();
@@ -147,7 +164,7 @@ export default function ExchangeSelector({ isOpen, onClose, exchangeToSetup }: E
         // to update the configured exchanges list
         window.location.reload(); // Simple refresh to update configured exchanges
       }, 1500);
-      
+
     } catch (error) {
       console.error('Failed to save credentials:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to save credentials';
@@ -167,17 +184,17 @@ export default function ExchangeSelector({ isOpen, onClose, exchangeToSetup }: E
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Blurred backdrop */}
-      <div 
+      <div
         className="absolute inset-0 backdrop-blur-sm bg-black/30"
         onClick={() => !isSaving && onClose()}
       />
-      
+
       {/* Modal card */}
       <div className="relative bg-card border border-default rounded-lg w-full max-w-md shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-default">
           <h2 className="text-lg font-semibold">
-            Setup {exchangeNames[exchangeToSetup]} API
+            {existingCredentials ? 'Update' : 'Setup'} {exchangeNames[exchangeToSetup]} API
           </h2>
           <button
             onClick={onClose}
@@ -187,7 +204,7 @@ export default function ExchangeSelector({ isOpen, onClose, exchangeToSetup }: E
             <X className="w-5 h-5" />
           </button>
         </div>
-        
+
         {/* Form */}
         <div className="p-4 space-y-4">
           {/* Success Message */}
@@ -212,12 +229,13 @@ export default function ExchangeSelector({ isOpen, onClose, exchangeToSetup }: E
             </label>
             <input
               type="text"
+              name="credential-label"
+              autoComplete="off"
               value={formData.label}
               onChange={(e) => handleInputChange('label', e.target.value)}
               placeholder="e.g., My Trading Account"
-              className={`w-full px-3 py-2 border rounded-lg bg-background ${
-                errors.label ? 'border-danger' : 'border-default'
-              } focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent`}
+              className={`w-full px-3 py-2 border rounded-lg bg-background ${errors.label ? 'border-danger' : 'border-default'
+                } focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent`}
               disabled={isSaving}
             />
             {errors.label && <p className="text-sm text-danger mt-1">{errors.label}</p>}
@@ -232,12 +250,13 @@ export default function ExchangeSelector({ isOpen, onClose, exchangeToSetup }: E
             <div className="relative">
               <input
                 type={showSecrets.apiKey ? 'text' : 'password'}
+                name="api-key"
+                autoComplete="off"
                 value={formData.apiKey}
                 onChange={(e) => handleInputChange('apiKey', e.target.value)}
                 placeholder="Enter your API key"
-                className={`w-full px-3 py-2 pr-10 border rounded-lg bg-background ${
-                  errors.apiKey ? 'border-danger' : 'border-default'
-                } focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent`}
+                className={`w-full px-3 py-2 pr-10 border rounded-lg bg-background ${errors.apiKey ? 'border-danger' : 'border-default'
+                  } focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent`}
                 disabled={isSaving}
               />
               <button
@@ -260,12 +279,13 @@ export default function ExchangeSelector({ isOpen, onClose, exchangeToSetup }: E
             <div className="relative">
               <input
                 type={showSecrets.secretKey ? 'text' : 'password'}
+                name="api-secret"
+                autoComplete="new-password"
                 value={formData.secretKey}
                 onChange={(e) => handleInputChange('secretKey', e.target.value)}
                 placeholder="Enter your secret key"
-                className={`w-full px-3 py-2 pr-10 border rounded-lg bg-background ${
-                  errors.secretKey ? 'border-danger' : 'border-default'
-                } focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent`}
+                className={`w-full px-3 py-2 pr-10 border rounded-lg bg-background ${errors.secretKey ? 'border-danger' : 'border-default'
+                  } focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent`}
                 disabled={isSaving}
               />
               <button
@@ -289,12 +309,13 @@ export default function ExchangeSelector({ isOpen, onClose, exchangeToSetup }: E
             <div className="relative">
               <input
                 type={showSecrets.passphrase ? 'text' : 'password'}
+                name="api-passphrase"
+                autoComplete="new-password"
                 value={formData.passphrase}
                 onChange={(e) => handleInputChange('passphrase', e.target.value)}
                 placeholder="Enter your API passphrase"
-                className={`w-full px-3 py-2 pr-10 border rounded-lg bg-background ${
-                  errors.passphrase ? 'border-danger' : 'border-default'
-                } focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent`}
+                className={`w-full px-3 py-2 pr-10 border rounded-lg bg-background ${errors.passphrase ? 'border-danger' : 'border-default'
+                  } focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent`}
                 disabled={isSaving}
               />
               <button
@@ -315,11 +336,10 @@ export default function ExchangeSelector({ isOpen, onClose, exchangeToSetup }: E
             <button
               type="button"
               onClick={() => handleInputChange('activeTrading', !formData.activeTrading)}
-              className={`w-full flex items-center justify-between rounded-2xl px-4 py-3 border transition-all duration-200 shadow-sm ${
-                formData.activeTrading
-                  ? 'border-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20'
-                  : 'border-rose-400 bg-rose-500/10 hover:bg-rose-500/20'
-              }`}
+              className={`w-full flex items-center justify-between rounded-2xl px-4 py-3 border transition-all duration-200 shadow-sm ${formData.activeTrading
+                ? 'border-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20'
+                : 'border-rose-400 bg-rose-500/10 hover:bg-rose-500/20'
+                }`}
             >
               <div className="text-left">
                 <p className="text-sm font-semibold text-card-foreground">
@@ -330,9 +350,8 @@ export default function ExchangeSelector({ isOpen, onClose, exchangeToSetup }: E
                 </p>
               </div>
               <span
-                className={`inline-flex items-center gap-1 text-xs font-semibold px-3 py-1 rounded-full ${
-                  formData.activeTrading ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'
-                }`}
+                className={`inline-flex items-center gap-1 text-xs font-semibold px-3 py-1 rounded-full ${formData.activeTrading ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'
+                  }`}
               >
                 <span className="w-2 h-2 rounded-full bg-white/90" />
                 {formData.activeTrading ? 'Enabled' : 'Disabled'}
@@ -363,7 +382,7 @@ export default function ExchangeSelector({ isOpen, onClose, exchangeToSetup }: E
           >
             {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
             {successMessage && <Check className="w-4 h-4" />}
-            <span>{isSaving ? 'Saving...' : successMessage ? 'Saved!' : 'Save Credentials'}</span>
+            <span>{isSaving ? 'Saving...' : successMessage ? 'Saved!' : existingCredentials ? 'Update Credentials' : 'Save Credentials'}</span>
           </button>
         </div>
       </div>

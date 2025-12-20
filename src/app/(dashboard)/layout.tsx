@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Sidebar from '../../components/layout/SideBar';
 import Header from '../../components/layout/Header';
 import { useAppSelector } from '@/infrastructure/store/hooks';
-import TokenStorage from '@/lib/tokenStorage';
+import TokenStorage from '@/infrastructure/login/tokenStorage';
 
 export default function DashboardLayout({
   children,

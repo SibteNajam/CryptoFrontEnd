@@ -3,7 +3,7 @@ export interface User {
     email: string;
     displayName: string;
     createdAt: string;
-    configuredExchanges?: string[]; // Array of exchange names user has configured
+    configured_exchanges?: string[];
 }
 export interface AuthState {
     user: User | null;
@@ -22,6 +22,31 @@ export interface SignupCredentials {
     confirmPassword: string;
 }
 export interface AuthResponse {
-    user: User;
+    status: string;
+    message: string;
+    statusCode: number;
+    data: {
+        data: {
+            user: User;
+            payload: {
+                type: string;
+                token: string;
+                refresh_token?: string;
+            };
+        };
+    };
+}
+
+export interface SignupResponse {
+    status: string;
+    data: {
+        user: {
+            id: string;
+            email: string;
+            displayName: string;
+            createdAt: string;
+        }
+    };
+    statusCode: number;
     message: string;
 }

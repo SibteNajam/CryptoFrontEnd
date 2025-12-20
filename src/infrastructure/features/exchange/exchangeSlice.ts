@@ -1,5 +1,6 @@
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
-import { saveCredentialsToDatabase, CreateCredentialDto } from '@/infrastructure/api/CredentialsApi';
+import { saveCredentialsToDatabase, getUserCredentials, CreateCredentialDto } from '@/infrastructure/api/CredentialsApi';
+import { loginUser } from '@/infrastructure/features/auth/authSlice';
 
 export type ExchangeType = 'binance' | 'bitget';
 
@@ -17,6 +18,7 @@ export interface ExchangeCredentials {
 interface ExchangeState {
   selectedExchange: ExchangeType;
   credentialsArray: ExchangeCredentials[]; // Array of credentials, one per exchange
+  configuredExchanges: string[]; // List of exchanges that have credentials configured
   isSetupModalOpen: boolean;
 }
 
@@ -26,7 +28,7 @@ const saveExchangeStateToLocalStorage = (state: ExchangeState) => {
     try {
       const TokenStorage = require('@/lib/tokenStorage').default;
       const token = TokenStorage.getAccessToken();
-      
+
       if (token) {
         // Get current saved state and update only the exchange part
         const existingState = localStorage.getItem('reduxState');
@@ -35,9 +37,10 @@ const saveExchangeStateToLocalStorage = (state: ExchangeState) => {
           exchange: {
             selectedExchange: state.selectedExchange,
             credentialsArray: state.credentialsArray,
+            configuredExchanges: state.configuredExchanges,
           },
         };
-        
+
         if (existingState) {
           try {
             const parsed = JSON.parse(existingState);
@@ -46,13 +49,14 @@ const saveExchangeStateToLocalStorage = (state: ExchangeState) => {
               exchange: {
                 selectedExchange: state.selectedExchange,
                 credentialsArray: state.credentialsArray,
+                configuredExchanges: state.configuredExchanges,
               },
             };
           } catch (e) {
             // If parsing fails, use the default structure
           }
         }
-        
+
         localStorage.setItem('reduxState', JSON.stringify(stateToSave));
         console.log('💾 Exchange state saved to localStorage');
       }
@@ -68,6 +72,7 @@ const loadInitialState = (): ExchangeState => {
     return {
       selectedExchange: 'binance',
       credentialsArray: [],
+      configuredExchanges: [],
       isSetupModalOpen: false,
     };
   }
@@ -84,7 +89,17 @@ const loadInitialState = (): ExchangeState => {
             ...cred,
             activeTrading: cred.activeTrading ?? true,
           })),
+          configuredExchanges: parsedState.exchange.configuredExchanges || parsedState.auth?.user?.configured_exchanges || [],
           isSetupModalOpen: false, // Always start with modal closed
+        };
+      } else if (parsedState.auth?.user?.configured_exchanges) {
+        // Fallback: use configured_exchanges from auth user if exchange state not saved
+        console.log('🔄 Restoring configured exchanges from auth user in localStorage');
+        return {
+          selectedExchange: 'binance',
+          credentialsArray: [],
+          configuredExchanges: parsedState.auth.user.configured_exchanges,
+          isSetupModalOpen: false,
         };
       }
     }
@@ -95,6 +110,7 @@ const loadInitialState = (): ExchangeState => {
   return {
     selectedExchange: 'binance',
     credentialsArray: [],
+    configuredExchanges: [],
     isSetupModalOpen: false,
   };
 };
@@ -145,6 +161,18 @@ export const getDecryptedCredentials = createAsyncThunk(
   }
 );
 
+export const fetchUserCredentials = createAsyncThunk(
+  'exchange/fetchUserCredentials',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await getUserCredentials();
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
 const exchangeSlice = createSlice({
   name: 'exchange',
   initialState,
@@ -163,7 +191,7 @@ const exchangeSlice = createSlice({
       const existingIndex = state.credentialsArray.findIndex(
         cred => cred.exchange === credentialWithDefaults.exchange
       );
-      
+
       if (existingIndex !== -1) {
         // Update existing credentials
         state.credentialsArray[existingIndex] = credentialWithDefaults;
@@ -190,6 +218,10 @@ const exchangeSlice = createSlice({
     toggleSetupModal(state) {
       state.isSetupModalOpen = !state.isSetupModalOpen;
     },
+    setConfiguredExchanges(state, action: PayloadAction<string[]>) {
+      state.configuredExchanges = action.payload;
+      saveExchangeStateToLocalStorage(state);
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -202,16 +234,57 @@ const exchangeSlice = createSlice({
           isActive: action.payload.dbResponse.data.isActive,
           activeTrading: action.payload.dbResponse.data.activeTrading ?? action.payload.credentials.activeTrading,
         };
-        
+
         const existingIndex = state.credentialsArray.findIndex(
           cred => cred.exchange === credentialsWithDbData.exchange
         );
-        
+
         if (existingIndex !== -1) {
           state.credentialsArray[existingIndex] = credentialsWithDbData;
         } else {
           state.credentialsArray.push(credentialsWithDbData);
         }
+
+        // Add to configuredExchanges if not present
+        if (!state.configuredExchanges.includes(credentialsWithDbData.exchange)) {
+          state.configuredExchanges.push(credentialsWithDbData.exchange);
+        }
+
+        saveExchangeStateToLocalStorage(state);
+      })
+      .addCase(fetchUserCredentials.fulfilled, (state, action) => {
+        // Update configured exchanges list
+        const configured = action.payload.map(cred => cred.exchange);
+        state.configuredExchanges = configured;
+
+        // Also update credentialsArray with the meta data (we don't get secrets back)
+        // This keeps the UI in sync regarding labels, dates etc.
+        action.payload.forEach(cred => {
+          const exchangeType = cred.exchange as ExchangeType;
+          const index = state.credentialsArray.findIndex(c => c.exchange === exchangeType);
+
+          if (index !== -1) {
+            // Update existing
+            state.credentialsArray[index] = {
+              ...state.credentialsArray[index],
+              id: cred.id,
+              isActive: cred.isActive,
+              label: cred.label || state.credentialsArray[index].label,
+              activeTrading: cred.activeTrading ?? state.credentialsArray[index].activeTrading,
+            };
+          } else {
+            // Add new credential with placeholder keys (secrets are not returned by API)
+            state.credentialsArray.push({
+              exchange: exchangeType,
+              apiKey: '*************', // Placeholder
+              secretKey: '*************', // Placeholder
+              label: cred.label || `${cred.exchange.toUpperCase()} Account`,
+              activeTrading: cred.activeTrading ?? true,
+              id: cred.id,
+              isActive: cred.isActive,
+            });
+          }
+        });
 
         saveExchangeStateToLocalStorage(state);
       })
@@ -219,6 +292,14 @@ const exchangeSlice = createSlice({
         console.error('❌ Failed to save credentials to database:', action.payload);
         // Note: Credentials are still stored in Redux even if DB save fails
         // This ensures the app still works, but user should be notified
+      })
+      .addCase(loginUser.fulfilled, (state, action) => {
+        // When user logs in, update the configured exchanges list from the user object
+        if (action.payload.configuredExchanges && action.payload.configuredExchanges.length > 0) {
+          console.log('🔄 Syncing configured exchanges from login:', action.payload.configuredExchanges);
+          state.configuredExchanges = action.payload.configuredExchanges;
+          saveExchangeStateToLocalStorage(state);
+        }
       });
   },
 });
@@ -228,6 +309,7 @@ export const {
   setCredentials,
   clearCredentials,
   toggleSetupModal,
+  setConfiguredExchanges,
 } = exchangeSlice.actions;
 
 export default exchangeSlice.reducer;
@@ -240,14 +322,14 @@ export const getCredentials = (state: { exchange: ExchangeState }) => {
   ) || null;
 };
 
-export const getAllCredentials = (state: { exchange: ExchangeState }) => 
+export const getAllCredentials = (state: { exchange: ExchangeState }) =>
   state.exchange.credentialsArray;
 
-export const getCredentialsForExchange = (exchange: ExchangeType) => 
-  (state: { exchange: ExchangeState }) => 
+export const getCredentialsForExchange = (exchange: ExchangeType) =>
+  (state: { exchange: ExchangeState }) =>
     state.exchange.credentialsArray.find(cred => cred.exchange === exchange) || null;
 
-export const getSelectedExchange = (state: { exchange: ExchangeState }) => 
+export const getSelectedExchange = (state: { exchange: ExchangeState }) =>
   state.exchange.selectedExchange;
 
 export const hasCredentials = (state: { exchange: ExchangeState }) => {
@@ -255,8 +337,10 @@ export const hasCredentials = (state: { exchange: ExchangeState }) => {
   return !!(creds?.apiKey && creds?.secretKey);
 };
 
-export const hasCredentialsForExchange = (exchange: ExchangeType) => 
+export const getConfiguredExchanges = (state: { exchange: ExchangeState }) => state.exchange.configuredExchanges;
+
+export const hasCredentialsForExchange = (exchange: ExchangeType) =>
   (state: { exchange: ExchangeState }) => {
-    const creds = state.exchange.credentialsArray.find(cred => cred.exchange === exchange);
-    return !!(creds?.apiKey && creds?.secretKey);
+    // Check if it's in the configured list
+    return state.exchange.configuredExchanges.includes(exchange);
   };

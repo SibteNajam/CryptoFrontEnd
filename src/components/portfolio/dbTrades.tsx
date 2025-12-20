@@ -7,11 +7,46 @@ import {
   Calendar, ChevronDown, ChevronUp, Wallet, DollarSign, Percent
 } from 'lucide-react';
 import {
-  ResponsiveContainer, ComposedChart, Line, Area, Bar, XAxis, YAxis,
-  CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, BarChart,
-  ReferenceLine
-} from 'recharts';
-import TokenStorage from '../../lib/tokenStorage';
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ArcElement,
+  Title,
+  Tooltip as ChartTooltip,
+  Legend as ChartLegend,
+  Filler,
+  ChartOptions,
+} from 'chart.js';
+import { Line as LineChart, Bar as BarChart, Pie as PieChart, Doughnut } from 'react-chartjs-2';
+
+// Register Chart.js components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ArcElement,
+  Title,
+  ChartTooltip,
+  ChartLegend,
+  Filler
+);
+import TokenStorage from '../../infrastructure/login/tokenStorage';
+
+// MUI X Charts Imports
+import { PieChart as MuiPieChart, pieArcClasses, pieArcLabelClasses } from '@mui/x-charts/PieChart';
+import { Gauge, gaugeClasses } from '@mui/x-charts/Gauge';
+import { useDrawingArea } from '@mui/x-charts/hooks';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
+import { styled, useTheme } from '@mui/material/styles';
+import type { Theme } from '@mui/material/styles';
 
 // ============================================
 // TYPE DEFINITIONS
@@ -113,12 +148,27 @@ interface HeatmapDay {
   dayOfWeek: number;
 }
 
+// ChartDatum type for pie/bar chart data
+interface ChartDatum {
+  id: string;
+  label: string;
+  value: number;
+  percentage: number;
+  color: string;
+}
+
+// TradeDatum type for pie chart transformation
+type TradeDatum = {
+  Symbol: string;
+  Outcome: 'Win' | 'Loss';
+  Count: number;
+};
+
 // ============================================
 // API FUNCTION
 // ============================================
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
-
 async function fetchTrades(exchange?: string, symbol?: string): Promise<TradesResponse> {
   const params = new URLSearchParams();
   if (exchange) params.append('exchange', exchange.toUpperCase());
@@ -153,20 +203,38 @@ async function fetchTrades(exchange?: string, symbol?: string): Promise<TradesRe
 }
 
 // ============================================
-// CHART COLORS
+// CHART COLORS - Professional Soft Palette
 // ============================================
 
 const CHART_COLORS = {
-  green: '#0ecb81',
-  red: '#f6465d',
-  blue: '#609dff',
-  purple: '#a855f7',
-  orange: '#f59e0b',
-  cyan: '#06b6d4',
-  gray: '#848e9c',
+  // Primary colors - softer, more professional
+  green: 'rgb(34, 197, 94)',      // Emerald green
+  red: 'rgb(239, 68, 68)',        // Soft red
+  blue: 'rgb(59, 130, 246)',      // Sky blue
+  purple: 'rgb(139, 92, 246)',    // Violet
+  orange: 'rgb(251, 146, 60)',    // Soft orange
+  cyan: 'rgb(6, 182, 212)',       // Cyan
+  pink: 'rgb(236, 72, 153)',      // Pink
+  yellow: 'rgb(250, 204, 21)',    // Yellow
+  slate: 'rgb(148, 163, 184)',    // Slate gray
+
+  // Gradient versions (for fills)
+  greenGradientStart: 'rgba(34, 197, 94, 0.25)',
+  greenGradientEnd: 'rgba(34, 197, 94, 0)',
+  redGradientStart: 'rgba(239, 68, 68, 0.25)',
+  redGradientEnd: 'rgba(239, 68, 68, 0)',
+  blueGradientStart: 'rgba(59, 130, 246, 0.25)',
+  blueGradientEnd: 'rgba(59, 130, 246, 0)',
 };
 
-const PIE_COLORS = ['#0ecb81', '#f6465d', '#609dff', '#f59e0b', '#a855f7', '#06b6d4'];
+const PIE_COLORS = [
+  'rgb(34, 197, 94)',   // Green
+  'rgb(239, 68, 68)',   // Red
+  'rgb(59, 130, 246)',  // Blue
+  'rgb(251, 146, 60)',  // Orange
+  'rgb(139, 92, 246)',  // Purple
+  'rgb(6, 182, 212)',   // Cyan
+];
 
 // ============================================
 // HELPER FUNCTIONS
@@ -233,53 +301,139 @@ const getRoleBadgeColor = (role: string): string => {
 };
 
 // ============================================
-// CUSTOM TOOLTIP COMPONENT
+// PROFESSIONAL CHART.JS CONFIGURATION
 // ============================================
 
-const CustomTooltip = ({ active, payload, label }: any) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
-        <p className="text-sm font-medium text-card-foreground mb-1">{label}</p>
-        {payload.map((entry: any, index: number) => (
-          <p
-            key={index}
-            className={`text-sm ${getColorClass(entry.color)}`}
-          >
-            {entry.name}: {typeof entry.value === 'number' ? `$${entry.value.toFixed(2)}` : entry.value}
-          </p>
-        ))}
-      </div>
-    );
-  }
-  return null;
+// Professional tooltip configuration
+const tooltipConfig = {
+  enabled: true,
+  backgroundColor: 'rgba(15, 23, 42, 0.95)',
+  titleColor: '#f1f5f9',
+  bodyColor: '#cbd5e1',
+  borderColor: 'rgba(148, 163, 184, 0.2)',
+  borderWidth: 1,
+  padding: 14,
+  cornerRadius: 10,
+  displayColors: true,
+  boxPadding: 6,
+  usePointStyle: true,
+  titleFont: {
+    size: 13,
+    weight: 600,
+    family: "'Inter', 'system-ui', sans-serif",
+  },
+  bodyFont: {
+    size: 12,
+    family: "'Inter', 'system-ui', sans-serif",
+  },
+  footerFont: {
+    size: 11,
+    family: "'Inter', 'system-ui', sans-serif",
+  },
 };
+
+// Professional legend configuration
+const legendConfig = {
+  display: true,
+  position: 'top' as const,
+  align: 'end' as const,
+  labels: {
+    color: '#cbd5e1',
+    font: {
+      size: 12,
+      weight: 500,
+      family: "'Inter', 'system-ui', sans-serif",
+    },
+    padding: 16,
+    usePointStyle: true,
+    pointStyle: 'circle',
+    boxWidth: 8,
+    boxHeight: 8,
+  },
+};
+
+// Professional scale configuration
+const getScaleConfig = (showDollar = true) => ({
+  x: {
+    grid: {
+      display: true,
+      color: 'rgba(71, 85, 105, 0.12)',
+      drawBorder: false,
+      lineWidth: 1,
+    },
+    ticks: {
+      color: '#94a3b8',
+      font: {
+        size: 11,
+        family: "'Inter', 'system-ui', sans-serif",
+      },
+      padding: 8,
+      maxRotation: 45,
+    },
+    border: {
+      display: false,
+    },
+  },
+  y: {
+    grid: {
+      display: true,
+      color: 'rgba(71, 85, 105, 0.12)',
+      drawBorder: false,
+      lineWidth: 1,
+    },
+    ticks: {
+      color: '#94a3b8',
+      font: {
+        size: 11,
+        family: "'Inter', 'system-ui', sans-serif",
+      },
+      padding: 10,
+      callback: function (value: any) {
+        return showDollar ? '$' + value.toFixed(2) : value;
+      }
+    },
+    border: {
+      display: false,
+    },
+  },
+});
+
+// Common chart options for professional dark theme
+const getCommonChartOptions = (title?: string): any => ({
+  responsive: true,
+  maintainAspectRatio: false,
+  animation: {
+    duration: 800,
+    easing: 'easeOutQuart' as const,
+  },
+  interaction: {
+    intersect: false,
+    mode: 'index' as const,
+  },
+  plugins: {
+    legend: { display: false },
+    title: { display: false },
+    tooltip: {
+      ...tooltipConfig,
+      callbacks: {
+        label: function (context: any) {
+          const label = context.dataset.label || '';
+          const value = context.parsed.y;
+          if (value !== null) {
+            return `${label}: $${value.toFixed(2)}`;
+          }
+          return label;
+        }
+      }
+    },
+  },
+  scales: getScaleConfig(true),
+});
+
 
 // ============================================
 // MAIN COMPONENT
 // ============================================
-
-// Helper to map color hex to a CSS class
-function getColorClass(color: string) {
-  switch (color) {
-    case '#0ecb81':
-      return 'text-green-500';
-    case '#f6465d':
-      return 'text-red-500';
-    case '#609dff':
-      return 'text-blue-500';
-    case '#a855f7':
-      return 'text-purple-500';
-    case '#f59e0b':
-      return 'text-yellow-500';
-    case '#06b6d4':
-      return 'text-cyan-500';
-    case '#848e9c':
-      return 'text-gray-500';
-    default:
-      return '';
-  }
-}
 
 interface DbTradesTabProps {
   selectedExchange?: string;
@@ -354,7 +508,7 @@ export default function DbTradesTab({ selectedExchange }: DbTradesTabProps) {
   // Process chart data
   const chartData = useMemo(() => {
     const completedTrades = filteredByTimeRange
-      .filter(t => t.pnl.isComplete)
+      .filter(t => t.pnl.isComplete && t.pnl.total !== 0) // Exclude break-even/zero PnL trades from calculations
       .sort((a, b) => new Date(a.entryOrder.createdAt).getTime() - new Date(b.entryOrder.createdAt).getTime());
 
     // Equity Curve
@@ -420,7 +574,7 @@ export default function DbTradesTab({ selectedExchange }: DbTradesTabProps) {
       const existing = symbolMap.get(symbol) || { pnl: 0, wins: 0, losses: 0 };
       symbolMap.set(symbol, {
         pnl: existing.pnl + trade.pnl.realized,
-        wins: existing.wins + (trade.pnl.realized >= 0 ? 1 : 0),
+        wins: existing.wins + (trade.pnl.realized > 0 ? 1 : 0),
         losses: existing.losses + (trade.pnl.realized < 0 ? 1 : 0),
       });
     });
@@ -435,18 +589,20 @@ export default function DbTradesTab({ selectedExchange }: DbTradesTabProps) {
       .slice(0, 10);
 
     // Win/Loss Distribution
-    const wins = completedTrades.filter(t => t.pnl.realized >= 0).length;
+    const wins = completedTrades.filter(t => t.pnl.realized > 0).length;
     const losses = completedTrades.filter(t => t.pnl.realized < 0).length;
+    const neutral = completedTrades.filter(t => t.pnl.realized === 0).length;
     const winLossData = [
       { name: 'Wins', value: wins, color: CHART_COLORS.green },
       { name: 'Losses', value: losses, color: CHART_COLORS.red },
     ];
 
-    // Win Rate
-    const winRate = completedTrades.length > 0 ? (wins / completedTrades.length) * 100 : 0;
+    // Win Rate (excluding zero PnL trades from calculation as requested)
+    const validTradesCount = wins + losses;
+    const winRate = validTradesCount > 0 ? (wins / validTradesCount) * 100 : 0;
 
     // Average Win/Loss
-    const avgWin = wins > 0 ? completedTrades.filter(t => t.pnl.realized >= 0).reduce((sum, t) => sum + t.pnl.realized, 0) / wins : 0;
+    const avgWin = wins > 0 ? completedTrades.filter(t => t.pnl.realized > 0).reduce((sum, t) => sum + t.pnl.realized, 0) / wins : 0;
     const avgLoss = losses > 0 ? Math.abs(completedTrades.filter(t => t.pnl.realized < 0).reduce((sum, t) => sum + t.pnl.realized, 0) / losses) : 0;
 
     // Profit Factor
@@ -680,7 +836,9 @@ interface StatCardProps {
   variant?: 'default' | 'success' | 'danger' | 'info';
   highlighted?: boolean;
 }
-
+// thsi logic is not correct that it place two tp order and moitioring for sl order
+// we can split one order intwo two order so that asssume order comes of 40 usdt then we split in two portiosn 20 usdt and 20 usdt
+// first order 20 usdt seco
 function StatCard({ label, value, icon, variant = 'default', highlighted }: StatCardProps) {
   const variantStyles = {
     default: 'text-card-foreground',
@@ -701,6 +859,515 @@ function StatCard({ label, value, icon, variant = 'default', highlighted }: Stat
   );
 }
 
+// ============================================
+// TRADE PERFORMANCE PIE CHART (MUI X) - IMPROVED
+// ============================================
+
+// PieCenterLabel helper for MUI PieChart (centers children in the chart)
+function PieCenterLabel({ children }: { children: React.ReactNode }) {
+  const { width, height, left, top } = useDrawingArea();
+  return (
+    <g transform={`translate(${left + width / 2}, ${top + height / 2})`}>
+      <foreignObject x={-40} y={-16} width={80} height={32} style={{ pointerEvents: 'none' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
+          {children}
+        </div>
+      </foreignObject>
+    </g>
+  );
+}
+
+function TradePerformancePie({ symbolPerformance }: { symbolPerformance: SymbolPerformance[] }) {
+  const [view, setView] = React.useState<'symbol' | 'outcome'>('symbol');
+  const theme = useTheme();
+
+  const handleViewChange = (
+    event: React.MouseEvent<HTMLElement>,
+    newView: 'symbol' | 'outcome' | null,
+  ) => {
+    if (newView !== null) {
+      setView(newView);
+    }
+  };
+
+  // Prepare Data
+  const topSymbols = symbolPerformance.slice(0, 5);
+  const rawData: TradeDatum[] = topSymbols.flatMap(s => {
+    const wins = Math.round(s.trades * (s.winRate / 100));
+    const losses = s.trades - wins;
+    return [
+      { Symbol: s.symbol, Outcome: 'Win' as const, Count: wins },
+      { Symbol: s.symbol, Outcome: 'Loss' as const, Count: losses }
+    ];
+  }).filter(d => d.Count > 0);
+
+  const totalCount = rawData.reduce((acc, item) => acc + item.Count, 0);
+
+  // Improved outcome colors with better contrast on black background
+  const outcomeColors = {
+    'Win': '#10B981', // Brighter, more vibrant green
+    'Loss': '#EF4444', // Brighter, more vibrant red
+  };
+
+  // Enhanced symbol palette for black background
+  const symbolPalette = [
+    '#3B82F6', // Bright blue
+    '#8B5CF6', // Vibrant purple
+    '#10B981', // Emerald green
+    '#F59E0B', // Amber
+    '#EC4899', // Pink
+    '#6366F1', // Indigo
+  ];
+
+  const symbolColors: Record<string, string> = {};
+  topSymbols.forEach((s, i) => {
+    symbolColors[s.symbol] = symbolPalette[i % symbolPalette.length];
+  });
+
+  // --- Data Transformation Logic ---
+  const symbolData: ChartDatum[] = topSymbols.map(s => {
+    const symbolTotal = rawData
+      .filter(d => d.Symbol === s.symbol)
+      .reduce((acc, d) => acc + d.Count, 0);
+    return {
+      id: s.symbol,
+      label: s.symbol,
+      value: symbolTotal,
+      percentage: (symbolTotal / totalCount) * 100,
+      color: symbolColors[s.symbol],
+    };
+  }).filter(d => d.value > 0);
+
+  // Helper to convert hex/rgb to rgba
+  function hexToRgba(hex: string, alpha: number): string {
+    // If already rgba, just replace alpha
+    if (hex.startsWith('rgba')) {
+      return hex.replace(/[\d\.]+\)$/g, `${alpha})`);
+    }
+    // If rgb, convert to rgba
+    if (hex.startsWith('rgb(')) {
+      return hex.replace('rgb(', 'rgba(').replace(')', `, ${alpha})`);
+    }
+    // Remove hash if present
+    hex = hex.replace('#', '');
+    // Expand shorthand
+    if (hex.length === 3) {
+      hex = hex.split('').map(x => x + x).join('');
+    }
+    const num = parseInt(hex, 16);
+    const r = (num >> 16) & 255;
+    const g = (num >> 8) & 255;
+    const b = num & 255;
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+
+  const symbolOutcomeData: ChartDatum[] = topSymbols.flatMap(s => {
+    const symbolTotal = symbolData.find(d => d.id === s.symbol)?.value || 0;
+    const baseColor = symbolColors[s.symbol];
+    return rawData
+      .filter(d => d.Symbol === s.symbol)
+      .sort((a, b) => (a.Outcome === 'Win' ? -1 : 1))
+      .map(d => ({
+        id: `${d.Symbol}-${d.Outcome}`,
+        label: d.Outcome,
+        value: d.Count,
+        percentage: (d.Count / symbolTotal) * 100,
+        color: d.Outcome === 'Win' ? baseColor : hexToRgba(baseColor, 0.4),
+      }));
+  });
+
+  const outcomeData: ChartDatum[] = [
+    {
+      id: 'Win',
+      label: 'Win',
+      value: rawData.filter(d => d.Outcome === 'Win').reduce((sum, d) => sum + d.Count, 0),
+      percentage: 0,
+      color: outcomeColors['Win'],
+    },
+    {
+      id: 'Loss',
+      label: 'Loss',
+      value: rawData.filter(d => d.Outcome === 'Loss').reduce((sum, d) => sum + d.Count, 0),
+      percentage: 0,
+      color: outcomeColors['Loss'],
+    }
+  ].map(d => ({ ...d, percentage: (d.value / totalCount) * 100 }));
+
+  const outcomeSymbolData: ChartDatum[] = ['Win', 'Loss'].flatMap((outcome) => {
+    const outcomeTotal = outcomeData.find(d => d.id === outcome)?.value || 0;
+    const tints = symbolPalette;
+    return rawData
+      .filter(d => d.Outcome === outcome)
+      .map((d, i) => ({
+        id: `${d.Symbol}-${d.Outcome}`,
+        label: d.Symbol,
+        value: d.Count,
+        percentage: (d.Count / outcomeTotal) * 100,
+        color: tints[i % tints.length],
+      }));
+  });
+
+  const innerRadius = 32;
+  const middleRadius = 55;
+
+  if (totalCount === 0) return <EmptyChart message="No completed trades" />;
+
+  return (
+    <Box sx={{
+      width: '100%',
+      textAlign: 'center',
+      backgroundColor: 'transparent',
+      p: 1,
+      borderRadius: 2,
+    }}>
+      <div className="flex justify-center mb-3">
+        <ToggleButtonGroup
+          color="primary"
+          value={view}
+          exclusive
+          onChange={handleViewChange}
+          size="small"
+          aria-label="Chart View"
+          sx={{
+            background: 'rgba(0, 0, 0, 0.3)',
+            backdropFilter: 'blur(8px)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            '& .MuiToggleButton-root': {
+              color: '#9ca3af',
+              fontSize: '0.7rem',
+              py: 0.5,
+              px: 1.5,
+              border: 'none',
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                color: '#ffffff',
+              }
+            },
+            '& .Mui-selected': {
+              color: '#ffffff !important',
+              backgroundColor: 'rgba(59, 130, 246, 0.3) !important',
+              fontWeight: 600,
+            }
+          }}
+        >
+          <ToggleButton value="symbol">By Symbol</ToggleButton>
+          <ToggleButton value="outcome">By Outcome</ToggleButton>
+        </ToggleButtonGroup>
+      </div>
+
+      <Box sx={{
+        display: 'flex',
+        justifyContent: 'center',
+        height: 130,
+        position: 'relative',
+      }}>
+        {view === 'symbol' ? (
+          <MuiPieChart
+            series={[
+              {
+                innerRadius,
+                outerRadius: middleRadius,
+                data: symbolData,
+                arcLabel: (item) => (item as any).percentage > 15 ? `${item.id}` : '',
+                arcLabelMinAngle: 20,
+                highlightScope: { fade: 'global', highlight: 'item' },
+                highlighted: {
+                  additionalRadius: 4,
+                  innerRadius: innerRadius - 2,
+                  outerRadius: middleRadius + 2,
+                },
+                cornerRadius: 6,
+                cx: '50%',
+                paddingAngle: 1,
+              },
+              {
+                innerRadius: middleRadius + 3,
+                outerRadius: middleRadius + 18,
+                data: symbolOutcomeData,
+                arcLabel: (item) => (item as any).percentage > 10 ? `${(item as any).percentage.toFixed(0)}%` : '',
+                arcLabelMinAngle: 15,
+                highlightScope: { fade: 'global', highlight: 'item' },
+                highlighted: {
+                  additionalRadius: 3,
+                  innerRadius: middleRadius + 1,
+                  outerRadius: middleRadius + 20,
+                },
+                cornerRadius: 4,
+                cx: '50%',
+                paddingAngle: 0.5,
+              },
+            ]}
+            slotProps={{
+              legend: ({ hidden: true } as any)
+            }}
+            sx={{
+              width: '100%',
+              height: '100%',
+              // FIXED: Remove black overlay
+              '& .MuiResponsiveChart-container': {
+                backgroundColor: 'transparent !important',
+              },
+              '& .MuiChartsLegend-root': {
+                display: 'none',
+              },
+              [`& .${pieArcLabelClasses.root}`]: {
+                fill: '#ffffff',
+                fontSize: 10,
+                fontWeight: 600,
+                fontFamily: "'Inter', sans-serif",
+                textShadow: '0 1px 3px rgba(0,0,0,0.8)',
+              },
+              [`& .${pieArcLabelClasses.root}[data-highlighted='true']`]: {
+                fill: '#ffffff',
+                fontSize: 11,
+              },
+              [`& .${pieArcClasses.root}`]: {
+                stroke: '#000000',
+                strokeWidth: 1,
+                transition: 'all 0.2s ease',
+              },
+              [`& .${pieArcClasses.root}[data-highlighted='true']`]: {
+                filter: 'drop-shadow(0 0 6px rgba(255,255,255,0.3))',
+                strokeWidth: 2,
+              },
+            }}
+          >
+            <PieCenterLabel>
+              <Typography sx={{
+                fill: '#ffffff',
+                fontSize: 12,
+                fontWeight: 600,
+                fontFamily: "'Inter', sans-serif",
+              }}>
+                Symbol
+              </Typography>
+            </PieCenterLabel>
+          </MuiPieChart>
+        ) : (
+          <MuiPieChart
+            series={[
+              {
+                innerRadius,
+                outerRadius: middleRadius,
+                data: outcomeData,
+                arcLabel: (item) => `${item.id}`,
+                highlightScope: { fade: 'global', highlight: 'item' },
+                highlighted: {
+                  additionalRadius: 4,
+                  innerRadius: innerRadius - 2,
+                  outerRadius: middleRadius + 2,
+                },
+                cornerRadius: 6,
+                cx: '50%',
+                paddingAngle: 1,
+              },
+              {
+                innerRadius: middleRadius + 3,
+                outerRadius: middleRadius + 18,
+                data: outcomeSymbolData,
+                arcLabel: (item) => (item as any).percentage > 10 ? `${(item as any).label}` : '',
+                arcLabelMinAngle: 15,
+                highlightScope: { fade: 'global', highlight: 'item' },
+                highlighted: {
+                  additionalRadius: 3,
+                  innerRadius: middleRadius + 1,
+                  outerRadius: middleRadius + 20,
+                },
+                cornerRadius: 4,
+                cx: '50%',
+                paddingAngle: 0.5,
+              },
+            ]}
+            sx={{
+              width: '100%',
+              height: '100%',
+              // FIXED: Remove black overlay
+              '& .MuiResponsiveChart-container': {
+                backgroundColor: 'transparent !important',
+              },
+              '& .MuiChartsLegend-root': {
+                display: 'none',
+              },
+              [`& .${pieArcLabelClasses.root}`]: {
+                fill: '#ffffff',
+                fontSize: 10,
+                fontWeight: 600,
+                fontFamily: "'Inter', sans-serif",
+                textShadow: '0 1px 3px rgba(0,0,0,0.8)',
+              },
+              [`& .${pieArcLabelClasses.root}[data-highlighted='true']`]: {
+                fill: '#ffffff',
+                fontSize: 11,
+              },
+              [`& .${pieArcClasses.root}`]: {
+                stroke: '#000000',
+                strokeWidth: 1,
+                transition: 'all 0.2s ease',
+              },
+              [`& .${pieArcClasses.root}[data-highlighted='true']`]: {
+                filter: 'drop-shadow(0 0 6px rgba(255,255,255,0.3))',
+                strokeWidth: 2,
+              },
+            }}
+            slotProps={{
+              legend: ({ hidden: true } as any)
+            }}
+          >
+            <PieCenterLabel>
+              <Typography sx={{
+                fill: '#ffffff',
+                fontSize: 12,
+                fontWeight: 600,
+                fontFamily: "'Inter', sans-serif",
+              }}>
+                Result
+              </Typography>
+            </PieCenterLabel>
+          </MuiPieChart>
+        )}
+      </Box>
+    </Box>
+  );
+}
+
+
+// ============================================
+// IMPROVED PROFITABILITY SCORE COMPONENT
+// ============================================
+
+function ProfitabilityScore({ winRate, profitFactor }: { winRate: number, profitFactor: number }) {
+  const pfScore = Math.min((profitFactor / 3) * 50, 50);
+  const wrScore = Math.min((winRate / 100) * 50, 50);
+  const totalScore = Math.round(pfScore + wrScore);
+
+  // Dynamic color based on score
+  const getScoreColor = (score: number) => {
+    if (score >= 70) return '#10B981'; // Green for good
+    if (score >= 50) return '#F59E0B'; // Amber for average
+    if (score >= 30) return '#F97316'; // Orange for below average
+    return '#EF4444'; // Red for poor
+  };
+
+  const scoreColor = getScoreColor(totalScore);
+
+  return (
+    <Box sx={{
+      width: '100%',
+      textAlign: 'center',
+      background: 'linear-gradient(145deg, rgba(30, 30, 35, 0.8), rgba(20, 20, 25, 0.9))',
+      backdropFilter: 'blur(10px)',
+      border: '1px solid rgba(255, 255, 255, 0.08)',
+      borderRadius: '12px',
+      p: 2,
+      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+    }}>
+      <Box sx={{ height: 130, mt: 0.5 }}>
+        <Gauge
+          value={totalScore}
+          startAngle={-110}
+          endAngle={110}
+          innerRadius="80%"
+          outerRadius="100%"
+          sx={{
+            // FIXED: Remove black background overlay
+            '& .MuiResponsiveChart-container': {
+              backgroundColor: 'transparent !important',
+            },
+            [`& .${gaugeClasses.valueText}`]: {
+              fontSize: 24,
+              fontWeight: 800,
+              fill: '#ffffff',
+              textShadow: '0 2px 8px rgba(0, 0, 0, 0.5)',
+            },
+            [`& .${gaugeClasses.valueArc}`]: {
+              fill: scoreColor,
+              stroke: scoreColor,
+              strokeWidth: 2,
+              filter: `drop-shadow(0 0 8px ${scoreColor}40)`,
+            },
+            [`& .${gaugeClasses.referenceArc}`]: {
+              fill: 'rgba(255, 255, 255, 0.08)',
+              stroke: 'rgba(255, 255, 255, 0.05)',
+              strokeWidth: 1,
+            },
+          }}
+          text={({ value }) => `${value}`}
+        />
+      </Box>
+
+      <Typography sx={{
+        fontSize: '11px',
+        color: '#9CA3AF',
+        mt: 0.5,
+        textTransform: 'uppercase',
+        letterSpacing: '0.08em',
+        fontWeight: 600,
+      }}>
+        Trading Edge Score
+      </Typography>
+
+      <Box sx={{
+        mt: 2,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 1,
+        background: 'rgba(255, 255, 255, 0.03)',
+        borderRadius: '8px',
+        p: 1.5,
+      }}>
+        <Box sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          fontSize: '11px',
+          color: '#D1D5DB',
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box sx={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #3B82F6, #8B5CF6)',
+            }} />
+            <span>Efficiency (Profit Factor)</span>
+          </Box>
+          <span style={{
+            color: '#ffffff',
+            fontWeight: 700,
+            fontSize: '12px',
+          }}>
+            {(pfScore * 2).toFixed(0)}%
+          </span>
+        </Box>
+
+        <Box sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          fontSize: '11px',
+          color: '#D1D5DB',
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box sx={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #10B981, #059669)',
+            }} />
+            <span>Consistency (Win Rate)</span>
+          </Box>
+          <span style={{
+            color: '#ffffff',
+            fontWeight: 700,
+            fontSize: '12px',
+          }}>
+            {(wrScore * 2).toFixed(0)}%
+          </span>
+        </Box>
+      </Box>
+    </Box>
+  );
+}
 // ============================================
 // ANALYTICS VIEW COMPONENT
 // ============================================
@@ -730,158 +1397,410 @@ function AnalyticsView({ chartData }: AnalyticsViewProps) {
       ? chartData.weeklyPnL
       : chartData.monthlyPnL;
 
+  // ==========================================
+  // CLEAN EQUITY CURVE CHART (Like Chart.js website)
+  // ==========================================
+  const equityCurveData = {
+    labels: chartData.equityCurve.map(d => d.date),
+    datasets: [
+      {
+        label: 'Cumulative PnL',
+        data: chartData.equityCurve.map(d => d.cumulative),
+        borderColor: 'rgb(75, 192, 192)',  // Soft teal - Chart.js default style
+        backgroundColor: 'rgba(75, 192, 192, 0.1)',  // Very subtle fill
+        fill: true,
+        tension: 0.4,
+        borderWidth: 2,  // Thin line like Chart.js examples
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        pointHoverBackgroundColor: 'rgb(75, 192, 192)',
+        pointHoverBorderColor: '#fff',
+        pointHoverBorderWidth: 2,
+      },
+    ],
+  };
+
+  const equityCurveOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: {
+      duration: 750,
+      easing: 'easeOutQuart' as const,
+    },
+    interaction: {
+      intersect: false,
+      mode: 'index' as const,
+    },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        titleColor: '#fff',
+        bodyColor: 'rgba(255, 255, 255, 0.8)',
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+        borderWidth: 1,
+        padding: 12,
+        cornerRadius: 6,
+        displayColors: true,
+        boxPadding: 4,
+        titleFont: { size: 13, weight: 600 },
+        bodyFont: { size: 12 },
+        callbacks: {
+          label: (context: any) => {
+            const value = context.parsed.y;
+            const prefix = value >= 0 ? '+' : '';
+            return `PnL: ${prefix}$${value.toFixed(2)}`;
+          }
+        }
+      },
+    },
+    scales: {
+      x: {
+        grid: {
+          display: false,  // No vertical grid lines - cleaner
+        },
+        ticks: {
+          color: 'rgb(148, 226, 213)',  // Teal for dates
+          font: { size: 10 },
+          padding: 8,
+          maxTicksLimit: 6,
+        },
+        border: { display: false },
+      },
+      y: {
+        grid: {
+          color: 'rgba(156, 163, 175, 0.1)',  // Very subtle grid
+          lineWidth: 1,
+        },
+        ticks: {
+          color: 'rgba(148, 226, 213, 0.9)',  // Teal for values
+          font: { size: 11 },
+          padding: 10,
+          maxTicksLimit: 5,  // Fewer ticks = cleaner
+          callback: (value: any) => {
+            // Smart formatting - avoid cluttered decimals
+            if (Math.abs(value) >= 1) return `$${value.toFixed(0)}`;
+            if (value === 0) return '$0';
+            return `$${value.toFixed(2)}`;
+          }
+        },
+        border: { display: false },
+      },
+    },
+  };
+
+  // ==========================================
+  // CLEAN DOUGHNUT CHART (Chart.js style)
+  // ==========================================
+  const winLossChartData = {
+    labels: chartData.winLossData.map(d => d.name),
+    datasets: [
+      {
+        data: chartData.winLossData.map(d => d.value),
+        // Chart.js default pastel colors
+        backgroundColor: ['rgb(75, 192, 192)', 'rgb(255, 99, 132)'],
+        hoverBackgroundColor: ['rgb(75, 192, 192)', 'rgb(255, 99, 132)'],
+        borderColor: 'rgba(30, 41, 59, 1)',  // Dark background color
+        borderWidth: 2,
+        hoverOffset: 4,
+        spacing: 1,
+      },
+    ],
+  };
+
+  const doughnutOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    cutout: '65%',  // Chart.js default style
+    animation: {
+      animateRotate: true,
+      animateScale: false,
+      duration: 750,
+      easing: 'easeOutQuart' as const,
+    },
+    plugins: {
+      legend: {
+        display: true,
+        position: 'bottom' as const,
+        labels: {
+          color: 'rgba(203, 213, 225, 0.9)',
+          font: { size: 12 },
+          padding: 16,
+          usePointStyle: true,
+          pointStyle: 'circle',
+          boxWidth: 8,
+          boxHeight: 8,
+        },
+      },
+      tooltip: {
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        titleColor: '#fff',
+        bodyColor: 'rgba(255, 255, 255, 0.8)',
+        padding: 10,
+        cornerRadius: 6,
+        callbacks: {
+          label: (context: any) => {
+            const label = context.label || '';
+            const value = context.parsed || 0;
+            const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
+            const percentage = ((value / total) * 100).toFixed(1);
+            return `${label}: ${value} (${percentage}%)`;
+          }
+        }
+      },
+    },
+  };
+
+  // ==========================================
+  // CLEAN BAR CHART - PnL by Period (Chart.js style)
+  // ==========================================
+  const pnlChartData = {
+    labels: pnlData.map(d => d.date),
+    datasets: [
+      {
+        label: 'PnL',
+        data: pnlData.map(d => d.pnl),
+        // Softer colors like Chart.js examples
+        backgroundColor: pnlData.map(d =>
+          d.pnl >= 0 ? 'rgba(75, 192, 192, 0.6)' : 'rgba(255, 99, 132, 0.6)'
+        ),
+        hoverBackgroundColor: pnlData.map(d =>
+          d.pnl >= 0 ? 'rgba(75, 192, 192, 0.8)' : 'rgba(255, 99, 132, 0.8)'
+        ),
+        borderColor: pnlData.map(d =>
+          d.pnl >= 0 ? 'rgb(75, 192, 192)' : 'rgb(255, 99, 132)'
+        ),
+        borderWidth: 1,
+        borderRadius: 3,
+        borderSkipped: false,
+      },
+    ],
+  };
+
+  const pnlBarOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: {
+      duration: 750,
+      easing: 'easeOutQuart' as const,
+    },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        titleColor: '#fff',
+        bodyColor: 'rgba(255, 255, 255, 0.8)',
+        padding: 10,
+        cornerRadius: 6,
+        displayColors: true,
+        boxPadding: 4,
+        callbacks: {
+          label: (context: any) => {
+            const value = context.parsed.y;
+            const prefix = value >= 0 ? '+' : '';
+            return `PnL: ${prefix}$${value.toFixed(2)}`;
+          }
+        }
+      },
+    },
+    scales: {
+      x: {
+        grid: { display: false },
+        ticks: {
+          color: 'rgb(148, 226, 213)',  // Teal for dates
+          font: { size: 9 },
+          padding: 6,
+          maxRotation: 45,
+        },
+        border: { display: false },
+      },
+      y: {
+        grid: {
+          color: 'rgba(156, 163, 175, 0.1)',
+          lineWidth: 1,
+        },
+        ticks: {
+          color: 'rgba(148, 226, 213, 0.9)',  // Teal for values
+          font: { size: 10 },
+          padding: 8,
+          maxTicksLimit: 5,
+          callback: (value: any) => {
+            if (Math.abs(value) >= 1) return `$${value.toFixed(0)}`;
+            if (value === 0) return '$0';
+            return `$${value.toFixed(2)}`;
+          }
+        },
+        border: { display: false },
+      },
+    },
+  };
+
+  // ==========================================
+  // CLEAN HORIZONTAL BAR CHART - Symbols (Chart.js style)
+  // ==========================================
+  const symbolChartData = {
+    labels: chartData.symbolPerformance.map(d => d.symbol),
+    datasets: [
+      {
+        label: 'PnL',
+        data: chartData.symbolPerformance.map(d => d.pnl),
+        backgroundColor: chartData.symbolPerformance.map(d =>
+          d.pnl >= 0 ? 'rgba(75, 192, 192, 0.6)' : 'rgba(255, 99, 132, 0.6)'
+        ),
+        hoverBackgroundColor: chartData.symbolPerformance.map(d =>
+          d.pnl >= 0 ? 'rgba(75, 192, 192, 0.8)' : 'rgba(255, 99, 132, 0.8)'
+        ),
+        borderColor: chartData.symbolPerformance.map(d =>
+          d.pnl >= 0 ? 'rgb(75, 192, 192)' : 'rgb(255, 99, 132)'
+        ),
+        borderWidth: 1,
+        borderRadius: 3,
+        borderSkipped: false,
+      },
+    ],
+  };
+
+  const symbolBarOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    indexAxis: 'y' as const,
+    animation: {
+      duration: 750,
+      easing: 'easeOutQuart' as const,
+    },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        titleColor: '#fff',
+        bodyColor: 'rgba(255, 255, 255, 0.8)',
+        padding: 10,
+        cornerRadius: 6,
+        displayColors: true,
+        boxPadding: 4,
+        callbacks: {
+          label: (context: any) => {
+            const value = context.parsed.x;
+            const prefix = value >= 0 ? '+' : '';
+            return `PnL: ${prefix}$${value.toFixed(2)}`;
+          }
+        }
+      },
+    },
+    scales: {
+      x: {
+        grid: {
+          color: 'rgba(156, 163, 175, 0.1)',
+          lineWidth: 1,
+        },
+        ticks: {
+          color: 'rgba(148, 226, 213, 0.9)',  // Teal/cyan for better visibility
+          font: { size: 11 },
+          padding: 8,
+          maxTicksLimit: 5,
+          callback: (value: any) => {
+            if (Math.abs(value) >= 1) return `$${value.toFixed(0)}`;
+            if (value === 0) return '$0';
+            return `$${value.toFixed(2)}`;
+          }
+        },
+        border: { display: false },
+      },
+      y: {
+        grid: { display: false },
+        ticks: {
+          color: 'rgb(148, 226, 213)',  // Bright teal for symbol labels
+          font: { size: 10, weight: 600 },
+          padding: 8,
+        },
+        border: { display: false },
+      },
+    },
+  };
+
   return (
-    <div className="space-y-6">
-      {/* Row 1: Equity Curve & Win/Loss */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Equity Curve */}
-        <div className="lg:col-span-2 bg-card border border-border rounded-xl p-6">
-          <h3 className="text-lg font-semibold text-card-foreground mb-4 flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-success" />
-            Equity Curve
-          </h3>
+    <div className="space-y-3">
+      {/* Main Charts Grid - 3 distinct areas across on large screens */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
+        {/* Equity Curve - Primary Visualization */}
+        <div className="lg:col-span-2 bg-[#0c0e11] border border-border/50 rounded-lg p-3">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Equity Curve</h3>
+            {chartData.equityCurve.length > 0 && (
+              <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${chartData.equityCurve[chartData.equityCurve.length - 1]?.cumulative >= 0
+                ? 'bg-emerald-500/10 text-emerald-500'
+                : 'bg-red-500/10 text-red-500'
+                }`}>
+                {chartData.equityCurve[chartData.equityCurve.length - 1]?.cumulative >= 0 ? '+' : ''}
+                ${chartData.equityCurve[chartData.equityCurve.length - 1]?.cumulative?.toFixed(2) || '0.00'}
+              </span>
+            )}
+          </div>
           {chartData.equityCurve.length > 0 ? (
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={chartData.equityCurve}>
-                  <defs>
-                    <linearGradient id="equityGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={CHART_COLORS.green} stopOpacity={0.3} />
-                      <stop offset="95%" stopColor={CHART_COLORS.green} stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                  <XAxis dataKey="date" stroke="var(--muted-foreground)" tick={{ fontSize: 11 }} />
-                  <YAxis stroke="var(--muted-foreground)" tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <ReferenceLine y={0} stroke="var(--border)" />
-                  <Area
-                    type="monotone"
-                    dataKey="cumulative"
-                    stroke={CHART_COLORS.green}
-                    fill="url(#equityGradient)"
-                    name="Cumulative PnL"
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="cumulative"
-                    stroke={CHART_COLORS.green}
-                    strokeWidth={2}
-                    dot={false}
-                    name="Cumulative PnL"
-                  />
-                </ComposedChart>
-              </ResponsiveContainer>
+            <div className="h-[150px]">
+              <LineChart data={equityCurveData} options={equityCurveOptions} />
             </div>
           ) : (
             <EmptyChart message="No completed trades yet" />
           )}
         </div>
 
-        {/* Win/Loss & Stats */}
-        <div className="bg-card border border-border rounded-xl p-6">
-          <h3 className="text-lg font-semibold text-card-foreground mb-4 flex items-center gap-2">
-            <PieChartIcon className="w-5 h-5 text-info" />
-            Win/Loss Ratio
-          </h3>
+        {/* Portfolio Distribution - 1 slot */}
+        <div className="lg:col-span-1 bg-[#0c0e11] border border-border/20 rounded-lg p-3">
+          <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Portfolio</h3>
           {chartData.winLossData[0].value + chartData.winLossData[1].value > 0 ? (
-            <>
-              <div className="h-[180px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={chartData.winLossData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={50}
-                      outerRadius={70}
-                      paddingAngle={5}
-                      dataKey="value"
-                    >
-                      {chartData.winLossData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="space-y-3 mt-4">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Win Rate</span>
-                  <span className={`font-semibold ${chartData.winRate >= 50 ? 'text-success' : 'text-danger'}`}>
+            <div className="flex flex-col">
+              <TradePerformancePie symbolPerformance={chartData.symbolPerformance} />
+              <div className="grid grid-cols-2 gap-x-2 gap-y-1 mt-2">
+                <div className="text-[9px]">
+                  <div className="text-muted-foreground">Win Rate</div>
+                  <div className={`font-semibold tabular-nums ${chartData.winRate >= 50 ? 'text-emerald-400' : 'text-red-400'}`}>
                     {chartData.winRate.toFixed(1)}%
-                  </span>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Avg Win</span>
-                  <span className="font-semibold text-success">${chartData.avgWin.toFixed(2)}</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Avg Loss</span>
-                  <span className="font-semibold text-danger">${chartData.avgLoss.toFixed(2)}</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Profit Factor</span>
-                  <span className={`font-semibold ${chartData.profitFactor >= 1 ? 'text-success' : 'text-danger'}`}>
-                    {chartData.profitFactor === Infinity ? '∞' : chartData.profitFactor.toFixed(2)}
-                  </span>
+                <div className="text-[9px]">
+                  <div className="text-muted-foreground">Profit Factor</div>
+                  <div className={`font-semibold tabular-nums ${chartData.profitFactor >= 1 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {chartData.profitFactor.toFixed(2)}
+                  </div>
                 </div>
               </div>
-            </>
+            </div>
           ) : (
-            <EmptyChart message="No trades to analyze" />
+            <EmptyChart message="No data" />
           )}
+        </div>
+
+        {/* Risk Edge Gauge - 1 slot */}
+        <div className="lg:col-span-1 bg-[#0c0e11] border border-border/20 rounded-lg p-3">
+          <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Risk Edge</h3>
+          <ProfitabilityScore winRate={chartData.winRate} profitFactor={chartData.profitFactor} />
         </div>
       </div>
 
-      {/* Row 2: PnL by Period & Symbol Performance */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* PnL by Period */}
-        <div className="bg-card border border-border rounded-xl p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-card-foreground flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 text-purple-500" />
-              PnL by Period
-            </h3>
-            <div className="flex items-center gap-1 p-1 bg-muted rounded-lg">
+      {/* Row 2: Analysis Grids */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="bg-[#0c0e11] border border-border/20 rounded-lg p-3">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">PnL by Period</h3>
+            <div className="flex gap-0.5 text-[9px]">
               {(['daily', 'weekly', 'monthly'] as const).map((period) => (
                 <button
                   key={period}
                   onClick={() => setPnlPeriod(period)}
-                  className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${pnlPeriod === period
-                    ? 'bg-card text-card-foreground shadow-sm'
+                  className={`px-1.5 py-0.5 rounded transition-all ${pnlPeriod === period
+                    ? 'bg-teal-500/20 text-teal-400'
                     : 'text-muted-foreground hover:text-card-foreground'
                     }`}
                 >
-                  {period.charAt(0).toUpperCase() + period.slice(1)}
+                  {period.slice(0, 1).toUpperCase()}
                 </button>
               ))}
             </div>
           </div>
           {pnlData.length > 0 ? (
-            <div className="h-[250px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={pnlData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                  <XAxis dataKey="date" stroke="var(--muted-foreground)" tick={{ fontSize: 10 }} />
-                  <YAxis stroke="var(--muted-foreground)" tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <ReferenceLine y={0} stroke="var(--border)" />
-                  <Bar
-                    dataKey="pnl"
-                    name="PnL"
-                    radius={[4, 4, 0, 0]}
-                  >
-                    {pnlData.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={entry.pnl >= 0 ? CHART_COLORS.green : CHART_COLORS.red}
-                      />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+            <div className="h-[180px]">
+              <BarChart data={pnlChartData} options={pnlBarOptions} />
             </div>
           ) : (
             <EmptyChart message="No PnL data available" />
@@ -889,30 +1808,11 @@ function AnalyticsView({ chartData }: AnalyticsViewProps) {
         </div>
 
         {/* Symbol Performance */}
-        <div className="bg-card border border-border rounded-xl p-6">
-          <h3 className="text-lg font-semibold text-card-foreground mb-4 flex items-center gap-2">
-            <Target className="w-5 h-5 text-orange-500" />
-            Top Symbols by PnL
-          </h3>
+        <div className="bg-[#0c0e11] border border-border/20 rounded-lg p-3">
+          <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Top Symbols</h3>
           {chartData.symbolPerformance.length > 0 ? (
-            <div className="h-[250px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData.symbolPerformance} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                  <XAxis type="number" stroke="var(--muted-foreground)" tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
-                  <YAxis type="category" dataKey="symbol" stroke="var(--muted-foreground)" tick={{ fontSize: 11 }} width={60} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <ReferenceLine x={0} stroke="var(--border)" />
-                  <Bar dataKey="pnl" name="PnL" radius={[0, 4, 4, 0]}>
-                    {chartData.symbolPerformance.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={entry.pnl >= 0 ? CHART_COLORS.green : CHART_COLORS.red}
-                      />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+            <div className="h-[180px]">
+              <BarChart data={symbolChartData} options={symbolBarOptions} />
             </div>
           ) : (
             <EmptyChart message="No symbol data available" />
@@ -920,18 +1820,16 @@ function AnalyticsView({ chartData }: AnalyticsViewProps) {
         </div>
       </div>
 
-      {/* Row 3: Heatmap */}
-      <div className="bg-card border border-border rounded-xl p-6">
-        <h3 className="text-lg font-semibold text-card-foreground mb-4 flex items-center gap-2">
-          <Calendar className="w-5 h-5 text-cyan-500" />
-          Trading Activity Heatmap (Last 12 Weeks)
-        </h3>
+      {/* Heatmap - Full width */}
+      <div className="bg-[#0c0e11] border border-border/20 rounded-lg p-3">
+        <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Activity Heatmap</h3>
         <div className="overflow-x-auto">
           <PnLHeatmap data={chartData.heatmapData} />
         </div>
       </div>
     </div>
   );
+
 }
 
 // ============================================
@@ -952,21 +1850,21 @@ function PnLHeatmap({ data }: { data: HeatmapDay[] }) {
   };
 
   return (
-    <div className="flex gap-4">
-      <div className="flex flex-col gap-1 text-xs text-muted-foreground pt-5">
+    <div className="flex gap-3 items-start">
+      <div className="flex flex-col gap-0.5 text-[10px] text-muted-foreground pt-3">
         {days.map(day => (
-          <div key={day} className="h-5 flex items-center">{day}</div>
+          <div key={day} className="h-4 flex items-center">{day.slice(0, 2)}</div>
         ))}
       </div>
-      <div className="flex gap-1">
+      <div className="flex gap-0.5">
         {weeks.map(week => (
-          <div key={week} className="flex flex-col gap-1">
+          <div key={week} className="flex flex-col gap-0.5">
             {days.map((_, dayIndex) => {
               const dayData = data.find(d => d.week === week && d.dayOfWeek === dayIndex);
               return (
                 <div
                   key={`${week}-${dayIndex}`}
-                  className={`w-5 h-5 rounded-sm ${getColor(dayData?.pnl || 0, dayData?.trades || 0)} cursor-pointer transition-all hover:ring-2 hover:ring-primary/50`}
+                  className={`w-4 h-4 rounded-sm ${getColor(dayData?.pnl || 0, dayData?.trades || 0)} cursor-pointer transition-all hover:ring-1 hover:ring-primary/50`}
                   title={dayData ? `${dayData.date}: $${dayData.pnl.toFixed(2)} (${dayData.trades} trades)` : 'No data'}
                 />
               );
@@ -974,27 +1872,10 @@ function PnLHeatmap({ data }: { data: HeatmapDay[] }) {
           </div>
         ))}
       </div>
-      <div className="flex flex-col justify-center gap-1 ml-4">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <div className="w-3 h-3 rounded-sm bg-red-500" />
-          <span>Loss &gt; $10</span>
-        </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <div className="w-3 h-3 rounded-sm bg-red-400/70" />
-          <span>Small Loss</span>
-        </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <div className="w-3 h-3 rounded-sm bg-muted" />
-          <span>No trades</span>
-        </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <div className="w-3 h-3 rounded-sm bg-green-400/70" />
-          <span>Small Profit</span>
-        </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <div className="w-3 h-3 rounded-sm bg-green-500" />
-          <span>Profit &gt; $10</span>
-        </div>
+      <div className="flex flex-wrap gap-x-3 gap-y-0.5 ml-3 text-[10px] text-muted-foreground items-center">
+        <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-sm bg-red-500" /><span>Loss</span></div>
+        <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-sm bg-muted" /><span>None</span></div>
+        <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-sm bg-green-500" /><span>Profit</span></div>
       </div>
     </div>
   );
@@ -1006,8 +1887,8 @@ function PnLHeatmap({ data }: { data: HeatmapDay[] }) {
 
 function EmptyChart({ message }: { message: string }) {
   return (
-    <div className="h-[200px] flex items-center justify-center">
-      <p className="text-muted-foreground text-sm">{message}</p>
+    <div className="h-[120px] flex items-center justify-center">
+      <p className="text-muted-foreground text-xs">{message}</p>
     </div>
   );
 }
@@ -1110,11 +1991,13 @@ function TradeCard({ trade, isExpanded, onToggle }: TradeCardProps) {
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
                 <span className="font-bold text-lg text-card-foreground">{entryOrder.symbol}</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${pnl.isComplete
-                  ? 'bg-muted text-muted-foreground'
-                  : 'bg-info/10 text-info'
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${exitOrders.length === 0
+                  ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400'
+                  : pnl.isComplete
+                    ? 'bg-muted text-muted-foreground'
+                    : 'bg-info/10 text-info'
                   }`}>
-                  {pnl.isComplete ? 'Closed' : 'Active'}
+                  {exitOrders.length === 0 ? 'Open Order' : pnl.isComplete ? 'Closed' : 'Active'}
                 </span>
               </div>
               <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">

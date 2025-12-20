@@ -126,7 +126,7 @@ export default function OverviewTab({ accountData }: OverviewTabProps) {
                 <div key={balance.asset} className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     {/* Fixed Asset Icon - Dark blue background with white text */}
-                    <div className="w-8 h-8 bg-blue-200 rounded-full flex items-center justify-center shadow-sm">
+                    <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center shadow-sm">
                       <span className="text-xs font-bold text-white">
                         {balance.asset.slice(0, 2)}
                       </span>

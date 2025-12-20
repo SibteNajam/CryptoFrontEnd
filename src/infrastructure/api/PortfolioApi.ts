@@ -8,7 +8,7 @@ export interface ApiCredentials {
 }
 
 // Import TokenStorage for JWT authentication
-import TokenStorage from '../../lib/tokenStorage';
+import TokenStorage from '../login/tokenStorage';
 
 
 

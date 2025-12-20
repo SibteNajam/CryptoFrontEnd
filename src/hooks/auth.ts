@@ -15,7 +15,6 @@ export const useAuth = () => {
 
     const signup = async (credentials: SignupCredentials) => {
         const response = dispatch(signupUser(credentials));
-        console.log('Signup response in hook:', response);
         return response;
     };
 
